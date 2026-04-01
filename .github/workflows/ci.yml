@@ -1,0 +1,54 @@
+# CI: lint, typecheck, build, and Drizzle migrations against Postgres.
+#
+# Quality / build: uses a placeholder DATABASE_URL so imports stay valid if code touches the DB layer.
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: postgresql://tma:tma@127.0.0.1:5432/tma_platform
+      ADMIN_SESSION_SECRET: another_32_char_minimum_secret_str
+      NEXT_PUBLIC_SERVER_URL: http://localhost:3069
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm run build
+
+  migrations:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: tma
+          POSTGRES_PASSWORD: tma
+          POSTGRES_DB: tma_platform
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U tma -d tma_platform"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+      - run: npm ci
+      - name: Set DATABASE_URL
+        run: |
+          echo "DATABASE_URL=postgresql://tma:tma@localhost:5432/tma_platform" >> "$GITHUB_ENV"
+      - run: npm run db:custom:migrate

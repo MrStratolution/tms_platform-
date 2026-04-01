@@ -1,0 +1,47 @@
+/**
+ * TMA design tokens — The Modesty Argument
+ * Display: Syne (editorial) — swap for licensed Helvetica Now Display if you have the family files.
+ * Body: Inter — swap for Arial Nova / full Helvetica stack via next/local font if licensed.
+ */
+
+:root {
+  /* Color */
+  --tma-black: #000000;
+  --tma-lime: #e7f8c8;
+  --tma-white: #ffffff;
+  --tma-red: #f14c4c;
+  --tma-lime-dim: rgba(231, 248, 200, 0.12);
+  --tma-lime-glow: rgba(231, 248, 200, 0.25);
+  --tma-white-muted: rgba(255, 255, 255, 0.72);
+  --tma-white-subtle: rgba(255, 255, 255, 0.45);
+  --tma-border: rgba(255, 255, 255, 0.12);
+  --tma-card: rgba(255, 255, 255, 0.03);
+  --tma-scrim: linear-gradient(
+    180deg,
+    rgba(0, 0, 0, 0.2) 0%,
+    rgba(0, 0, 0, 0.75) 55%,
+    #000000 100%
+  );
+
+  /* Type */
+  --font-display:
+    'Helvetica Now Display TMA', var(--font-syne), 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  --font-body: 'Arial Nova TMA', var(--font-inter), 'Helvetica Neue', Helvetica, Arial, sans-serif;
+
+  --text-display: clamp(2.25rem, 5vw + 1rem, 4.25rem);
+  --text-h2: clamp(1.75rem, 2.5vw + 1rem, 2.75rem);
+  --text-lead: clamp(1.05rem, 0.5vw + 1rem, 1.25rem);
+  --text-body: 1.0625rem;
+  --tracking-tight: -0.03em;
+  --tracking-display: -0.04em;
+
+  /* Space */
+  --tma-section-y: clamp(4rem, 12vw, 8rem);
+  --tma-gutter: clamp(1.25rem, 4vw, 2.5rem);
+  --tma-max: 72rem;
+
+  /* Motion */
+  --tma-ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --tma-duration: 0.65s;
+  --tma-duration-slow: 1s;
+}

@@ -1,0 +1,38 @@
+/**
+ * Licensed font slots (optional).
+ *
+ * Do NOT declare @font-face with url(/fonts/...) until the WOFF2 files exist in public/fonts/,
+ * or every page load will hit 404s for those URLs.
+ *
+ * Steps:
+ * 1. Add files per public/fonts/PLACE_LICENSED_FONTS_HERE.txt
+ * 2. Paste the @font-face block below (uncomment) or copy from this comment block.
+ *
+ * ---
+ * @font-face {
+ *   font-family: 'Helvetica Now Display TMA';
+ *   font-style: normal;
+ *   font-weight: 700;
+ *   font-display: optional;
+ *   src:
+ *     local('Helvetica Now Display Bold'),
+ *     url('/fonts/HelveticaNowDisplay-Bold.woff2') format('woff2');
+ * }
+ * @font-face {
+ *   font-family: 'Arial Nova TMA';
+ *   font-style: normal;
+ *   font-weight: 400;
+ *   font-display: optional;
+ *   src: local('Arial Nova'), url('/fonts/ArialNova-Regular.woff2') format('woff2');
+ * }
+ * @font-face {
+ *   font-family: 'Arial Nova TMA';
+ *   font-style: normal;
+ *   font-weight: 600;
+ *   font-display: optional;
+ *   src:
+ *     local('Arial Nova Semibold'),
+ *     url('/fonts/ArialNova-Semibold.woff2') format('woff2');
+ * }
+ * ---
+ */

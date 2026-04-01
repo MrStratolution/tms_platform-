@@ -1,0 +1,12 @@
+Place licensed WOFF2 files in this folder (same filenames):
+
+  HelveticaNowDisplay-Bold.woff2   → display / hero weight 700
+  ArialNova-Regular.woff2          → body text 400
+  ArialNova-Semibold.woff2         → body emphasis 600
+
+After adding files, paste the @font-face rules into src/styles/tma-licensed-fonts.css
+(see the comment template at the bottom of that file). The app imports it via tma.css.
+Without those rules, Syne / Inter are used — no 404s.
+If a file is missing, the browser uses the next font in the CSS stack (Syne / Inter).
+
+Do not commit licensed binaries to a public repo unless your license allows it.

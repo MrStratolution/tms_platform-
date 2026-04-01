@@ -1,0 +1,1 @@
+ALTER TABLE "tma_custom"."cms_page_localization" ADD COLUMN "layout_json" jsonb;

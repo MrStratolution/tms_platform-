@@ -1,0 +1,1 @@
+ALTER TABLE "tma_custom"."cms_media" ADD COLUMN "folder" text;

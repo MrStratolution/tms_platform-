@@ -1,0 +1,28 @@
+# Optional bundled Postgres for tma-platform (user tma / db tma_platform_4069).
+#
+# Profile `tma-db` is intentional: plain `docker compose up` does NOT start this service, so you
+# do not get a second Postgres next to an existing one (e.g. postgres-site on :5432).
+# Start it only when you want the bundled DB: npm run db:up
+#
+# Host port 5443 avoids clashing with another Postgres on :5432 and older TMA stacks on :5433. To use one server only, skip
+# db:up, point DATABASE_URL at that server (see README “One PostgreSQL server”), and create
+# database tma_platform_4069 + user tma there (or adjust the URL).
+name: ${COMPOSE_PROJECT_NAME:-tma-platform-4069}
+
+services:
+  postgres:
+    profiles:
+      - tma-db
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-tma}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-tma}
+      POSTGRES_DB: ${POSTGRES_DB:-tma_platform_4069}
+    ports:
+      - '5443:5432'
+    volumes:
+      - tma_pg_data:/var/lib/postgresql/data
+
+volumes:
+  tma_pg_data:

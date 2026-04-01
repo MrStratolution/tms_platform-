@@ -1,0 +1,1 @@
+ALTER TABLE "tma_custom"."cms_booking_event" ALTER COLUMN "lead_id" DROP NOT NULL;

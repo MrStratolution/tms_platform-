@@ -1,0 +1,9 @@
+/* Extra polish when html[dir="rtl"] (see `tma_lang` cookie / ?lang=) */
+
+[dir='rtl'] .block-proof__label {
+  text-align: start;
+}
+
+[dir='rtl'] .block-proof--logos-center .block-proof__label {
+  text-align: center;
+}
