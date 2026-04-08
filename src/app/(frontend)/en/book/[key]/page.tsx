@@ -4,10 +4,10 @@ type Props = { params: Promise<{ key: string }> }
 
 export async function generateMetadata({ params }: Props) {
   const { key } = await params
-  return generateLocalizedBookingMetadata(key)
+  return generateLocalizedBookingMetadata('en', key)
 }
 
 export default async function EnglishBookingPage({ params }: Props) {
   const { key } = await params
-  return renderLocalizedBooking(key)
+  return renderLocalizedBooking('en', key)
 }

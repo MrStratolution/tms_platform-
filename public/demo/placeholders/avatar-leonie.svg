@@ -1,0 +1,18 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="leonie-bg" x1="82" y1="72" x2="430" y2="454" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#10151B"/>
+      <stop offset="1" stop-color="#06090D"/>
+    </linearGradient>
+    <radialGradient id="leonie-glow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(370 150) rotate(134.676) scale(140.419)">
+      <stop stop-color="#E7F8C8" stop-opacity="0.22"/>
+      <stop offset="1" stop-color="#E7F8C8" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="512" height="512" rx="80" fill="url(#leonie-bg)"/>
+  <circle cx="370" cy="150" r="138" fill="url(#leonie-glow)"/>
+  <rect x="86" y="78" width="340" height="356" rx="44" fill="rgba(255,255,255,0.03)" stroke="rgba(255,255,255,0.08)"/>
+  <circle cx="256" cy="214" r="86" fill="#F1F4F9"/>
+  <path d="M154 416C168 334 208 296 256 296C304 296 344 334 358 416" fill="#111820"/>
+  <path d="M166 196C178 138 214 112 262 112C316 112 350 148 352 208C330 176 298 162 264 162C228 162 196 174 166 196Z" fill="#5B6571"/>
+</svg>

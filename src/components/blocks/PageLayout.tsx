@@ -1,18 +1,25 @@
+import Link from 'next/link'
 import type { SerializedEditorState } from 'lexical'
 import type { CSSProperties, ReactNode } from 'react'
 
 import { LexicalRichReadonly } from '@/components/cms/LexicalRichReadonly'
+import { MotionHeading } from '@/components/motion/MotionHeading'
+import { NoiseOverlay } from '@/components/motion/NoiseOverlay'
 import { applyRichTextShortcodes } from '@/lib/cms/richTextShortcodes'
 import {
   resolveSectionSpacingStyle,
   resolveSectionWidthClass,
+  sectionEffectsFromBlock,
   sectionChromeFromBlock,
 } from '@/lib/cms/resolveSectionPresentation'
 import { Reveal } from '@/components/motion/Reveal'
+import { SectionGlow } from '@/components/motion/SectionGlow'
 import { AnimatedStats } from '@/components/tma/AnimatedStats'
 import { CtaButton } from '@/components/tma/CtaButton'
 import { HeroBackdrop } from '@/components/tma/HeroBackdrop'
 import { absoluteMediaUrl } from '@/lib/mediaUrl'
+import { normalizeProductContentKind } from '@/lib/productFeeds'
+import { localizePublicHref, type PublicLocale } from '@/lib/publicLocale'
 import type {
   BookingProfile,
   CaseStudy,
@@ -20,6 +27,7 @@ import type {
   Industry,
   Media,
   Page,
+  Product,
   TeamMember,
   Testimonial,
 } from '@/types/cms'
@@ -28,6 +36,7 @@ import { toVideoEmbedUrl, isLikelyEmbeddableVideoUrl } from '@/lib/videoEmbed'
 
 import { BookingBlock } from './BookingBlock'
 import { FormBlock } from './FormBlock'
+import { ServicesFocusBlock } from './ServicesFocusBlock'
 import { StickyCtaBar } from './StickyCtaBar'
 
 type LayoutBlock = NonNullable<Page['layout']>[number]
@@ -52,11 +61,139 @@ function isPopulatedIndustry(i: number | Industry): i is Industry {
   return typeof i === 'object' && i != null && 'name' in i
 }
 
+function isPopulatedPage(p: number | Page): p is Page {
+  return typeof p === 'object' && p != null && 'slug' in p && 'title' in p
+}
+
+function isPopulatedProduct(p: number | Product): p is Product {
+  return typeof p === 'object' && p != null && 'slug' in p && 'name' in p
+}
+
 const CADENCE_LABEL: Record<string, string> = {
   monthly: '/mo',
   annual: '/yr',
   once: ' one-time',
   custom: '',
+}
+
+function getPrimaryHeroBlock(page: Page) {
+  if (!Array.isArray(page.layout)) return null
+  const hero = page.layout.find(
+    (block): block is Extract<NonNullable<Page['layout']>[number], { blockType: 'hero' }> =>
+      !!block && typeof block === 'object' && 'blockType' in block && block.blockType === 'hero',
+  )
+  return hero ?? null
+}
+
+function displayPageTitle(page: Page): string {
+  const hero = getPrimaryHeroBlock(page)
+  const headline = hero?.headline?.trim()
+  if (headline) return headline
+  const legacy = page.hero?.headline?.trim()
+  if (legacy) return legacy
+  return page.title.replace(/\s*[·|-]\s*The Modesty Argument\s*$/i, '').trim()
+}
+
+function pageExcerpt(page: Page): string {
+  const hero = getPrimaryHeroBlock(page)
+  const heroSubheadline = hero?.subheadline?.trim()
+  if (heroSubheadline) return heroSubheadline
+  const legacy = page.hero?.subheadline?.trim()
+  if (legacy) return legacy
+  const seoDescription = page.seo?.description?.trim()
+  if (seoDescription) return seoDescription
+  return ''
+}
+
+function pageImage(page: Page): { src: string; alt: string } | null {
+  const hero = getPrimaryHeroBlock(page)
+  const heroMediaUrl =
+    typeof hero?.backgroundMediaUrl === 'string' && hero.backgroundMediaUrl.trim()
+      ? absoluteMediaUrl(hero.backgroundMediaUrl.trim())
+      : null
+  if (heroMediaUrl) {
+    return {
+      src: heroMediaUrl,
+      alt: displayPageTitle(page),
+    }
+  }
+  if (hero?.backgroundMedia && isPopulatedMedia(hero.backgroundMedia)) {
+    const mediaUrl = typeof hero.backgroundMedia.url === 'string' ? hero.backgroundMedia.url : ''
+    if (!mediaUrl) return null
+    return {
+      src: absoluteMediaUrl(mediaUrl) ?? mediaUrl,
+      alt: hero.backgroundMedia.alt || displayPageTitle(page),
+    }
+  }
+  if (page.hero?.backgroundMedia && isPopulatedMedia(page.hero.backgroundMedia)) {
+    const mediaUrl = typeof page.hero.backgroundMedia.url === 'string' ? page.hero.backgroundMedia.url : ''
+    if (!mediaUrl) return null
+    return {
+      src: absoluteMediaUrl(mediaUrl) ?? mediaUrl,
+      alt: page.hero.backgroundMedia.alt || displayPageTitle(page),
+    }
+  }
+  return null
+}
+
+function formatPageDate(page: Page, locale: PublicLocale): string {
+  const date = page.createdAt || page.updatedAt
+  if (!date) return ''
+  try {
+    return new Intl.DateTimeFormat(locale === 'de' ? 'de-DE' : 'en-US', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+    }).format(new Date(date))
+  } catch {
+    return ''
+  }
+}
+
+function localizedProductDocument(product: Product) {
+  return product.document && typeof product.document === 'object' && !Array.isArray(product.document)
+    ? (product.document as Record<string, unknown>)
+    : {}
+}
+
+function productDisplayName(product: Product): string {
+  return product.name.trim() || product.slug
+}
+
+function productSummary(product: Product): string {
+  const doc = localizedProductDocument(product)
+  const summary = typeof doc.summary === 'string' ? doc.summary.trim() : ''
+  if (summary) return summary
+  const tagline = typeof doc.tagline === 'string' ? doc.tagline.trim() : ''
+  if (tagline) return tagline
+  const seo = doc.seo
+  if (seo && typeof seo === 'object' && !Array.isArray(seo) && typeof (seo as { description?: unknown }).description === 'string') {
+    return ((seo as { description: string }).description || '').trim()
+  }
+  return ''
+}
+
+function productTypeLabel(product: Product): string {
+  const doc = localizedProductDocument(product)
+  if (typeof doc.projectType === 'string' && doc.projectType.trim()) return doc.projectType.trim()
+  if (typeof doc.typeLabel === 'string' && doc.typeLabel.trim()) return doc.typeLabel.trim()
+  const contentKind = normalizeProductContentKind(product.contentKind)
+  if (contentKind !== 'product') {
+    return contentKind.charAt(0).toUpperCase() + contentKind.slice(1)
+  }
+  return ''
+}
+
+function productImage(product: Product): { src: string; alt: string } | null {
+  const doc = localizedProductDocument(product)
+  const raw = typeof doc.coverImageUrl === 'string' ? doc.coverImageUrl.trim() : ''
+  if (!raw) return null
+  return {
+    src: absoluteMediaUrl(raw) ?? raw,
+    alt:
+      (typeof doc.coverImageAlt === 'string' && doc.coverImageAlt.trim()) ||
+      productDisplayName(product),
+  }
 }
 
 function ResponsiveImage(props: {
@@ -165,13 +302,22 @@ function mediaHeightStyle(raw: unknown): CSSProperties {
   }
 }
 
-function SectionOuter(props: { page: Page; block: LayoutBlock; children: ReactNode }) {
+function SectionOuter(props: {
+  page: Page
+  block: LayoutBlock
+  children: ReactNode
+  selectedBlockId?: string | null
+  isBuilderPreview?: boolean
+  onSelectBlock?: (blockId: string) => void
+}) {
   const { page, block, children } = props
   const chrome = sectionChromeFromBlock(block)
   if (chrome.sectionHidden) return null
   const baseStyle = resolveSectionSpacingStyle(page, chrome)
   const widthClass = resolveSectionWidthClass(page, chrome)
-  const anchor = chrome.anchorId?.trim().replace(/^#/, '')
+  const anchor =
+    chrome.anchorId?.trim().replace(/^#/, '') ||
+    (typeof block.id === 'string' && block.id.trim() ? block.id.trim() : '')
   const extra = chrome.customClass?.trim()
   const responsiveHide = [
     chrome.hideOnDesktop ? 'tma-hide-desktop' : '',
@@ -208,13 +354,23 @@ function SectionOuter(props: { page: Page; block: LayoutBlock; children: ReactNo
   }
 
   const themeClass = raw.sectionTheme === 'light' ? 'tma-theme-light' : raw.sectionTheme === 'dark' ? 'tma-theme-dark' : ''
-  const cls = `tma-block-outer ${widthClass}${extra ? ` ${extra}` : ''}${responsiveHide ? ` ${responsiveHide}` : ''}${themeClass ? ` ${themeClass}` : ''}`.trim()
+  const isSelected =
+    typeof block.id === 'string' && props.selectedBlockId === block.id
+  const cls = `tma-block-outer${isSelected ? ' tma-block-outer--selected' : ''} ${widthClass}${extra ? ` ${extra}` : ''}${responsiveHide ? ` ${responsiveHide}` : ''}${themeClass ? ` ${themeClass}` : ''}`.trim()
   return (
     <div
       id={anchor || undefined}
       data-tma-block-id={typeof block.id === 'string' ? block.id : undefined}
+      data-tma-block-selected={isSelected ? 'true' : 'false'}
       className={cls}
       style={blockStyle}
+      onClickCapture={(event) => {
+        if (!props.isBuilderPreview) return
+        if (typeof block.id !== 'string' || !block.id.trim()) return
+        event.preventDefault()
+        event.stopPropagation()
+        props.onSelectBlock?.(block.id)
+      }}
     >
       {children}
     </div>
@@ -224,7 +380,9 @@ function SectionOuter(props: { page: Page; block: LayoutBlock; children: ReactNo
 function renderBlock(
   block: LayoutBlock,
   page: Page,
+  locale: PublicLocale,
   embedShortcodeVars?: Record<string, string>,
+  heroEffect: 'none' | 'rotating-text' | 'canvas-accent' = 'none',
 ) {
   switch (block.blockType) {
     case 'hero': {
@@ -245,6 +403,8 @@ function renderBlock(
           mediaUrl={mediaUrl}
           ctaLabel={block.ctaLabel}
           ctaHref={block.ctaHref}
+          secondaryCtaLabel={block.secondaryCtaLabel}
+          secondaryCtaHref={block.secondaryCtaHref}
           headingId={block.id ? `tma-hero-${block.id}` : 'tma-block-hero-heading'}
           tabletImageUrl={block.tabletImageUrl}
           mobileImageUrl={block.mobileImageUrl}
@@ -252,6 +412,8 @@ function renderBlock(
           mediaFit={block.mediaFit}
           mediaPositionX={block.mediaPositionX}
           mediaPositionY={block.mediaPositionY}
+          heroEffect={heroEffect}
+          locale={locale}
         />
       )
     }
@@ -262,6 +424,7 @@ function renderBlock(
             label={block.label}
             href={block.href}
             variant={block.variant ?? 'primary'}
+            locale={locale}
           />
         </p>
       )
@@ -289,15 +452,22 @@ function renderBlock(
           className={`block-promo-banner block-promo-banner--${v} block-promo-banner--align-${align}`}
           aria-labelledby={headingId}
         >
+          <SectionGlow className="block-promo-banner__glow" tone="soft" />
+          <NoiseOverlay className="block-promo-banner__noise" strength="soft" />
           <div className="block-promo-banner__inner">
             {eyebrow ? <p className="block-promo-banner__eyebrow">{eyebrow}</p> : null}
-            <h2 className="block-promo-banner__headline" id={headingId}>
-              {headline}
-            </h2>
+            <MotionHeading
+              as="h2"
+              className="block-promo-banner__headline"
+              id={headingId}
+              text={headline}
+              intervalMs={2400}
+              enabled={heroEffect === 'rotating-text'}
+            />
             {body ? <p className="block-promo-banner__body">{body}</p> : null}
             {ctaLabel && ctaHref ? (
               <p className="block-promo-banner__cta">
-                <CtaButton label={ctaLabel} href={ctaHref} variant="primary" />
+                <CtaButton label={ctaLabel} href={ctaHref} variant="primary" locale={locale} />
               </p>
             ) : null}
           </div>
@@ -355,7 +525,7 @@ function renderBlock(
           aria-labelledby={headline ? headingId : undefined}
           aria-label={headline ? undefined : imgAlt || 'Featured banner'}
         >
-          <div className="block-image-banner__media">
+          <div className="block-image-banner__media tma-media-hover">
             <ResponsiveImage
               src={src}
               alt={imgAlt}
@@ -367,16 +537,23 @@ function renderBlock(
             />
           </div>
           <div className="block-image-banner__scrim" aria-hidden="true" />
+          <SectionGlow className="block-image-banner__glow" tone="lime" />
+          <NoiseOverlay className="block-image-banner__noise" strength="soft" />
           <div className="block-image-banner__inner">
             {headline ? (
-              <h2 className="block-image-banner__headline" id={headingId}>
-                {headline}
-              </h2>
+              <MotionHeading
+                as="h2"
+                className="block-image-banner__headline"
+                id={headingId}
+                text={headline}
+                intervalMs={2500}
+                enabled={heroEffect === 'rotating-text'}
+              />
             ) : null}
             {sub ? <p className="block-image-banner__sub">{sub}</p> : null}
             {ctaLabel && ctaHref ? (
               <p className="block-image-banner__cta">
-                <CtaButton label={ctaLabel} href={ctaHref} variant="primary" />
+                <CtaButton label={ctaLabel} href={ctaHref} variant="primary" locale={locale} />
               </p>
             ) : null}
           </div>
@@ -396,7 +573,7 @@ function renderBlock(
           {block.intro?.trim() ? <p className="block-section__intro">{block.intro.trim()}</p> : null}
           <ul className="block-icon-row__grid">
             {items.map((it, i) => (
-              <li key={it.id ?? i} className="block-icon-row__card">
+              <li key={it.id ?? i} className="block-icon-row__card tma-surface-lift">
                 {it.icon?.trim() ? (
                   <span className="block-icon-row__icon" aria-hidden="true">
                     {it.icon.trim()}
@@ -468,7 +645,7 @@ function renderBlock(
       return (
         <div className="block-testimonials">
           {items.map((t) => (
-            <blockquote key={t.id} className="block-testimonials__card">
+            <blockquote key={t.id} className="block-testimonials__card tma-surface-lift">
               <p>{t.quote}</p>
               <footer>
                 — {t.author}
@@ -492,6 +669,7 @@ function renderBlock(
           formConfig={fc}
           pageSlug={page.slug}
           width={block.width ?? 'default'}
+          locale={locale}
         />
       )
     }
@@ -558,7 +736,7 @@ function renderBlock(
               const ph = m.photo && isPopulatedMedia(m.photo) ? m.photo : null
               const src = ph ? absoluteMediaUrl(ph.url) : null
               return (
-                <li key={m.id} className="block-team__card">
+                <li key={m.id} className="block-team__card tma-surface-lift">
                   {src ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
@@ -597,11 +775,14 @@ function renderBlock(
       if (studies.length === 0) {
         return <p className="tma-muted">Add case studies in the CMS.</p>
       }
+      const ctaLabel = block.ctaLabel?.trim()
+      const ctaHref = block.ctaHref?.trim()
       return (
         <div className="block-case-studies">
           {block.sectionTitle ? (
             <h2 className="block-section__title">{block.sectionTitle}</h2>
           ) : null}
+          {block.intro ? <p className="block-section__intro">{block.intro}</p> : null}
           <ul className="block-case-studies__grid">
             {studies.map((cs) => {
               const img =
@@ -610,29 +791,245 @@ function renderBlock(
                   : null
               const src = img ? absoluteMediaUrl(img.url) : null
               const ind = cs.industry && isPopulatedIndustry(cs.industry) ? cs.industry : null
+              const detailHref = localizePublicHref(`/work/${cs.slug}`, locale)
               return (
-                <li key={cs.id} className="block-case-studies__card">
-                  {src ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      className="block-case-studies__thumb"
-                      src={src}
-                      alt={img?.alt || ''}
-                      width={640}
-                      height={360}
-                      loading="lazy"
-                    />
-                  ) : null}
-                  {ind ? <p className="block-case-studies__meta">{ind.name}</p> : null}
-                  <h3 className="block-case-studies__title">{cs.title}</h3>
-                  {cs.summary ? <p className="block-case-studies__summary">{cs.summary}</p> : null}
+                <li key={cs.id} className="block-case-studies__card tma-surface-lift">
+                  <Link href={detailHref} className="block-case-studies__link">
+                    {src ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        className="block-case-studies__thumb"
+                        src={src}
+                        alt={img?.alt || ''}
+                        width={640}
+                        height={360}
+                        loading="lazy"
+                      />
+                    ) : null}
+                    {ind ? <p className="block-case-studies__meta">{ind.name}</p> : null}
+                    <h3 className="block-case-studies__title">{cs.title}</h3>
+                    {cs.summary ? <p className="block-case-studies__summary">{cs.summary}</p> : null}
+                  </Link>
                 </li>
               )
             })}
           </ul>
+          {ctaLabel && ctaHref ? (
+            <p className="block-case-studies__cta">
+              <CtaButton label={ctaLabel} href={ctaHref} variant="ghost" locale={locale} />
+            </p>
+          ) : null}
         </div>
       )
     }
+    case 'resourceFeed': {
+      const populatedPages = (block.pages?.filter(isPopulatedPage) ?? [])
+        .filter((page, index, arr) => arr.findIndex((item) => item.id === page.id) === index)
+      const featuredCandidate =
+        block.featuredPage && isPopulatedPage(block.featuredPage) ? block.featuredPage : null
+      const featured = featuredCandidate ?? populatedPages[0] ?? null
+      const resourcePages = populatedPages.filter((page) => (featured ? page.id !== featured.id : true))
+      const limit =
+        typeof block.limit === 'number' && Number.isFinite(block.limit) && block.limit > 0
+          ? Math.max(1, Math.floor(block.limit))
+          : resourcePages.length
+      const cards = resourcePages.slice(0, limit)
+      const ctaLabel = block.ctaLabel?.trim()
+      const ctaHref = block.ctaHref?.trim()
+
+      if (!featured && cards.length === 0) {
+        return <p className="tma-muted">Add published resource pages to populate this news feed.</p>
+      }
+
+      return (
+        <div className="block-resource-feed">
+          {block.sectionTitle ? (
+            <h2 className="block-section__title">{block.sectionTitle}</h2>
+          ) : null}
+          {block.intro ? <p className="block-section__intro">{block.intro}</p> : null}
+
+          {featured ? (
+            <article className="block-resource-feed__featured tma-surface-lift">
+              <Link
+                href={localizePublicHref(`/${featured.slug}`, locale)}
+                className="block-resource-feed__featured-link"
+              >
+                {pageImage(featured) ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    className="block-resource-feed__featured-image"
+                    src={pageImage(featured)!.src}
+                    alt={pageImage(featured)!.alt}
+                    width={1200}
+                    height={720}
+                    loading="lazy"
+                  />
+                ) : null}
+                <div className="block-resource-feed__featured-copy">
+                  <p className="block-resource-feed__meta">
+                    Featured article
+                    {formatPageDate(featured, locale) ? ` · ${formatPageDate(featured, locale)}` : ''}
+                  </p>
+                  <h3 className="block-resource-feed__featured-title">{displayPageTitle(featured)}</h3>
+                  {pageExcerpt(featured) ? (
+                    <p className="block-resource-feed__featured-excerpt">{pageExcerpt(featured)}</p>
+                  ) : null}
+                </div>
+              </Link>
+            </article>
+          ) : null}
+
+          {cards.length > 0 ? (
+            <ul className="block-resource-feed__grid">
+              {cards.map((entry) => {
+                const image = pageImage(entry)
+                const href = localizePublicHref(`/${entry.slug}`, locale)
+                return (
+                  <li key={entry.id} className="block-resource-feed__card tma-surface-lift">
+                    <Link href={href} className="block-resource-feed__card-link">
+                      {image ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          className="block-resource-feed__card-image"
+                          src={image.src}
+                          alt={image.alt}
+                          width={800}
+                          height={480}
+                          loading="lazy"
+                        />
+                      ) : null}
+                      {formatPageDate(entry, locale) ? (
+                        <p className="block-resource-feed__meta">{formatPageDate(entry, locale)}</p>
+                      ) : null}
+                      <h3 className="block-resource-feed__card-title">{displayPageTitle(entry)}</h3>
+                      {pageExcerpt(entry) ? (
+                        <p className="block-resource-feed__card-excerpt">{pageExcerpt(entry)}</p>
+                      ) : null}
+                    </Link>
+                  </li>
+                )
+              })}
+            </ul>
+          ) : null}
+
+          {ctaLabel && ctaHref ? (
+            <p className="block-resource-feed__cta">
+              <CtaButton label={ctaLabel} href={ctaHref} variant="ghost" locale={locale} />
+            </p>
+          ) : null}
+        </div>
+      )
+    }
+    case 'productFeed': {
+      const populatedProducts = (block.products?.filter(isPopulatedProduct) ?? [])
+        .filter((product, index, arr) => arr.findIndex((item) => item.id === product.id) === index)
+      const featuredCandidate =
+        block.featuredProduct && isPopulatedProduct(block.featuredProduct)
+          ? block.featuredProduct
+          : null
+      const featured = featuredCandidate ?? populatedProducts[0] ?? null
+      const products = populatedProducts.filter((product) => (featured ? product.id !== featured.id : true))
+      const limit =
+        typeof block.limit === 'number' && Number.isFinite(block.limit) && block.limit > 0
+          ? Math.max(1, Math.floor(block.limit))
+          : products.length
+      const cards = products.slice(0, limit)
+      const ctaLabel = block.ctaLabel?.trim()
+      const ctaHref = block.ctaHref?.trim()
+
+      if (!featured && cards.length === 0) {
+        return <p className="tma-muted">Add published products to populate this projects grid.</p>
+      }
+
+      return (
+        <div className="block-product-feed">
+          {block.sectionTitle ? (
+            <h2 className="block-section__title">{block.sectionTitle}</h2>
+          ) : null}
+          {block.intro ? <p className="block-section__intro">{block.intro}</p> : null}
+
+          {featured ? (
+            <article className="block-product-feed__featured tma-surface-lift">
+              <Link
+                href={localizePublicHref(`/products/${featured.slug}`, locale)}
+                className="block-product-feed__featured-link"
+              >
+                {productImage(featured) ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    className="block-product-feed__featured-image"
+                    src={productImage(featured)!.src}
+                    alt={productImage(featured)!.alt}
+                    width={1200}
+                    height={720}
+                    loading="lazy"
+                  />
+                ) : null}
+                <div className="block-product-feed__featured-copy">
+                  {productTypeLabel(featured) ? (
+                    <p className="block-product-feed__meta">{productTypeLabel(featured)}</p>
+                  ) : null}
+                  <h3 className="block-product-feed__featured-title">{productDisplayName(featured)}</h3>
+                  {productSummary(featured) ? (
+                    <p className="block-product-feed__featured-excerpt">{productSummary(featured)}</p>
+                  ) : null}
+                </div>
+              </Link>
+            </article>
+          ) : null}
+
+          {cards.length > 0 ? (
+            <ul className="block-product-feed__grid">
+              {cards.map((product) => {
+                const image = productImage(product)
+                return (
+                  <li key={product.id} className="block-product-feed__card tma-surface-lift">
+                    <Link
+                      href={localizePublicHref(`/products/${product.slug}`, locale)}
+                      className="block-product-feed__card-link"
+                    >
+                      {image ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          className="block-product-feed__card-image"
+                          src={image.src}
+                          alt={image.alt}
+                          width={800}
+                          height={480}
+                          loading="lazy"
+                        />
+                      ) : null}
+                      {productTypeLabel(product) ? (
+                        <p className="block-product-feed__meta">{productTypeLabel(product)}</p>
+                      ) : null}
+                      <h3 className="block-product-feed__card-title">{productDisplayName(product)}</h3>
+                      {productSummary(product) ? (
+                        <p className="block-product-feed__card-excerpt">{productSummary(product)}</p>
+                      ) : null}
+                    </Link>
+                  </li>
+                )
+              })}
+            </ul>
+          ) : null}
+
+          {ctaLabel && ctaHref ? (
+            <p className="block-product-feed__cta">
+              <CtaButton label={ctaLabel} href={ctaHref} variant="ghost" locale={locale} />
+            </p>
+          ) : null}
+        </div>
+      )
+    }
+    case 'servicesFocus':
+      return (
+        <ServicesFocusBlock
+          sectionTitle={block.sectionTitle}
+          intro={block.intro}
+          items={block.items ?? []}
+          locale={locale}
+        />
+      )
     case 'pricing': {
       const plans = block.plans ?? []
       if (plans.length === 0) {
@@ -650,8 +1047,8 @@ function renderBlock(
                 key={plan.id ?? idx}
                 className={
                   plan.highlighted
-                    ? 'block-pricing__plan block-pricing__plan--highlight'
-                    : 'block-pricing__plan'
+                    ? 'block-pricing__plan block-pricing__plan--highlight tma-surface-lift'
+                    : 'block-pricing__plan tma-surface-lift'
                 }
               >
                 <h3 className="block-pricing__name">{plan.name}</h3>
@@ -671,7 +1068,7 @@ function renderBlock(
                 ) : null}
                 {plan.ctaLabel && plan.ctaHref ? (
                   <p className="block-pricing__cta">
-                    <CtaButton label={plan.ctaLabel} href={plan.ctaHref} variant="secondary" />
+                    <CtaButton label={plan.ctaLabel} href={plan.ctaHref} variant="secondary" locale={locale} />
                   </p>
                 ) : null}
               </article>
@@ -794,7 +1191,7 @@ function renderBlock(
             {block.body ? <p className="block-text-media__body">{block.body}</p> : null}
           </div>
           {src ? (
-            <div className="block-text-media__figure" style={figureStyle}>
+            <div className="block-text-media__figure tma-media-hover" style={figureStyle}>
               <ResponsiveImage
                 src={src}
                 alt={block.imageAlt || ''}
@@ -873,7 +1270,7 @@ function renderBlock(
         return <p className="tma-muted">Add a file URL for this download in the CMS.</p>
       }
       return (
-        <div className="block-download">
+        <div className="block-download tma-glass-card tma-surface-lift">
           <h3 className="block-download__title">{block.title}</h3>
           {block.description ? <p className="block-download__desc">{block.description}</p> : null}
           <p className="block-download__action">
@@ -881,6 +1278,7 @@ function renderBlock(
               label={block.fileLabel?.trim() || 'Download'}
               href={block.fileUrl}
               variant="secondary"
+              locale={locale}
             />
           </p>
         </div>
@@ -918,9 +1316,21 @@ type PageLayoutProps = {
   blocks?: NonNullable<Page['layout']>
   /** Allowlisted `{{site_name}}` etc. in rich text blocks. */
   embedShortcodeVars?: Record<string, string>
+  locale?: PublicLocale
+  selectedBlockId?: string | null
+  isBuilderPreview?: boolean
+  onSelectBlock?: (blockId: string) => void
 }
 
-export function PageLayout({ page, blocks: blockSlice, embedShortcodeVars }: PageLayoutProps) {
+export function PageLayout({
+  page,
+  blocks: blockSlice,
+  embedShortcodeVars,
+  locale = 'de',
+  selectedBlockId = null,
+  isBuilderPreview = false,
+  onSelectBlock,
+}: PageLayoutProps) {
   const fullLayout = page.layout
   const layout = blockSlice ?? fullLayout
   if (!layout?.length) return null
@@ -941,19 +1351,50 @@ export function PageLayout({ page, blocks: blockSlice, embedShortcodeVars }: Pag
       <section className="blocks" aria-label="Page sections">
         {mainBlocks.map((block, i) => {
           const key = block.id ?? `b-${i}`
-          if (block.blockType === 'hero') {
-            return (
-              <SectionOuter key={key} page={page} block={block}>
-                {renderBlock(block, page, embedShortcodeVars)}
-              </SectionOuter>
-            )
-          }
-          const blur =
-            block.blockType === 'testimonialSlider' || block.blockType === 'imageBanner'
+          const effects = sectionEffectsFromBlock(block)
+          const shellClass = [
+            'block-shell',
+            'tma-block-shell',
+            effects.hoverPreset !== 'none'
+              ? `tma-block-shell--hover-${effects.hoverPreset}`
+              : '',
+            effects.backgroundEffect !== 'none'
+              ? `tma-block-shell--fx-${effects.backgroundEffect}`
+              : '',
+          ]
+            .filter(Boolean)
+            .join(' ')
+
           return (
-            <SectionOuter key={key} page={page} block={block}>
-              <Reveal className="block-shell" variant={blur ? 'blur' : 'fade'}>
-                {renderBlock(block, page, embedShortcodeVars)}
+            <SectionOuter
+              key={key}
+              page={page}
+              block={block}
+              selectedBlockId={selectedBlockId}
+              isBuilderPreview={isBuilderPreview}
+              onSelectBlock={onSelectBlock}
+            >
+              <Reveal
+                className={shellClass}
+                variant={effects.revealVariant}
+                delay={effects.animationPreset === 'none' ? undefined : effects.revealDelay}
+              >
+                {effects.backgroundEffect === 'glow' ? (
+                  <SectionGlow className="tma-block-shell__glow" tone="lime" />
+                ) : null}
+                {effects.backgroundEffect === 'noise' ? (
+                  <NoiseOverlay className="tma-block-shell__noise" strength="soft" />
+                ) : null}
+                {effects.backgroundEffect === 'orb' ? (
+                  <div className="tma-block-shell__orb" aria-hidden="true" />
+                ) : null}
+                {renderBlock(
+                  block,
+                  page,
+                  locale,
+                  embedShortcodeVars,
+                  effects.heroEffect,
+                )}
               </Reveal>
             </SectionOuter>
           )
@@ -964,6 +1405,7 @@ export function PageLayout({ page, blocks: blockSlice, embedShortcodeVars }: Pag
           label={lastSticky.label}
           href={lastSticky.href}
           variant={lastSticky.variant ?? 'primary'}
+          locale={locale}
         />
       ) : null}
     </>

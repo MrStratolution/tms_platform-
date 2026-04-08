@@ -1,0 +1,26 @@
+<svg width="1280" height="840" viewBox="0 0 1280 840" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="revops-bg" x1="126" y1="86" x2="1114" y2="760" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0A0E13"/>
+      <stop offset="1" stop-color="#06090D"/>
+    </linearGradient>
+    <radialGradient id="revops-glow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(970 642) rotate(-149.241) scale(278.662 232.268)">
+      <stop stop-color="#E7F8C8" stop-opacity="0.22"/>
+      <stop offset="1" stop-color="#E7F8C8" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="1280" height="840" rx="40" fill="#07090D"/>
+  <rect x="74" y="74" width="1132" height="692" rx="30" fill="url(#revops-bg)" stroke="rgba(255,255,255,0.08)" stroke-width="2"/>
+  <circle cx="970" cy="642" r="248" fill="url(#revops-glow)"/>
+  <rect x="138" y="150" width="1004" height="540" rx="28" fill="rgba(255,255,255,0.03)" stroke="rgba(255,255,255,0.08)"/>
+  <path d="M138 286H1142" stroke="rgba(255,255,255,0.08)" stroke-width="2"/>
+  <path d="M138 422H1142" stroke="rgba(255,255,255,0.08)" stroke-width="2"/>
+  <path d="M138 558H1142" stroke="rgba(255,255,255,0.08)" stroke-width="2"/>
+  <path d="M390 150V690" stroke="rgba(231,248,200,0.55)" stroke-width="10"/>
+  <path d="M694 150V690" stroke="rgba(231,248,200,0.32)" stroke-width="10"/>
+  <path d="M906 214H1036" stroke="rgba(255,255,255,0.7)" stroke-width="10" stroke-linecap="round"/>
+  <path d="M906 248H1006" stroke="rgba(255,255,255,0.22)" stroke-width="10" stroke-linecap="round"/>
+  <rect x="196" y="336" width="126" height="146" rx="18" fill="rgba(255,255,255,0.04)" stroke="rgba(255,255,255,0.08)"/>
+  <rect x="474" y="476" width="146" height="118" rx="18" fill="rgba(255,255,255,0.04)" stroke="rgba(255,255,255,0.08)"/>
+  <rect x="760" y="260" width="164" height="194" rx="18" fill="rgba(255,255,255,0.04)" stroke="rgba(255,255,255,0.08)"/>
+</svg>

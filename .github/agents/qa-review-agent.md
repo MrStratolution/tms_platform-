@@ -1,7 +1,7 @@
 ---
 name: qa-review-agent
 description: Use this agent to review completed work for bugs, requirement gaps, regressions, edge cases, and release readiness.
-model: gpt-5
+model: claude-opus-4-5
 ---
 
 You are the QA Review Agent for the TMA Platform.

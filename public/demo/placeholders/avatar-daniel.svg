@@ -1,0 +1,18 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="daniel-bg" x1="72" y1="62" x2="444" y2="452" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0E1318"/>
+      <stop offset="1" stop-color="#080B10"/>
+    </linearGradient>
+    <radialGradient id="daniel-glow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(166 122) rotate(48.5763) scale(152.382)">
+      <stop stop-color="#9AB27A" stop-opacity="0.24"/>
+      <stop offset="1" stop-color="#9AB27A" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="512" height="512" rx="80" fill="url(#daniel-bg)"/>
+  <circle cx="166" cy="122" r="144" fill="url(#daniel-glow)"/>
+  <rect x="86" y="78" width="340" height="356" rx="44" fill="rgba(255,255,255,0.03)" stroke="rgba(255,255,255,0.08)"/>
+  <circle cx="256" cy="214" r="86" fill="#EEF3F9"/>
+  <path d="M154 416C168 334 208 296 256 296C304 296 344 334 358 416" fill="#5F6C79"/>
+  <path d="M174 194C188 148 222 120 264 120C310 120 340 152 346 198C330 184 304 174 274 174C238 174 204 182 174 194Z" fill="#10161D"/>
+</svg>

@@ -3,8 +3,6 @@ import { z } from 'zod'
 import { normalizeNavHref } from '@/lib/cms/navHref'
 
 export type PageSurfaceFields = {
-  heroHeadline: string
-  heroSubheadline: string
   seoTitle: string
   seoDescription: string
   seoCanonicalUrl: string
@@ -12,10 +10,6 @@ export type PageSurfaceFields = {
   navigationLabel: string
   navigationHref: string
   navOrder: string
-  /** Main layout blocks to show before the page hero; empty or "0" = hero first. */
-  heroInsertIndex: string
-  primaryCtaLabel: string
-  primaryCtaHref: string
   pageTheme: string
   maxWidthMode: string
   sectionSpacingPreset: string
@@ -36,12 +30,8 @@ function asRecord(v: unknown): Record<string, unknown> {
 
 /** Pull common fields from a page `document` for the structured form. */
 export function extractPageSurfaceFromDocument(doc: Record<string, unknown>): PageSurfaceFields {
-  const hero = asRecord(doc.hero)
   const seo = asRecord(doc.seo)
-  const cta = asRecord(doc.primaryCta)
   return {
-    heroHeadline: typeof hero.headline === 'string' ? hero.headline : '',
-    heroSubheadline: typeof hero.subheadline === 'string' ? hero.subheadline : '',
     seoTitle: typeof seo.title === 'string' ? seo.title : '',
     seoDescription: typeof seo.description === 'string' ? seo.description : '',
     seoCanonicalUrl: typeof seo.canonicalUrl === 'string' ? seo.canonicalUrl : '',
@@ -53,12 +43,6 @@ export function extractPageSurfaceFromDocument(doc: Record<string, unknown>): Pa
       typeof doc.navOrder === 'number' && Number.isFinite(doc.navOrder)
         ? String(doc.navOrder)
         : '',
-    heroInsertIndex:
-      typeof doc.heroInsertIndex === 'number' && Number.isFinite(doc.heroInsertIndex)
-        ? String(Math.max(0, Math.floor(doc.heroInsertIndex)))
-        : '',
-    primaryCtaLabel: typeof cta.label === 'string' ? cta.label : '',
-    primaryCtaHref: typeof cta.href === 'string' ? cta.href : '',
     pageTheme:
       doc.pageTheme === 'light' || doc.pageTheme === 'dark' || doc.pageTheme === 'default'
         ? String(doc.pageTheme)
@@ -98,17 +82,15 @@ export function extractPageSurfaceFromDocument(doc: Record<string, unknown>): Pa
 }
 
 /**
- * Merge structured hero / SEO / primary CTA into a page document (keeps layout and other keys).
- * Empty strings remove that key inside the nested object when appropriate.
+ * Merge structured page-level settings into a page document while preserving layout blocks.
+ * Legacy page-level hero fields are stripped so hero stays canonical in `layout`.
  */
 export function mergePageSurfaceIntoDocument(
   base: Record<string, unknown>,
   surface: PageSurfaceFields,
 ): Record<string, unknown> {
   const out: Record<string, unknown> = { ...base }
-  const hero = asRecord(out.hero)
   const seo = asRecord(out.seo)
-  const cta = asRecord(out.primaryCta)
 
   const setOrDelete = (
     obj: Record<string, unknown>,
@@ -120,8 +102,6 @@ export function mergePageSurfaceIntoDocument(
     else delete obj[key]
   }
 
-  setOrDelete(hero, 'headline', surface.heroHeadline)
-  setOrDelete(hero, 'subheadline', surface.heroSubheadline)
   setOrDelete(seo, 'title', surface.seoTitle)
   setOrDelete(seo, 'description', surface.seoDescription)
   setOrDelete(seo, 'canonicalUrl', surface.seoCanonicalUrl)
@@ -137,21 +117,6 @@ export function mergePageSurfaceIntoDocument(
   } else {
     ;(out as Record<string, unknown>).navOrder = Number.parseInt(navOrd, 10)
   }
-
-  const heroIns = surface.heroInsertIndex.trim()
-  if (heroIns === '' || !/^\d+$/.test(heroIns)) {
-    delete (out as Record<string, unknown>).heroInsertIndex
-  } else {
-    const n = Number.parseInt(heroIns, 10)
-    if (n <= 0) {
-      delete (out as Record<string, unknown>).heroInsertIndex
-    } else {
-      ;(out as Record<string, unknown>).heroInsertIndex = n
-    }
-  }
-
-  setOrDelete(cta, 'label', surface.primaryCtaLabel)
-  setOrDelete(cta, 'href', surface.primaryCtaHref)
 
   const setEnum = (key: string, val: string, allowed: string[]) => {
     const t = val.trim()
@@ -189,12 +154,11 @@ export function mergePageSurfaceIntoDocument(
     delete out.trackingOverrides
   }
 
-  if (Object.keys(hero).length) out.hero = hero
-  else delete out.hero
   if (Object.keys(seo).length) out.seo = seo
   else delete out.seo
-  if (Object.keys(cta).length) out.primaryCta = cta
-  else delete out.primaryCta
+  delete out.hero
+  delete out.primaryCta
+  delete out.heroInsertIndex
 
   return out
 }

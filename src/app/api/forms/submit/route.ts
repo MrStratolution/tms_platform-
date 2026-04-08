@@ -8,6 +8,7 @@ import { cmsLeads, cmsPages } from '@/db/schema'
 import { captchaRequiredFromEnv, verifyCaptchaIfConfigured } from '@/lib/captcha'
 import {
   findLeadByIdempotencyKey,
+  findRecentDuplicateLead,
   getActiveFormConfigByType,
   getEmailTemplateById,
   getIndustryIdBySlug,
@@ -16,7 +17,8 @@ import {
   type CmsDb,
 } from '@/lib/cmsData'
 import { fetchLeadById } from '@/lib/cmsLeadMap'
-import { notifyInternalNewLead, sendTemplatedToLead } from '@/lib/emailSend'
+import { notifyInternalNewLead, sendTemplatedToLead, leadToTemplateVars } from '@/lib/emailSend'
+import { sendEmail } from '@/lib/email/service'
 import {
   parseFormFieldDefinitions,
   partitionLeadFields,
@@ -24,11 +26,15 @@ import {
 } from '@/lib/formFields'
 import { logEvent } from '@/lib/logger'
 import { checkRateLimit, clientIpFromRequest } from '@/lib/rateLimit'
+import { getPublicSiteSettingsDocument } from '@/lib/siteSettings'
 import { triggerZohoAutoSync } from '@/lib/zohoSyncJob'
 import type { EmailTemplate, FormConfig } from '@/types/cms'
 
+const DEFAULT_FORM_DEDUPE_WINDOW_MINUTES = 60
+
 const bodySchema = z.object({
   formType: z.string().min(1),
+  language: z.string().optional(),
   sourcePageSlug: z.string().optional(),
   lead: z.object({
     firstName: z.string().optional(),
@@ -51,13 +57,27 @@ const bodySchema = z.object({
   extras: z.record(z.string()).optional(),
 })
 
+function dedupeWindowMinutes(): number {
+  const configured = Number(process.env.FORM_DEDUPE_WINDOW_MINUTES)
+  return Number.isFinite(configured) && configured > 0
+    ? configured
+    : DEFAULT_FORM_DEDUPE_WINDOW_MINUTES
+}
+
 function buildIdempotencyKey(
   email: string,
   formType: string,
   pageSlug?: string,
 ): string {
-  const raw = `${email.toLowerCase()}|${formType}|${pageSlug ?? ''}`
+  const windowMs = dedupeWindowMinutes() * 60 * 1000
+  const bucket = Math.floor(Date.now() / windowMs)
+  const raw = `${email.trim().toLowerCase()}|${formType.trim()}|${pageSlug?.trim() ?? ''}|${bucket}`
   return createHash('sha256').update(raw).digest('hex')
+}
+
+function duplicateWindowStart(): Date {
+  const minutes = dedupeWindowMinutes()
+  return new Date(Date.now() - minutes * 60 * 1000)
 }
 
 function readNotifyEmails(dest: unknown): string[] {
@@ -78,8 +98,13 @@ async function resolveAutoresponderTemplate(
 ): Promise<EmailTemplate | null> {
   const tpl = formConfig.autoresponderTemplate
   if (tpl == null) return null
-  if (typeof tpl === 'object' && 'subject' in tpl && 'body' in tpl) {
-    return tpl as EmailTemplate
+  if (typeof tpl === 'object' && tpl !== null) {
+    if ('subject' in tpl && 'body' in tpl) {
+      return tpl as EmailTemplate
+    }
+    if ('key' in tpl || 'slug' in tpl) {
+      return tpl as EmailTemplate
+    }
   }
   if (typeof tpl === 'number') {
     return getEmailTemplateById(db, tpl)
@@ -199,7 +224,12 @@ export async function POST(request: Request) {
     body.sourcePageSlug,
   )
 
-  const existing = await findLeadByIdempotencyKey(db, idempotencyKey)
+  const existing = await findRecentDuplicateLead(db, {
+    email: body.lead.email,
+    formType: body.formType,
+    sourcePageSlug: body.sourcePageSlug,
+    since: duplicateWindowStart(),
+  })
   if (existing) {
     const correlationId = randomUUID()
     logEvent({
@@ -222,26 +252,43 @@ export async function POST(request: Request) {
   const correlationId = randomUUID()
   const { lead: partLead, extras } = partitionLeadFields(flat)
 
-  const [created] = await db
-    .insert(cmsLeads)
-    .values({
-      firstName: partLead.firstName || body.lead.firstName,
-      lastName: partLead.lastName || body.lead.lastName,
-      email: partLead.email || body.lead.email,
-      phone: partLead.phone || body.lead.phone,
-      company: partLead.company || body.lead.company,
-      website: partLead.website || body.lead.website || undefined,
-      sourcePageId: sourcePageId ?? null,
-      sourcePageSlug: body.sourcePageSlug,
-      utm: body.context?.utm,
-      formType: body.formType,
-      serviceInterestId: serviceInterestId ?? null,
-      industryId: industryId ?? null,
-      consentMarketing: body.consentMarketing ?? false,
-      idempotencyKey,
-      submissionExtras: Object.keys(extras).length ? extras : undefined,
-    })
-    .returning({ id: cmsLeads.id })
+  let created: { id: number } | undefined
+  try {
+    ;[created] = await db
+      .insert(cmsLeads)
+      .values({
+        firstName: partLead.firstName || body.lead.firstName,
+        lastName: partLead.lastName || body.lead.lastName,
+        email: partLead.email || body.lead.email,
+        phone: partLead.phone || body.lead.phone,
+        company: partLead.company || body.lead.company,
+        website: partLead.website || body.lead.website || undefined,
+        sourcePageId: sourcePageId ?? null,
+        sourcePageSlug: body.sourcePageSlug,
+        utm: body.context?.utm,
+        formType: body.formType,
+        serviceInterestId: serviceInterestId ?? null,
+        industryId: industryId ?? null,
+        consentMarketing: body.consentMarketing ?? false,
+        idempotencyKey,
+        submissionExtras: Object.keys(extras).length ? extras : undefined,
+      })
+      .returning({ id: cmsLeads.id })
+  } catch (error) {
+    const existingByKey = await findLeadByIdempotencyKey(db, idempotencyKey)
+    if (existingByKey) {
+      return NextResponse.json(
+        {
+          ok: true,
+          duplicate: true,
+          leadId: existingByKey.id,
+          correlationId,
+        },
+        { status: 200 },
+      )
+    }
+    throw error
+  }
 
   const leadId = created!.id
   const lead = await fetchLeadById(db, leadId)
@@ -258,12 +305,41 @@ export async function POST(request: Request) {
   })
 
   const notifyList = readNotifyEmails(formConfig.destination)
-  await notifyInternalNewLead(db, lead, notifyList, correlationId)
+  void (async () => {
+    const site = await getPublicSiteSettingsDocument(db)
+    const siteEmail = site?.contactInfo?.email?.trim()
 
-  const tpl = await resolveAutoresponderTemplate(db, formConfig)
-  if (tpl) {
-    await sendTemplatedToLead(db, lead, tpl, extras)
-  }
+    await notifyInternalNewLead(
+      db,
+      lead,
+      siteEmail ? [...notifyList, siteEmail] : notifyList,
+      correlationId,
+      body.language,
+      extras,
+    )
+
+    const tpl = await resolveAutoresponderTemplate(db, formConfig)
+    if (tpl) {
+      await sendTemplatedToLead(db, lead, tpl, extras, body.language)
+      return
+    }
+
+    await sendEmail({
+      db,
+      templateKey: 'lead_user_confirmation',
+      to: lead.email,
+      language: body.language,
+      variables: leadToTemplateVars(lead, extras),
+      leadId: lead.id,
+    })
+  })().catch((error) => {
+    logEvent({
+      event: 'lead_email_dispatch_failed',
+      leadId: lead.id,
+      correlationId,
+      error: error instanceof Error ? error.message : 'Unknown email dispatch failure',
+    })
+  })
 
   triggerZohoAutoSync(lead.id, correlationId)
 

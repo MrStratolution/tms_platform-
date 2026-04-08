@@ -14,10 +14,12 @@ import {
   consoleUserCanWriteContent,
 } from '@/lib/console/rbac'
 import { requireConsoleSession } from '@/lib/console/requireConsoleSession'
-import { getPublicSiteOrigin } from '@/lib/publicSiteUrl'
 import { DEFAULT_PUBLIC_LOCALE } from '@/lib/publicLocale'
 
-type Props = { params: Promise<{ id: string }> }
+type Props = {
+  params: Promise<{ id: string }>
+  searchParams?: Promise<{ locale?: string | string[] }>
+}
 
 export async function generateMetadata(props: Props): Promise<Metadata> {
   const { id } = await props.params
@@ -28,6 +30,10 @@ export default async function ConsolePageEditPage(props: Props) {
   const session = await requireConsoleSession()
   const id = Number.parseInt((await props.params).id, 10)
   if (!Number.isFinite(id) || id < 1) notFound()
+  const sp = props.searchParams ? await props.searchParams : undefined
+  const rawLocale = sp?.locale
+  const editingLocale =
+    typeof rawLocale === 'string' && rawLocale.toLowerCase() === 'en' ? 'en' : 'de'
 
   const db = getCustomDb()
   if (!db) {
@@ -63,11 +69,12 @@ export default async function ConsolePageEditPage(props: Props) {
   const canDelete = consoleUserCanAdminTeam(session.role)
 
   const previewSecret = process.env.INTERNAL_PREVIEW_SECRET?.trim()
+  const previewLocale = editingLocale === 'en' ? 'en' : DEFAULT_PUBLIC_LOCALE
   const visualPreviewUrl =
     previewSecret && page.slug
-      ? `${getPublicSiteOrigin()}/${DEFAULT_PUBLIC_LOCALE}/preview/${encodeURIComponent(page.slug)}?secret=${encodeURIComponent(previewSecret)}`
+      ? `/${previewLocale}/preview/${encodeURIComponent(page.slug)}?secret=${encodeURIComponent(previewSecret)}`
       : null
-  const publicPath = page.slug === 'home' ? `/${DEFAULT_PUBLIC_LOCALE}` : `/${DEFAULT_PUBLIC_LOCALE}/${page.slug}`
+  const publicPath = page.slug === 'home' ? `/${previewLocale}` : `/${previewLocale}/${page.slug}`
 
   return (
     <main className="tma-console-main wide tma-console-page-edit">
@@ -75,6 +82,20 @@ export default async function ConsolePageEditPage(props: Props) {
         <Link href="/console/pages">← All pages</Link>
       </p>
       <h1 className="tma-console-page-title">Edit page</h1>
+      <div className="tma-console-status-filters" style={{ marginBottom: '0.75rem' }}>
+        <Link
+          href={`/console/pages/${page.id}?locale=de`}
+          className={`tma-console-status-pill${editingLocale === 'de' ? ' tma-console-status-pill--active' : ''}`}
+        >
+          German base
+        </Link>
+        <Link
+          href={`/console/pages/${page.id}?locale=en`}
+          className={`tma-console-status-pill${editingLocale === 'en' ? ' tma-console-status-pill--active' : ''}`}
+        >
+          English overlay
+        </Link>
+      </div>
       <ConsolePageToolbar
         pageId={page.id}
         slug={page.slug}
@@ -93,6 +114,7 @@ export default async function ConsolePageEditPage(props: Props) {
         initialPageType={page.pageType}
         initialStatus={statusNorm}
         initialDocument={doc}
+        editingLocale={editingLocale}
         canEdit={canEdit}
         canPublishLive={canPublishLive}
         canEditCustomCss={canEditCustomCss}

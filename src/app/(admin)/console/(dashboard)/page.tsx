@@ -206,8 +206,8 @@ export default async function ConsoleHomePage() {
           <div className="tma-cms-card" style={{ pointerEvents: 'none', opacity: 0.65 }}>
             <h3 className="tma-cms-card-title">Leads</h3>
             <p className="tma-cms-card-desc">
-              Your role does not include lead access. Ask an admin to assign <code>editor</code> or{' '}
-              <code>ops</code> if you need the pipeline.
+              Your role does not include lead access. Ask an admin to assign <code>ops</code> if you
+              need pipeline and PII access.
             </p>
           </div>
         )}

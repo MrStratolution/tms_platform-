@@ -3,15 +3,17 @@
 import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useState } from 'react'
 
+import { localizePublicHref, type PublicLocale } from '@/lib/publicLocale'
 import { readResponseJson } from '@/lib/safeJson'
 
 type Props = {
   profileKey: string
   profileName: string
   thankYouPageSlug?: string | null
+  locale?: PublicLocale
 }
 
-export function InternalBookFlow({ profileKey, profileName, thankYouPageSlug }: Props) {
+export function InternalBookFlow({ profileKey, profileName, thankYouPageSlug, locale = 'de' }: Props) {
   const router = useRouter()
   const [slots, setSlots] = useState<string[]>([])
   const [selectedDay, setSelectedDay] = useState<string | null>(null)
@@ -25,6 +27,48 @@ export function InternalBookFlow({ profileKey, profileName, thankYouPageSlug }: 
   const [phone, setPhone] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
+  const copy =
+    locale === 'en'
+      ? {
+          sessionSuffix: 'minute session',
+          loadingTimes: 'Loading available times…',
+          loadTimesError: 'Could not load times',
+          networkTimesError: 'Network error loading times',
+          retry: 'Retry',
+          noSlots: 'No open slots in the next two weeks. Check back soon.',
+          availableDays: 'Available days',
+          daysHint: 'Swipe or scroll sideways for more dates',
+          chooseTime: `Choose a time for ${profileName}`,
+          email: 'Email',
+          firstName: 'First name',
+          lastName: 'Last name',
+          phone: 'Phone (optional)',
+          slotConflict: 'That time was just booked. Please pick another slot.',
+          bookingFailed: 'Booking failed',
+          networkBookingError: 'Network error',
+          submitting: 'Booking…',
+          confirm: 'Confirm booking',
+        }
+      : {
+          sessionSuffix: 'Minuten Gespräch',
+          loadingTimes: 'Verfügbare Zeiten werden geladen…',
+          loadTimesError: 'Zeiten konnten nicht geladen werden',
+          networkTimesError: 'Netzwerkfehler beim Laden der Zeiten',
+          retry: 'Erneut versuchen',
+          noSlots: 'In den nächsten zwei Wochen sind aktuell keine freien Termine verfügbar.',
+          availableDays: 'Verfügbare Tage',
+          daysHint: 'Seitlich wischen oder scrollen, um weitere Termine zu sehen',
+          chooseTime: `Wählen Sie eine Zeit für ${profileName}`,
+          email: 'E-Mail',
+          firstName: 'Vorname',
+          lastName: 'Nachname',
+          phone: 'Telefon (optional)',
+          slotConflict: 'Dieser Termin wurde gerade vergeben. Bitte wählen Sie einen anderen Slot.',
+          bookingFailed: 'Buchung fehlgeschlagen',
+          networkBookingError: 'Netzwerkfehler',
+          submitting: 'Buchung läuft…',
+          confirm: 'Buchung bestätigen',
+        }
 
   const loadSlots = useCallback(async () => {
     setLoading(true)
@@ -40,7 +84,7 @@ export function InternalBookFlow({ profileKey, profileName, thankYouPageSlug }: 
         error?: string
       }>(res)
       if (!res.ok) {
-        setLoadError(data?.error ?? 'Could not load times')
+        setLoadError(data?.error ?? copy.loadTimesError)
         setSlots([])
         setSelectedDay(null)
         return
@@ -61,12 +105,12 @@ export function InternalBookFlow({ profileKey, profileName, thankYouPageSlug }: 
         setDurationMinutes(data.durationMinutes)
       }
     } catch {
-      setLoadError('Network error loading times')
+      setLoadError(copy.networkTimesError)
       setSlots([])
     } finally {
       setLoading(false)
     }
-  }, [profileKey])
+  }, [copy.loadTimesError, copy.networkTimesError, profileKey])
 
   useEffect(() => {
     void loadSlots()
@@ -83,6 +127,10 @@ export function InternalBookFlow({ profileKey, profileName, thankYouPageSlug }: 
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           bookingProfileKey: profileKey,
+          language:
+            typeof document !== 'undefined'
+              ? document.documentElement.lang
+              : undefined,
           scheduledFor: selected,
           lead: {
             email,
@@ -98,23 +146,23 @@ export function InternalBookFlow({ profileKey, profileName, thankYouPageSlug }: 
         thankYouPageSlug?: string | null
       }>(res)
       if (res.status === 409) {
-        setSubmitError('That time was just booked. Please pick another slot.')
+        setSubmitError(copy.slotConflict)
         await loadSlots()
         setSelected(null)
         return
       }
       if (!res.ok) {
-        setSubmitError(data?.error ?? 'Booking failed')
+        setSubmitError(data?.error ?? copy.bookingFailed)
         return
       }
       const thanks = data?.thankYouPageSlug ?? thankYouPageSlug
       if (thanks) {
-        router.push(`/${thanks}`)
+        router.push(localizePublicHref(`/${thanks}`, locale))
       } else {
-        router.push('/?booked=1')
+        router.push(`${localizePublicHref('/', locale)}?booked=1`)
       }
     } catch {
-      setSubmitError('Network error')
+      setSubmitError(copy.networkBookingError)
     } finally {
       setSubmitting(false)
     }
@@ -144,22 +192,22 @@ export function InternalBookFlow({ profileKey, profileName, thankYouPageSlug }: 
 
   return (
     <div className="book-flow">
-      <p className="book-flow__meta">{durationMinutes}-minute session</p>
+      <p className="book-flow__meta">{durationMinutes}-{copy.sessionSuffix}</p>
 
       {loading ? (
-        <p className="tma-muted">Loading available times…</p>
+        <p className="tma-muted">{copy.loadingTimes}</p>
       ) : loadError ? (
         <div className="book-flow__error" role="alert">
           {loadError}
           <button type="button" className="book-flow__retry" onClick={() => void loadSlots()}>
-            Retry
+            {copy.retry}
           </button>
         </div>
       ) : slots.length === 0 ? (
-        <p className="tma-muted">No open slots in the next two weeks. Check back soon.</p>
+        <p className="tma-muted">{copy.noSlots}</p>
       ) : (
         <>
-          <div className="book-flow__day-tabs" role="tablist" aria-label="Available days">
+          <div className="book-flow__day-tabs" role="tablist" aria-label={copy.availableDays}>
             {availableDays.map((day) => {
               // Parse 'YYYY-MM-DD' back to a local date at noon to avoid timezone shift in display
               const [y, m, d] = day.split('-').map(Number)
@@ -182,10 +230,10 @@ export function InternalBookFlow({ profileKey, profileName, thankYouPageSlug }: 
               )
             })}
           </div>
-          <p className="book-flow__day-tabs-hint">Swipe or scroll sideways for more dates</p>
+          <p className="book-flow__day-tabs-hint">{copy.daysHint}</p>
 
           <fieldset className="book-flow__slots">
-            <legend className="sr-only">Choose a time for {profileName}</legend>
+            <legend className="sr-only">{copy.chooseTime}</legend>
             <div className="book-flow__slot-grid">
               {slotsForSelectedDay.map((iso, i) => (
                 <label key={iso} className="book-flow__slot" htmlFor={`slot-${i}`}>
@@ -205,7 +253,7 @@ export function InternalBookFlow({ profileKey, profileName, thankYouPageSlug }: 
 
           <form className="book-flow__form" onSubmit={onConfirm}>
             <label className="book-flow__field">
-              <span>Email</span>
+              <span>{copy.email}</span>
               <input
                 type="email"
                 required
@@ -216,7 +264,7 @@ export function InternalBookFlow({ profileKey, profileName, thankYouPageSlug }: 
             </label>
             <div className="book-flow__row">
               <label className="book-flow__field">
-                <span>First name</span>
+                <span>{copy.firstName}</span>
                 <input
                   type="text"
                   autoComplete="given-name"
@@ -225,7 +273,7 @@ export function InternalBookFlow({ profileKey, profileName, thankYouPageSlug }: 
                 />
               </label>
               <label className="book-flow__field">
-                <span>Last name</span>
+                <span>{copy.lastName}</span>
                 <input
                   type="text"
                   autoComplete="family-name"
@@ -235,7 +283,7 @@ export function InternalBookFlow({ profileKey, profileName, thankYouPageSlug }: 
               </label>
             </div>
             <label className="book-flow__field">
-              <span>Phone (optional)</span>
+              <span>{copy.phone}</span>
               <input
                 type="tel"
                 autoComplete="tel"
@@ -253,7 +301,7 @@ export function InternalBookFlow({ profileKey, profileName, thankYouPageSlug }: 
               className="tma-btn tma-btn--primary book-flow__submit"
               disabled={!selected || submitting}
             >
-              {submitting ? 'Booking…' : 'Confirm booking'}
+              {submitting ? copy.submitting : copy.confirm}
             </button>
           </form>
         </>

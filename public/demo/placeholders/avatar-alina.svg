@@ -1,0 +1,18 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="alina-bg" x1="74" y1="58" x2="444" y2="456" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#11161D"/>
+      <stop offset="1" stop-color="#080B10"/>
+    </linearGradient>
+    <radialGradient id="alina-glow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(346 128) rotate(140.906) scale(140.989)">
+      <stop stop-color="#E7F8C8" stop-opacity="0.3"/>
+      <stop offset="1" stop-color="#E7F8C8" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="512" height="512" rx="80" fill="url(#alina-bg)"/>
+  <circle cx="346" cy="128" r="140" fill="url(#alina-glow)"/>
+  <rect x="86" y="78" width="340" height="356" rx="44" fill="rgba(255,255,255,0.03)" stroke="rgba(255,255,255,0.08)"/>
+  <circle cx="256" cy="214" r="86" fill="#E9EFF7"/>
+  <path d="M154 416C168 334 208 296 256 296C304 296 344 334 358 416" fill="#E7F8C8" fill-opacity="0.82"/>
+  <path d="M178 196C190 146 224 116 270 116C308 116 336 138 344 184C324 160 290 148 258 148C226 148 198 164 178 196Z" fill="#0D1218"/>
+</svg>

@@ -1,4 +1,4 @@
-/* Base layer: grain, body, selection, utilities */
+/* Base layer: grain, body, selection, grid utilities */
 
 .tma-body {
   margin: 0;
@@ -29,6 +29,211 @@
   z-index: 1;
 }
 
+.tma-noise-overlay,
+.tma-section-glow {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.tma-noise-overlay {
+  opacity: 0.06;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+.tma-noise-overlay--soft {
+  opacity: 0.06;
+}
+
+.tma-noise-overlay--medium {
+  opacity: 0.1;
+}
+
+.tma-section-glow {
+  inset: auto;
+  width: min(34rem, 70vw);
+  height: min(34rem, 70vw);
+  border-radius: 999px;
+  filter: blur(72px);
+  opacity: 0.22;
+  transform: translate3d(0, 0, 0);
+}
+
+.tma-section-glow--lime {
+  background: radial-gradient(circle, rgba(231, 248, 200, 0.42) 0%, rgba(231, 248, 200, 0.08) 42%, transparent 72%);
+}
+
+.tma-section-glow--soft {
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.16) 0%, rgba(255, 255, 255, 0.05) 40%, transparent 70%);
+}
+
+.tma-glass-card {
+  position: relative;
+  overflow: hidden;
+  background:
+    linear-gradient(155deg, rgba(255, 255, 255, 0.065) 0%, rgba(255, 255, 255, 0.02) 100%),
+    rgba(10, 14, 10, 0.82);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 28px 72px rgba(0, 0, 0, 0.34);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+
+.tma-glass-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(120deg, rgba(255, 255, 255, 0.08), transparent 38%);
+  pointer-events: none;
+}
+
+.tma-surface-lift {
+  transition:
+    transform 0.5s var(--tma-ease-out),
+    box-shadow 0.5s var(--tma-ease-out),
+    border-color 0.35s ease;
+}
+
+.tma-surface-lift:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 26px 64px rgba(0, 0, 0, 0.4);
+}
+
+.tma-media-hover {
+  overflow: hidden;
+}
+
+.tma-media-hover img,
+.tma-media-hover video {
+  transition:
+    transform 0.8s var(--tma-ease-out),
+    filter 0.5s ease;
+}
+
+.tma-media-hover:hover img,
+.tma-media-hover:hover video {
+  transform: scale(1.04);
+}
+
+.tma-reveal {
+  will-change: transform, opacity, filter;
+}
+
+.tma-body[data-tma-motion='on'][data-tma-motion-ready='true'][data-tma-motion-reduce='false'] .tma-reveal[data-reveal-state='hidden'] {
+  opacity: 0;
+}
+
+.tma-body[data-tma-motion='on'][data-tma-motion-ready='true'][data-tma-motion-reduce='false'] .tma-reveal--fade[data-reveal-state='hidden'] {
+  transform: translateY(18px);
+}
+
+.tma-body[data-tma-motion='on'][data-tma-motion-ready='true'][data-tma-motion-reduce='false'] .tma-reveal--blur[data-reveal-state='hidden'] {
+  transform: translateY(26px);
+  filter: blur(14px);
+}
+
+.tma-body[data-tma-motion='on'][data-tma-motion-ready='true'][data-tma-motion-reduce='false'] .tma-reveal[data-reveal-state='visible'] {
+  opacity: 1;
+  transform: translateY(0);
+  filter: blur(0);
+  transition:
+    opacity 0.55s var(--tma-ease-out),
+    transform 0.55s var(--tma-ease-out),
+    filter 0.7s var(--tma-ease-out);
+}
+
+.tma-body[data-tma-motion='on'][data-tma-motion-ready='true'][data-tma-motion-reduce='false'] .tma-reveal--blur[data-reveal-state='visible'] {
+  transition-duration: 0.82s, 0.82s, 0.96s;
+}
+
+/* slide-up: more pronounced vertical travel than default fade */
+.tma-body[data-tma-motion='on'][data-tma-motion-ready='true'][data-tma-motion-reduce='false'] .tma-reveal--slide-up[data-reveal-state='hidden'] {
+  opacity: 0;
+  transform: translateY(40px);
+}
+
+.tma-body[data-tma-motion='on'][data-tma-motion-ready='true'][data-tma-motion-reduce='false'] .tma-reveal--slide-up[data-reveal-state='visible'] {
+  opacity: 1;
+  transform: translateY(0);
+  transition:
+    opacity 0.6s var(--tma-ease-out),
+    transform 0.7s var(--tma-ease-out);
+}
+
+.tma-body[data-tma-motion='on'][data-tma-motion-ready='true'][data-tma-motion-reduce='false'] .tma-reveal--scale-in[data-reveal-state='hidden'] {
+  opacity: 0;
+  transform: scale(0.965);
+}
+
+.tma-body[data-tma-motion='on'][data-tma-motion-ready='true'][data-tma-motion-reduce='false'] .tma-reveal--scale-in[data-reveal-state='visible'] {
+  opacity: 1;
+  transform: scale(1);
+  transition:
+    opacity var(--tma-duration-slow) var(--tma-ease-out),
+    transform var(--tma-duration-slow) var(--tma-ease-spring);
+}
+
+/* subtle: fade only — no position shift */
+.tma-body[data-tma-motion='on'][data-tma-motion-ready='true'][data-tma-motion-reduce='false'] .tma-reveal--subtle[data-reveal-state='hidden'] {
+  opacity: 0;
+  transform: none;
+}
+
+.tma-body[data-tma-motion='on'][data-tma-motion-ready='true'][data-tma-motion-reduce='false'] .tma-reveal--subtle[data-reveal-state='visible'] {
+  opacity: 1;
+  transform: none;
+  transition: opacity 0.7s ease;
+}
+
+/* stagger: parent holds no animation; children carry stagger via CSS custom property */
+.tma-body[data-tma-motion='on'][data-tma-motion-ready='true'][data-tma-motion-reduce='false'] .tma-reveal--stagger[data-reveal-state='hidden'] > * {
+  opacity: 0;
+  transform: translateY(18px);
+}
+
+.tma-body[data-tma-motion='on'][data-tma-motion-ready='true'][data-tma-motion-reduce='false'] .tma-reveal--stagger[data-reveal-state='visible'] > *:nth-child(1) { transition-delay: calc(var(--tma-stagger-1) * 0); }
+.tma-body[data-tma-motion='on'][data-tma-motion-ready='true'][data-tma-motion-reduce='false'] .tma-reveal--stagger[data-reveal-state='visible'] > *:nth-child(2) { transition-delay: var(--tma-stagger-1); }
+.tma-body[data-tma-motion='on'][data-tma-motion-ready='true'][data-tma-motion-reduce='false'] .tma-reveal--stagger[data-reveal-state='visible'] > *:nth-child(3) { transition-delay: var(--tma-stagger-2); }
+.tma-body[data-tma-motion='on'][data-tma-motion-ready='true'][data-tma-motion-reduce='false'] .tma-reveal--stagger[data-reveal-state='visible'] > *:nth-child(4) { transition-delay: var(--tma-stagger-3); }
+.tma-body[data-tma-motion='on'][data-tma-motion-ready='true'][data-tma-motion-reduce='false'] .tma-reveal--stagger[data-reveal-state='visible'] > *:nth-child(n+5) { transition-delay: var(--tma-stagger-4); }
+
+.tma-body[data-tma-motion='on'][data-tma-motion-ready='true'][data-tma-motion-reduce='false'] .tma-reveal--stagger[data-reveal-state='visible'] > * {
+  opacity: 1;
+  transform: translateY(0);
+  transition:
+    opacity 0.5s var(--tma-ease-out),
+    transform 0.5s var(--tma-ease-out);
+}
+
+.tma-rotating-words {
+  display: inline-grid;
+  vertical-align: baseline;
+  margin-inline: 0.15em;
+  min-width: 9ch;
+}
+
+.tma-rotating-words__word {
+  display: inline-block;
+  color: var(--tma-white);
+  text-shadow: 0 0 32px rgba(255, 255, 255, 0.15);
+  animation: tma-word-enter 0.48s var(--tma-ease-out);
+}
+
+@keyframes tma-word-enter {
+  from {
+    opacity: 0;
+    transform: translateY(0.45em) rotate(1.5deg);
+    filter: blur(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) rotate(0);
+    filter: blur(0);
+  }
+}
+
 ::selection {
   background: var(--tma-lime);
   color: var(--tma-black);
@@ -36,6 +241,120 @@
 
 .tma-muted {
   color: var(--tma-white-muted);
+}
+
+/* ── Grid & layout utilities ──────────────────────────────────────────── */
+/*                                                                          */
+/* Usage:                                                                   */
+/*   <div class="tma-grid tma-grid--2">  → 2-col responsive grid           */
+/*   <div class="tma-grid tma-grid--3">  → 3-col responsive grid           */
+/*   <div class="tma-grid tma-grid--4">  → 4-col responsive grid           */
+/*   <div class="tma-stack">             → vertical flex stack              */
+/*   <div class="tma-cluster">          → wrapping flex row with gap        */
+/*   <div class="tma-center">           → centered block with max-width     */
+/*   <div class="tma-divider">          → subtle horizontal rule            */
+/*                                                                          */
+/* Grid columns collapse to single column on mobile (< 640px).             */
+/* Use --gap-sm / --gap-md / --gap-lg tokens for consistent gaps.          */
+
+.tma-grid {
+  display: grid;
+  gap: var(--gap-md);
+}
+
+.tma-grid--2 {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+.tma-grid--3 {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.tma-grid--4 {
+  grid-template-columns: repeat(4, 1fr);
+}
+
+/* Auto-responsive: fills as many equal columns as fit without media queries */
+.tma-grid--auto-sm {
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 14rem), 1fr));
+}
+
+.tma-grid--auto-md {
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 20rem), 1fr));
+}
+
+.tma-grid--auto-lg {
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 28rem), 1fr));
+}
+
+/* 2-col asymmetric: 40/60 (text | visual) */
+.tma-grid--split-4060 {
+  grid-template-columns: 2fr 3fr;
+}
+
+/* 2-col asymmetric: 60/40 (visual | text) */
+.tma-grid--split-6040 {
+  grid-template-columns: 3fr 2fr;
+}
+
+/* Vertical flex stack */
+.tma-stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap-md);
+}
+
+.tma-stack--sm { gap: var(--gap-sm); }
+.tma-stack--lg { gap: var(--gap-lg); }
+
+/* Horizontal wrapping flex row */
+.tma-cluster {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--gap-sm);
+  align-items: center;
+}
+
+.tma-cluster--center { justify-content: center; }
+.tma-cluster--end    { justify-content: flex-end; }
+
+/* Centered block wrapper */
+.tma-center {
+  width: 100%;
+  max-width: var(--tma-max);
+  margin-inline: auto;
+  padding-inline: var(--tma-gutter);
+}
+
+/* Subtle section divider */
+.tma-divider {
+  border: none;
+  border-top: 1px solid var(--tma-border);
+  margin-block: var(--space-8);
+}
+
+/* ── Responsive: collapse grids to single column on mobile ──────────── */
+@media (max-width: 639px) {
+  .tma-grid--2,
+  .tma-grid--3,
+  .tma-grid--4,
+  .tma-grid--split-4060,
+  .tma-grid--split-6040 {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ── Responsive: 3-col and 4-col → 2-col on tablet ─────────────────── */
+@media (min-width: 640px) and (max-width: 1023px) {
+  .tma-grid--3,
+  .tma-grid--4 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .tma-grid--split-4060,
+  .tma-grid--split-6040 {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* Fallback hub */
@@ -145,4 +464,30 @@
 .signed-in--footer {
   text-align: center;
   padding: 2rem var(--tma-gutter);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tma-body::before,
+  .tma-noise-overlay,
+  .tma-section-glow {
+    animation: none !important;
+  }
+
+  .tma-surface-lift,
+  .tma-media-hover img,
+  .tma-media-hover video,
+  .tma-reveal,
+  .tma-rotating-words__word {
+    transition: none !important;
+    animation: none !important;
+    transform: none !important;
+    filter: none !important;
+  }
+}
+
+@media (max-width: 768px) {
+  .tma-section-glow {
+    opacity: 0.14;
+    filter: blur(56px);
+  }
 }

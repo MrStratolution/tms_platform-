@@ -13,6 +13,12 @@ type Props = {
   initialLeadStatus: string
   initialNotes: string | null
   canEdit: boolean
+  bookingEvent: {
+    id: number
+    status: string
+    scheduledFor: string | null
+    bookingProfileName: string | null
+  } | null
 }
 
 export function ConsoleLeadUpdateForm(props: Props) {
@@ -21,6 +27,8 @@ export function ConsoleLeadUpdateForm(props: Props) {
   const [leadStatus, setLeadStatus] = useState(props.initialLeadStatus)
   const [notes, setNotes] = useState(props.initialNotes ?? '')
   const [busy, setBusy] = useState(false)
+  const [cancelBusy, setCancelBusy] = useState(false)
+  const [cancelReason, setCancelReason] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
 
@@ -54,11 +62,42 @@ export function ConsoleLeadUpdateForm(props: Props) {
     }
   }
 
+  async function onCancelBooking() {
+    if (!props.canEdit || !props.bookingEvent || props.bookingEvent.status === 'cancelled') {
+      return
+    }
+    setError(null)
+    setSuccess(null)
+    setCancelBusy(true)
+    try {
+      const res = await fetch('/api/booking/cancel', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          bookingEventId: props.bookingEvent.id,
+          reason: cancelReason.trim() || undefined,
+        }),
+      })
+      const data = await readResponseJson<{ success?: boolean; error?: string }>(res)
+      if (!res.ok) {
+        setError(data?.error ?? 'Booking cancellation failed')
+        return
+      }
+      setSuccess('Booking cancelled.')
+      setCancelReason('')
+      router.refresh()
+    } catch {
+      setError('Network error')
+    } finally {
+      setCancelBusy(false)
+    }
+  }
+
   if (!props.canEdit) {
     return (
       <p className="tma-console-env-warning" role="status">
-        <strong>View only.</strong> Your role cannot update leads. Use <code>ops</code>,{' '}
-        <code>editor</code>, or <code>admin</code>.
+        <strong>View only.</strong> Your role cannot update leads. Use <code>ops</code> or{' '}
+        <code>admin</code>.
       </p>
     )
   }
@@ -102,6 +141,52 @@ export function ConsoleLeadUpdateForm(props: Props) {
           disabled={busy}
         />
       </label>
+      {props.bookingEvent ? (
+        <section className="tma-console-note">
+          <h3 className="tma-console-subheading">Booking</h3>
+          <p className="tma-console-lead">
+            <strong>Status:</strong> {props.bookingEvent.status}
+            <br />
+            <strong>Profile:</strong> {props.bookingEvent.bookingProfileName ?? '—'}
+            <br />
+            <strong>Scheduled for:</strong>{' '}
+            {props.bookingEvent.scheduledFor
+              ? new Date(props.bookingEvent.scheduledFor).toLocaleString()
+              : '—'}
+          </p>
+          {props.bookingEvent.status !== 'cancelled' ? (
+            <>
+              <label className="tma-console-label">
+                Cancellation reason (optional)
+                <textarea
+                  className="tma-console-textarea-prose"
+                  rows={3}
+                  value={cancelReason}
+                  onChange={(e) => setCancelReason(e.target.value)}
+                  disabled={cancelBusy}
+                  placeholder="Short note for the email log and cancellation record"
+                />
+              </label>
+              <div className="tma-console-actions">
+                <button
+                  type="button"
+                  className="tma-console-btn-danger"
+                  onClick={() => {
+                    void onCancelBooking()
+                  }}
+                  disabled={cancelBusy}
+                >
+                  {cancelBusy ? 'Cancelling…' : 'Cancel booking'}
+                </button>
+              </div>
+            </>
+          ) : (
+            <p className="tma-console-hint">
+              This booking is already cancelled.
+            </p>
+          )}
+        </section>
+      ) : null}
       {error ? <p className="tma-console-error">{error}</p> : null}
       {success ? <p className="tma-console-success">{success}</p> : null}
       <div className="tma-console-actions">

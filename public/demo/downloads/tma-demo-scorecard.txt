@@ -1,0 +1,9 @@
+TMA Platform demo scorecard
+
+Replace before production:
+- branding and navigation
+- homepage, services, landing pages, and products
+- forms, booking profiles, and email templates
+- placeholder media and demo leads
+
+This file exists so the seeded download asset is immediately usable in development.

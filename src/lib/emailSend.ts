@@ -1,131 +1,95 @@
 import { logEvent } from '@/lib/logger'
-import { cmsEmailLogs } from '@/db/schema'
 import type { EmailTemplate, Lead } from '@/types/cms'
 
 import type { CmsDb } from './cmsData'
-import { renderEmailBodyForSend } from './emailTemplateContent'
+import {
+  sendEmail,
+  sendEmailByTemplateId,
+} from './email/service'
+import { normalizeEmailLanguage } from './email/templateVariables'
 
-type SendParams = {
-  db: CmsDb
-  to: string
-  subject: string
-  html: string
-  text?: string
-  leadId?: number
-  templateId?: number
-}
+type SendEmailResult = Awaited<ReturnType<typeof sendEmail>>
 
-/**
- * Interpolate `{{key}}` from a flat record (lead + extras).
- */
 export function interpolateTemplate(
   template: string,
   vars: Record<string, string | number | boolean | null | undefined>,
 ): string {
   return template.replace(/\{\{\s*(\w+)\s*\}\}/g, (_, key: string) => {
-    const v = vars[key]
-    if (v == null) return ''
-    return String(v)
+    const value = vars[key]
+    return value == null ? '' : String(value)
   })
 }
 
-function interpolateTemplateRecord(
-  template: string,
-  vars: Record<string, string | number | boolean | null | undefined>,
+function relationName(
+  value: Lead['serviceInterest'] | Lead['industry'],
 ): string {
-  return interpolateTemplate(template, vars)
+  if (!value) return ''
+  if (typeof value === 'number') return String(value)
+  return value.name ?? ''
 }
 
 export function leadToTemplateVars(
   lead: Lead,
   extras?: Record<string, string>,
 ): Record<string, string> {
-  const base: Record<string, string> = {
-    firstName: lead.firstName ?? '',
-    lastName: lead.lastName ?? '',
+  const firstName = lead.firstName ?? ''
+  const lastName = lead.lastName ?? ''
+  const name = [firstName, lastName].filter(Boolean).join(' ').trim()
+  const service =
+    extras?.service ??
+    extras?.serviceInterest ??
+    relationName(lead.serviceInterest)
+  const industry =
+    extras?.industry ??
+    relationName(lead.industry)
+
+  return {
+    firstName,
+    lastName,
+    name,
     email: lead.email,
     phone: lead.phone ?? '',
     company: lead.company ?? '',
     website: lead.website ?? '',
     formType: lead.formType ?? '',
     sourcePageSlug: lead.sourcePageSlug ?? '',
+    source_page: lead.sourcePageSlug ?? '',
+    service: service ?? '',
+    industry: industry ?? '',
+    message: extras?.message ?? '',
+    ...extras,
   }
-  if (extras) {
-    for (const [k, v] of Object.entries(extras)) {
-      base[k] = v
-    }
-  }
-  return base
 }
 
-/**
- * Resend HTTP API (no extra npm dependency).
- */
-export async function sendWithResend(params: {
-  to: string
-  subject: string
-  html: string
-  text?: string
-}): Promise<{ ok: true; id?: string } | { ok: false; error: string }> {
-  const key = process.env.RESEND_API_KEY
-  if (!key) {
-    return { ok: false, error: 'RESEND_API_KEY not configured' }
-  }
-  const from = process.env.RESEND_FROM_EMAIL || 'TMA <onboarding@resend.dev>'
-  const res = await fetch('https://api.resend.com/emails', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${key}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      from,
-      to: [params.to],
-      subject: params.subject,
-      html: params.html,
-      text: params.text ?? stripHtml(params.html),
-    }),
-  })
-  const data = (await res.json()) as { id?: string; message?: string }
-  if (!res.ok) {
-    return { ok: false, error: data.message ?? res.statusText }
-  }
-  return { ok: true, id: data.id }
-}
-
-function stripHtml(html: string): string {
-  return html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
-}
-
-export async function logAndSendEmail(params: SendParams): Promise<'sent' | 'failed'> {
-  const { db, to, subject, html, text, leadId, templateId } = params
-  const sentAt = new Date()
-
-  const result = await sendWithResend({ to, subject, html, text })
-
-  if (result.ok) {
-    await db.insert(cmsEmailLogs).values({
-      leadId: leadId ?? null,
-      templateId: templateId ?? null,
-      recipient: to,
-      status: 'sent',
-      providerMessageId: result.id ?? null,
-      sentAt,
+async function sendFromTemplateRef(params: {
+  db: CmsDb
+  lead: Lead
+  template: EmailTemplate
+  language?: string | null
+  extras?: Record<string, string>
+}): Promise<SendEmailResult | 'skipped'> {
+  const { db, lead, template, language, extras } = params
+  if (!lead.email) return 'skipped'
+  const variables = leadToTemplateVars(lead, extras)
+  if (typeof template.id === 'number') {
+    return sendEmailByTemplateId({
+      db,
+      templateId: template.id,
+      to: lead.email,
+      language,
+      variables,
     })
-    logEvent({ event: 'email_sent', to, leadId, templateId })
-    return 'sent'
   }
 
-  await db.insert(cmsEmailLogs).values({
-    leadId: leadId ?? null,
-    templateId: templateId ?? null,
-    recipient: to,
-    status: 'failed',
-    providerMessageId: null,
-    sentAt,
+  const key = template.key || template.slug
+  if (!key) return 'skipped'
+  return sendEmail({
+    db,
+    templateKey: key,
+    to: lead.email,
+    language,
+    variables,
   })
-  logEvent({ event: 'email_failed', to, leadId, error: result.error })
-  return 'failed'
 }
 
 export function formatBookingDateForEmail(d: Date, timeZone?: string): string {
@@ -151,28 +115,21 @@ export async function sendBookingConfirmationToLead(
     durationMinutes: number
     slotEnd: Date
   },
+  language?: string | null,
 ): Promise<'sent' | 'failed' | 'skipped'> {
-  if (!process.env.RESEND_API_KEY) return 'skipped'
-
-  const vars = {
-    ...leadToTemplateVars(lead),
-    scheduledFor: formatBookingDateForEmail(booking.scheduledFor),
-    slotEnd: formatBookingDateForEmail(booking.slotEnd),
-    bookingProfileName: booking.bookingProfileName,
-    durationMinutes: String(booking.durationMinutes),
-  }
-  const subject = interpolateTemplate(template.subject, vars)
-  const html = renderEmailBodyForSend(template.body, (value) =>
-    interpolateTemplateRecord(value, vars),
-  )
-  return logAndSendEmail({
+  const result = await sendFromTemplateRef({
     db,
-    to: lead.email,
-    subject,
-    html,
-    leadId: lead.id,
-    templateId: template.id,
+    lead,
+    template,
+    language,
+    extras: {
+      scheduledFor: formatBookingDateForEmail(booking.scheduledFor),
+      slotEnd: formatBookingDateForEmail(booking.slotEnd),
+      bookingProfileName: booking.bookingProfileName,
+      durationMinutes: String(booking.durationMinutes),
+    },
   })
+  return result === 'skipped' ? 'skipped' : result.status
 }
 
 export async function sendTemplatedToLead(
@@ -180,40 +137,16 @@ export async function sendTemplatedToLead(
   lead: Lead,
   template: EmailTemplate,
   extras?: Record<string, string>,
+  language?: string | null,
 ): Promise<'sent' | 'failed' | 'skipped'> {
-  if (!process.env.RESEND_API_KEY) return 'skipped'
-
-  const vars = leadToTemplateVars(lead, extras)
-  const subject = interpolateTemplate(template.subject, vars)
-  const html = renderEmailBodyForSend(template.body, (value) =>
-    interpolateTemplateRecord(value, vars),
-  )
-  return logAndSendEmail({
+  const result = await sendFromTemplateRef({
     db,
-    to: lead.email,
-    subject,
-    html,
-    leadId: lead.id,
-    templateId: template.id,
+    lead,
+    template,
+    extras,
+    language,
   })
-}
-
-function leadSummaryHtml(lead: Lead): string {
-  const rows = [
-    ['Email', lead.email],
-    ['Name', [lead.firstName, lead.lastName].filter(Boolean).join(' ') || '—'],
-    ['Company', lead.company ?? '—'],
-    ['Phone', lead.phone ?? '—'],
-    ['Form', lead.formType ?? '—'],
-    ['Page', lead.sourcePageSlug ?? '—'],
-  ]
-  const tr = rows
-    .map(
-      ([k, v]) =>
-        `<tr><td style="padding:6px 12px;border:1px solid #eee"><strong>${k}</strong></td><td style="padding:6px 12px;border:1px solid #eee">${String(v)}</td></tr>`,
-    )
-    .join('')
-  return `<table style="border-collapse:collapse;font-family:system-ui,sans-serif">${tr}</table>`
+  return result === 'skipped' ? 'skipped' : result.status
 }
 
 export async function notifyInternalNewLead(
@@ -221,9 +154,9 @@ export async function notifyInternalNewLead(
   lead: Lead,
   extraRecipients: string[],
   correlationId: string,
+  language?: string | null,
+  extras?: Record<string, string>,
 ): Promise<void> {
-  if (!process.env.RESEND_API_KEY) return
-
   const envList = (process.env.INTERNAL_NOTIFY_EMAILS ?? '')
     .split(',')
     .map((s) => s.trim())
@@ -231,18 +164,27 @@ export async function notifyInternalNewLead(
   const recipients = [...new Set([...envList, ...extraRecipients])]
   if (recipients.length === 0) return
 
-  const subject = `New lead: ${lead.email}`
-  const html = `<p>New submission (${correlationId})</p>${leadSummaryHtml(lead)}`
+  const variables = {
+    ...leadToTemplateVars(lead, extras),
+    correlationId,
+  }
 
   await Promise.allSettled(
     recipients.map((to) =>
-      logAndSendEmail({
+      sendEmail({
         db,
+        templateKey: 'lead_admin_notification',
         to,
-        subject,
-        html,
-        leadId: lead.id,
+        language: normalizeEmailLanguage(language),
+        variables,
       }),
     ),
   )
+
+  logEvent({
+    event: 'lead_admin_email_triggered',
+    leadId: lead.id,
+    correlationId,
+    recipients: recipients.length,
+  })
 }

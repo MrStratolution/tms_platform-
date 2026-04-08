@@ -1,6 +1,7 @@
 'use client'
 
 import { PageView } from '@/components/pages/PageView'
+import type { PublicLocale } from '@/lib/publicLocale'
 import type { Page } from '@/types/cms'
 
 /**
@@ -9,9 +10,20 @@ import type { Page } from '@/types/cms'
 export function PageLivePreview({
   page,
   embedShortcodeVars,
+  locale = 'de',
+  trackingConsentGranted = true,
 }: {
   page: Page
   embedShortcodeVars?: Record<string, string>
+  locale?: PublicLocale
+  trackingConsentGranted?: boolean
 }) {
-  return <PageView page={page} embedShortcodeVars={embedShortcodeVars} />
+  return (
+    <PageView
+      page={page}
+      embedShortcodeVars={embedShortcodeVars}
+      locale={locale}
+      trackingConsentGranted={trackingConsentGranted}
+    />
+  )
 }

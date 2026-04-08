@@ -9,6 +9,7 @@ export type ConsolePermission =
   | 'content:publish'
   | 'leads:read'
   | 'leads:write'
+  | 'integrations:manage'
   | 'team:admin'
 
 function normalizeConsoleRole(role: string | undefined): string {
@@ -29,14 +30,16 @@ export function userHasConsolePermission(
   switch (perm) {
     case 'team:admin':
       return false
+    case 'integrations:manage':
+      return r === 'admin'
     case 'content:read':
       return true
     case 'content:publish':
       return r === 'ops' || r === 'admin'
     case 'leads:read':
-      return r === 'ops' || r === 'editor'
+      return r === 'ops' || r === 'admin'
     case 'leads:write':
-      return r === 'ops' || r === 'editor'
+      return r === 'ops' || r === 'admin'
     case 'content:write':
       return r === 'ops' || r === 'editor'
     default:
@@ -59,6 +62,10 @@ export function consoleUserCanAdminTeam(role: string | undefined): boolean {
 
 export function consoleUserCanWriteLeads(role: string | undefined): boolean {
   return userHasConsolePermission(role, 'leads:write')
+}
+
+export function consoleUserCanManageIntegrations(role: string | undefined): boolean {
+  return userHasConsolePermission(role, 'integrations:manage')
 }
 
 /** Raw site / page custom CSS and similar advanced controls. */

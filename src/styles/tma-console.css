@@ -1577,7 +1577,7 @@ a.tma-cms-card:hover {
 .tma-console-preview-dock__loading {
   position: absolute;
   inset: 0;
-  z-index: 2;
+  z-index: 3;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1606,6 +1606,14 @@ a.tma-cms-card:hover {
 .tma-console-preview-dock__iframe--pending {
   opacity: 0;
   pointer-events: none;
+}
+
+.tma-console-preview-dock__hitbox {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  cursor: pointer;
+  background: transparent;
 }
 
 @media (max-width: 640px) {
@@ -1691,6 +1699,20 @@ a.tma-cms-card:hover {
 
 .tma-builder__status--dirty {
   color: #fde68a;
+}
+
+.tma-builder__locale-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.22rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--tma-lime);
+  border: 1px solid rgba(163, 230, 53, 0.22);
+  background: rgba(163, 230, 53, 0.08);
+  white-space: nowrap;
 }
 
 .tma-builder__icon-btn {

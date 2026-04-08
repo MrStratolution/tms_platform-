@@ -1,0 +1,19 @@
+<svg width="1280" height="840" viewBox="0 0 1280 840" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="conversion-bg" x1="118" y1="96" x2="1112" y2="744" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0C1015"/>
+      <stop offset="1" stop-color="#06090D"/>
+    </linearGradient>
+  </defs>
+  <rect width="1280" height="840" rx="40" fill="#06090D"/>
+  <rect x="82" y="82" width="1116" height="676" rx="30" fill="url(#conversion-bg)" stroke="rgba(255,255,255,0.08)" stroke-width="2"/>
+  <path d="M182 214H1096" stroke="rgba(231,248,200,0.82)" stroke-width="14" stroke-linecap="round"/>
+  <path d="M182 340H1096" stroke="rgba(255,255,255,0.64)" stroke-width="14" stroke-linecap="round"/>
+  <path d="M182 466H1096" stroke="rgba(255,255,255,0.3)" stroke-width="14" stroke-linecap="round"/>
+  <path d="M182 592H1096" stroke="rgba(255,255,255,0.14)" stroke-width="14" stroke-linecap="round"/>
+  <circle cx="280" cy="214" r="22" fill="#E7F8C8"/>
+  <circle cx="512" cy="340" r="22" fill="rgba(255,255,255,0.85)"/>
+  <circle cx="786" cy="466" r="22" fill="rgba(255,255,255,0.44)"/>
+  <circle cx="1036" cy="592" r="22" fill="rgba(255,255,255,0.24)"/>
+  <path d="M280 214C404 214 462 340 512 340C600 340 642 466 786 466C920 466 960 592 1036 592" stroke="rgba(231,248,200,0.24)" stroke-width="10" stroke-linecap="round"/>
+</svg>

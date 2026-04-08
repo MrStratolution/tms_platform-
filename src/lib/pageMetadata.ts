@@ -106,3 +106,45 @@ export function buildProductPublicMetadata(
     },
   }
 }
+
+export function buildCaseStudyPublicMetadata(
+  input: {
+    title: string
+    summary?: string | null
+    slug: string
+    localePrefix?: string | null
+    featuredImageUrl?: string | null
+  },
+  siteDefaults?: SiteSettingsDocument | null,
+): Metadata {
+  const origin = getPublicSiteOrigin()
+  const prefix = input.localePrefix?.trim() ? input.localePrefix.trim() : ''
+  const canonical = `${origin}${prefix}/work/${input.slug}`
+  const title = input.title
+  const description =
+    input.summary?.trim() || siteDefaults?.defaultDescription?.trim() || undefined
+
+  let ogImage: string | undefined
+  const featured = input.featuredImageUrl?.trim()
+  if (featured) {
+    ogImage = absoluteMediaUrl(featured) ?? undefined
+  }
+  if (!ogImage) {
+    const siteOg = siteDefaults?.ogImageUrl?.trim()
+    if (siteOg) {
+      ogImage = absoluteMediaUrl(siteOg) ?? undefined
+    }
+  }
+
+  return {
+    title,
+    description,
+    alternates: { canonical },
+    openGraph: {
+      title,
+      description,
+      url: canonical,
+      ...(ogImage ? { images: [{ url: ogImage }] } : {}),
+    },
+  }
+}

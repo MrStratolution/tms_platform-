@@ -4,6 +4,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { type CSSProperties, type ReactNode, useCallback, useEffect, useId, useState } from 'react'
 
+import { useScrollState } from '@/components/motion/useScrollState'
 import { isNextLinkNavHref } from '@/lib/cms/navHref'
 import { localizePublicHref, type PublicLocale } from '@/lib/publicLocale'
 
@@ -19,17 +20,26 @@ export type SiteHeaderLink = {
 
 type Props = {
   navHome: string
-  navConsole: string
   middleLinks: SiteHeaderLink[]
-  langSwitcher: ReactNode
+  desktopLangSwitcher: ReactNode
+  mobileLangSwitcher: ReactNode
   /** Public site logo (path or https URL from site settings). */
   logoSrc?: string
   brandAlt?: string
   logoWidthDesktop?: number
   logoWidthMobile?: number
+  /** Optional lighter utility CTA shown before the main header CTA. */
+  navUtilityCta?: SiteHeaderLink
   /** Optional global header CTA (e.g. Book a call). */
   navCta?: SiteHeaderLink
-  announcement?: { text: string; href?: string; style?: 'subtle' | 'highlight' | 'outline' }
+  announcement?: {
+    text: string
+    href?: string
+    style?: 'subtle' | 'highlight' | 'outline'
+    mode?: 'static' | 'running'
+    speed?: 'slow' | 'normal' | 'fast'
+    pauseOnHover?: boolean
+  }
   sticky?: boolean
   transparentOnHero?: boolean
   layout?: 'split' | 'centered'
@@ -52,13 +62,14 @@ function BrandLogo({ src, alt }: { src: string; alt: string }) {
 
 export function SiteHeaderShell({
   navHome,
-  navConsole,
   middleLinks,
-  langSwitcher,
+  desktopLangSwitcher,
+  mobileLangSwitcher,
   logoSrc = '/brand/tma-logo-white.png',
   brandAlt = 'The Modesty Argument',
   logoWidthDesktop = 220,
   logoWidthMobile = 132,
+  navUtilityCta,
   navCta,
   announcement,
   sticky = true,
@@ -69,6 +80,7 @@ export function SiteHeaderShell({
 }: Props) {
   const [open, setOpen] = useState(false)
   const menuId = useId()
+  const scroll = useScrollState({ threshold: transparentOnHero ? 18 : 10 })
 
   const close = useCallback(() => setOpen(false), [])
 
@@ -133,6 +145,9 @@ export function SiteHeaderShell({
 
   const desktopLinks = middleLinks.filter((item) => item.showOnDesktop !== false)
   const mobileLinks = middleLinks.filter((item) => item.showOnMobile !== false)
+  const announcementRepeats = announcement?.text
+    ? Array.from({ length: 4 }, (_, index) => `${announcement.text}__${index}`)
+    : []
   const headerStyle = {
     ['--tma-header-logo-width-desktop' as const]: `${logoWidthDesktop}px`,
     ['--tma-header-logo-width-mobile' as const]: `${logoWidthMobile}px`,
@@ -142,27 +157,62 @@ export function SiteHeaderShell({
     <div
       className={`tma-header-wrap${sticky ? ' tma-header-wrap--sticky' : ''}${
         transparentOnHero ? ' tma-header-wrap--transparent' : ''
+      }${scroll.scrolled ? ' tma-header-wrap--scrolled' : ''}${
+        scroll.direction === 'down' ? ' tma-header-wrap--scrolling-down' : ''
       }`}
     >
       {announcement?.text ? (
-        <div className={`tma-header__announcement tma-header__announcement--${announcement.style ?? 'subtle'}`}>
+        <div
+          className={`tma-header__announcement tma-header__announcement--${announcement.style ?? 'subtle'}${
+            announcement.mode === 'running' ? ' tma-header__announcement--running' : ''
+          }${announcement.pauseOnHover ? ' tma-header__announcement--pause-on-hover' : ''}`}
+          data-speed={announcement.speed ?? 'normal'}
+        >
           {announcement.href ? (
             <Link href={announcement.href} className="tma-header__announcement-link">
-              {announcement.text}
+              <span className="tma-header__announcement-static">{announcement.text}</span>
+              {announcement.mode === 'running' ? (
+                <span className="tma-header__announcement-marquee" aria-hidden="true">
+                  <span className="tma-header__announcement-track">
+                    {announcementRepeats.map((key) => (
+                      <span key={key} className="tma-header__announcement-item">
+                        <span>{announcement.text}</span>
+                        <span className="tma-header__announcement-separator" aria-hidden="true">
+                          •
+                        </span>
+                      </span>
+                    ))}
+                  </span>
+                </span>
+              ) : null}
             </Link>
           ) : (
-            <span className="tma-header__announcement-text">{announcement.text}</span>
+            <>
+              <span className="tma-header__announcement-static">{announcement.text}</span>
+              {announcement.mode === 'running' ? (
+                <span className="tma-header__announcement-marquee" aria-hidden="true">
+                  <span className="tma-header__announcement-track">
+                    {announcementRepeats.map((key) => (
+                      <span key={key} className="tma-header__announcement-item">
+                        <span>{announcement.text}</span>
+                        <span className="tma-header__announcement-separator" aria-hidden="true">
+                          •
+                        </span>
+                      </span>
+                    ))}
+                  </span>
+                </span>
+              ) : null}
+            </>
           )}
         </div>
       ) : null}
-      <header className={`tma-header tma-header--${layout}`} style={headerStyle}>
+      <header className={`tma-header tma-header--${layout}`} style={headerStyle} data-scrolled={scroll.scrolled ? 'true' : 'false'}>
         <Link href={localizePublicHref('/', locale)} className="tma-header__brand" onClick={close}>
           <BrandLogo src={logoSrc} alt={brandAlt} />
         </Link>
 
         <div className="tma-header__end">
-          <div className="tma-header__lang">{langSwitcher}</div>
-
           <nav className="tma-header__nav tma-header__nav--wide" aria-label="Primary">
             <Link href={localizePublicHref('/', locale)} className="tma-header__link">
               <span>{navHome}</span>
@@ -170,13 +220,18 @@ export function SiteHeaderShell({
             {desktopLinks.map((item) => (
               <MiddleLink key={`${item.href}-${item.label}`} item={item} className="tma-header__link" />
             ))}
+            {navUtilityCta ? (
+              <MiddleLink
+                item={navUtilityCta}
+                className={`tma-header__link tma-header__nav-cta tma-header__nav-cta--${navUtilityCta.variant ?? 'ghost'}`}
+              />
+            ) : null}
             {navCta ? (
               <MiddleLink item={navCta} className={`tma-header__link tma-header__nav-cta tma-header__nav-cta--${navCta.variant ?? 'primary'}`} />
             ) : null}
-            <Link href="/console/login" className="tma-header__link">
-              <span>{navConsole}</span>
-            </Link>
           </nav>
+
+          <div className="tma-header__lang tma-header__lang--desktop">{desktopLangSwitcher}</div>
 
           <button
             type="button"
@@ -226,6 +281,13 @@ export function SiteHeaderShell({
                   onNavigate={close}
                 />
               ))}
+              {navUtilityCta ? (
+                <MiddleLink
+                  item={navUtilityCta}
+                  className={`tma-header__drawer-link tma-header__drawer-link--cta tma-header__drawer-link--${navUtilityCta.variant ?? 'ghost'}`}
+                  onNavigate={close}
+                />
+              ) : null}
               {navCta ? (
                 <MiddleLink
                   item={navCta}
@@ -233,9 +295,7 @@ export function SiteHeaderShell({
                   onNavigate={close}
                 />
               ) : null}
-              <Link href="/console/login" className="tma-header__drawer-link" onClick={close}>
-                <span>{navConsole}</span>
-              </Link>
+              <div className="tma-header__drawer-lang">{mobileLangSwitcher}</div>
             </nav>
           </div>
         </div>

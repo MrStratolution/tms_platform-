@@ -2,26 +2,64 @@
  * TMA design tokens — The Modesty Argument
  * Display: Syne (editorial) — swap for licensed Helvetica Now Display if you have the family files.
  * Body: Inter — swap for Arial Nova / full Helvetica stack via next/local font if licensed.
+ *
+ * TOKEN BRIDGE ARCHITECTURE
+ * ─────────────────────────
+ * Database-driven color overrides are injected by siteSettingsToRootCss() as:
+ *   --tma-color-primary   (maps to: colors.primary   in cms_site_settings)
+ *   --tma-color-accent    (maps to: colors.accent     in cms_site_settings)
+ *   --tma-color-text      (maps to: colors.textDefault in cms_site_settings)
+ *   --tma-color-secondary (maps to: colors.secondary  in cms_site_settings)
+ *   --tma-color-surface   (maps to: colors.surfaceBg  in cms_site_settings)
+ *   --tma-color-success / --tma-color-warning / --tma-color-error
+ *
+ * The hardcoded fallbacks below (e.g. #000000, #e7f8c8) are the TMA platform
+ * defaults. When an admin sets a brand color in site settings the DB-injected
+ * var wins and all components that reference --tma-black / --tma-lime update
+ * automatically — no component changes required.
+ *
+ * ⚠ Do NOT raise --tma-noise-opacity above 0.06. Glass-card backdrop-filter
+ *   composites with the noise overlay; higher values cause visual artefacts
+ *   on Safari. See CSS_ARCHITECTURE.md §Atmosphere Constraints.
  */
 
 :root {
-  /* Color */
-  --tma-black: #000000;
-  --tma-lime: #e7f8c8;
-  --tma-white: #ffffff;
-  --tma-red: #f14c4c;
-  --tma-lime-dim: rgba(231, 248, 200, 0.12);
-  --tma-lime-glow: rgba(231, 248, 200, 0.25);
-  --tma-white-muted: rgba(255, 255, 255, 0.72);
-  --tma-white-subtle: rgba(255, 255, 255, 0.45);
-  --tma-border: rgba(255, 255, 255, 0.12);
-  --tma-card: rgba(255, 255, 255, 0.03);
+  /* ── DB-injected color vars (set by siteSettingsToRootCss) ─────────────── */
+  /* These are declared here so var(--tma-color-accent, …) fallbacks work     */
+  /* even before a site-settings row exists in the database.                  */
+  --tma-color-primary:   #000000;
+  --tma-color-accent:    #e7f8c8;
+  --tma-color-text:      #ffffff;
+  --tma-color-secondary: #1a1a1a;
+  --tma-color-surface:   #0a0a0a;
+  --tma-color-success:   #10b981;
+  --tma-color-warning:   #f59e0b;
+  --tma-color-error:     #f14c4c;
+
+  /* ── Semantic aliases (all components use these) ──────────────────────── */
+  /* Changing a DB color token updates every alias that references it.        */
+  --tma-black: var(--tma-color-primary,  #000000);
+  --tma-lime:  var(--tma-color-accent,   #e7f8c8);
+  --tma-white: var(--tma-color-text,     #ffffff);
+  --tma-red:   var(--tma-color-error,    #f14c4c);
+
+  /* Derived alpha variants — always computed from the semantic alias above   */
+  --tma-lime-dim:    color-mix(in srgb, var(--tma-lime) 12%, transparent);
+  --tma-lime-glow:   color-mix(in srgb, var(--tma-lime) 25%, transparent);
+  --tma-white-muted: color-mix(in srgb, var(--tma-white) 72%, transparent);
+  --tma-white-subtle:color-mix(in srgb, var(--tma-white) 45%, transparent);
+  --tma-border:      color-mix(in srgb, var(--tma-white) 12%, transparent);
+  --tma-card:        color-mix(in srgb, var(--tma-white)  3%, transparent);
+
   --tma-scrim: linear-gradient(
     180deg,
     rgba(0, 0, 0, 0.2) 0%,
     rgba(0, 0, 0, 0.75) 55%,
     #000000 100%
   );
+
+  /* ── Noise opacity cap — see §Atmosphere Constraints ─────────────────── */
+  --tma-noise-opacity: 0.035;
 
   /* Type */
   --font-display:
@@ -35,13 +73,52 @@
   --tracking-tight: -0.03em;
   --tracking-display: -0.04em;
 
-  /* Space */
-  --tma-section-y: clamp(4rem, 12vw, 8rem);
+  /* ── Space scale ──────────────────────────────────────────────────────── */
+  /* Fluid spacing scale — prefer these over magic numbers in components.   */
+  /* Named after t-shirt sizes so editors can reason about rhythm visually. */
+  --tma-section-y: clamp(2.75rem, 7vw, 5rem);
   --tma-gutter: clamp(1.25rem, 4vw, 2.5rem);
   --tma-max: 72rem;
 
-  /* Motion */
-  --tma-ease-out: cubic-bezier(0.22, 1, 0.36, 1);
-  --tma-duration: 0.65s;
-  --tma-duration-slow: 1s;
+  /* Component-level spacing primitives */
+  --space-1:  0.25rem;   /*  4px */
+  --space-2:  0.5rem;    /*  8px */
+  --space-3:  0.75rem;   /* 12px */
+  --space-4:  1rem;      /* 16px */
+  --space-5:  1.25rem;   /* 20px */
+  --space-6:  1.5rem;    /* 24px */
+  --space-8:  2rem;      /* 32px */
+  --space-10: 2.5rem;    /* 40px */
+  --space-12: 3rem;      /* 48px */
+  --space-16: 4rem;      /* 64px */
+  --space-20: 5rem;      /* 80px */
+  --space-24: 6rem;      /* 96px */
+
+  /* Fluid gap — use inside grid/flex containers */
+  --gap-sm:  clamp(0.75rem, 2vw, 1.25rem);
+  --gap-md:  clamp(1.25rem, 3vw, 2rem);
+  --gap-lg:  clamp(2rem,    5vw, 3.5rem);
+
+  /* ── Border radius scale ───────────────────────────────────────────────── */
+  --radius-sm:   4px;
+  --radius-md:   8px;
+  --radius-lg:   14px;
+  --radius-xl:   24px;
+  --radius-full: 9999px;
+
+  /* ── Motion ────────────────────────────────────────────────────────────── */
+  --tma-ease-out:    cubic-bezier(0.22, 1, 0.36, 1);
+  --tma-ease-in-out: cubic-bezier(0.45, 0, 0.55, 1);
+  --tma-ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);  /* slight overshoot */
+
+  --tma-duration-fast:   0.22s;
+  --tma-duration:        0.55s;
+  --tma-duration-slow:   0.9s;
+  --tma-duration-xslow:  1.3s;
+
+  /* Stagger delay increments for list reveals */
+  --tma-stagger-1: 0.07s;
+  --tma-stagger-2: 0.14s;
+  --tma-stagger-3: 0.21s;
+  --tma-stagger-4: 0.28s;
 }

@@ -1,8 +1,11 @@
-import { eq, inArray } from 'drizzle-orm'
+import { and, desc, eq, inArray } from 'drizzle-orm'
 
-import { cmsCaseStudies, cmsDownloadAssets, cmsFaqEntries, cmsIndustries, cmsMedia, cmsTeamMembers, cmsTestimonials } from '@/db/schema'
-import type { CmsDb } from '@/lib/cmsData'
-import type { CaseStudy, Industry, Media, Page, TeamMember, Testimonial } from '@/types/cms'
+import { cmsCaseStudies, cmsDownloadAssets, cmsFaqEntries, cmsIndustries, cmsMedia, cmsPages, cmsProducts, cmsTeamMembers, cmsTestimonials } from '@/db/schema'
+import { canonicalizeHeroDocument } from '@/lib/cms/canonicalHeroBlock'
+import { rowToPage, type CmsDb } from '@/lib/cmsData'
+import { resolveLocalizedDocument } from '@/lib/documentLocalization'
+import { resolveProductFeedProducts, resolveProductFeedSelectionMode } from '@/lib/productFeeds'
+import type { CaseStudy, Industry, Media, Page, Product, TeamMember, Testimonial } from '@/types/cms'
 
 function mediaRowToShape(r: typeof cmsMedia.$inferSelect): Media {
   const url = r.storageKey.startsWith('http')
@@ -47,6 +50,7 @@ function rowToTestimonial(
 export async function hydrateLayoutContentLibraries(
   db: CmsDb,
   layout: NonNullable<Page['layout']>,
+  locale?: string | null,
 ): Promise<Page['layout']> {
   if (!layout?.length) return layout
 
@@ -55,8 +59,12 @@ export async function hydrateLayoutContentLibraries(
   const downloadIds = new Set<number>()
   const teamMemberIds = new Set<number>()
   const caseStudyIds = new Set<number>()
+  const resourcePageIds = new Set<number>()
+  const productIds = new Set<number>()
   let fetchAllTeamMembers = false
   let fetchAllCaseStudies = false
+  let fetchAllResourcePages = false
+  let fetchAllProducts = false
 
   for (const block of layout) {
     if (!block || typeof block !== 'object' || Array.isArray(block)) continue
@@ -96,9 +104,41 @@ export async function hydrateLayoutContentLibraries(
         }
       }
     }
+    if (b.blockType === 'resourceFeed') {
+      if (typeof b.featuredPage === 'number' && Number.isFinite(b.featuredPage)) {
+        resourcePageIds.add(b.featuredPage)
+      }
+      if (Array.isArray(b.pages)) {
+        if (b.pages.length === 0 && b.showAllPublished !== false) {
+          fetchAllResourcePages = true
+        } else {
+          for (const x of b.pages) {
+            if (typeof x === 'number' && Number.isFinite(x)) resourcePageIds.add(x)
+          }
+        }
+      } else if (b.showAllPublished !== false) {
+        fetchAllResourcePages = true
+      }
+    }
+    if (b.blockType === 'productFeed') {
+      const selectionMode = resolveProductFeedSelectionMode(
+        b as unknown as Extract<NonNullable<Page['layout']>[number], { blockType: 'productFeed' }>,
+      )
+      if (typeof b.featuredProduct === 'number' && Number.isFinite(b.featuredProduct)) {
+        productIds.add(b.featuredProduct)
+      }
+      if (Array.isArray(b.products)) {
+        for (const x of b.products) {
+          if (typeof x === 'number' && Number.isFinite(x)) productIds.add(x)
+        }
+      }
+      if (selectionMode !== 'manual') {
+        fetchAllProducts = true
+      }
+    }
   }
 
-  const [tRows, fRows, dRows, tmRows, csRows] = await Promise.all([
+  const [tRows, fRows, dRows, tmRows, csRows, pageRows, productRows] = await Promise.all([
     testimonialIds.size
       ? db.select().from(cmsTestimonials).where(inArray(cmsTestimonials.id, [...testimonialIds]))
       : Promise.resolve([] as (typeof cmsTestimonials.$inferSelect)[]),
@@ -114,6 +154,32 @@ export async function hydrateLayoutContentLibraries(
     fetchAllCaseStudies || caseStudyIds.size
       ? db.select().from(cmsCaseStudies).where(fetchAllCaseStudies ? eq(cmsCaseStudies.active, true) : inArray(cmsCaseStudies.id, [...caseStudyIds]))
       : Promise.resolve([] as (typeof cmsCaseStudies.$inferSelect)[]),
+    fetchAllResourcePages || resourcePageIds.size
+      ? db
+          .select()
+          .from(cmsPages)
+          .where(
+            fetchAllResourcePages
+              ? and(eq(cmsPages.pageType, 'resource'), eq(cmsPages.status, 'published'))
+              : and(
+                  inArray(cmsPages.id, [...resourcePageIds]),
+                  eq(cmsPages.pageType, 'resource'),
+                  eq(cmsPages.status, 'published'),
+                ),
+          )
+          .orderBy(desc(cmsPages.createdAt))
+      : Promise.resolve([] as (typeof cmsPages.$inferSelect)[]),
+    fetchAllProducts || productIds.size
+      ? db
+          .select()
+          .from(cmsProducts)
+          .where(
+            fetchAllProducts
+              ? eq(cmsProducts.status, 'published')
+              : and(inArray(cmsProducts.id, [...productIds]), eq(cmsProducts.status, 'published')),
+          )
+          .orderBy(desc(cmsProducts.updatedAt))
+      : Promise.resolve([] as (typeof cmsProducts.$inferSelect)[]),
   ])
 
   const tMap = new Map(tRows.map((r) => [r.id, r]))
@@ -121,6 +187,45 @@ export async function hydrateLayoutContentLibraries(
   const dMap = new Map(dRows.map((r) => [r.id, r]))
   const tmMap = new Map(tmRows.map((r) => [r.id, r]))
   const csMap = new Map(csRows.map((r) => [r.id, r]))
+  const pageMap = new Map(
+    pageRows.map((r) => {
+      const base = rowToPage(r)
+      if (!locale || locale.toLowerCase() === 'de') return [r.id, base] as const
+      const localized = canonicalizeHeroDocument(
+        resolveLocalizedDocument(base as unknown as Record<string, unknown>, locale),
+        { preferLegacyValuesForExistingHero: true },
+      ).document as unknown as Page
+      return [r.id, localized] as const
+    }),
+  )
+  const productMap = new Map(
+    productRows.map((r) => {
+      const rawDoc =
+        r.document && typeof r.document === 'object' && !Array.isArray(r.document)
+          ? (r.document as Record<string, unknown>)
+          : {}
+      const localizedDoc =
+        !locale || locale.toLowerCase() === 'de'
+          ? rawDoc
+          : (resolveLocalizedDocument(rawDoc, locale) as Record<string, unknown>)
+      return [
+        r.id,
+        {
+          id: r.id,
+          slug: r.slug,
+          name: r.name,
+          status: r.status as Product['status'],
+          contentKind: r.contentKind as Product['contentKind'],
+          publishedAt: r.publishedAt?.toISOString() ?? null,
+          listingPriority: r.listingPriority ?? null,
+          showInProjectFeeds: r.showInProjectFeeds,
+          document: localizedDoc,
+          updatedAt: r.updatedAt.toISOString(),
+          createdAt: r.createdAt.toISOString(),
+        } satisfies Product,
+      ] as const
+    }),
+  )
 
   const mediaIds = new Set<number>()
   for (const r of tRows) {
@@ -281,6 +386,47 @@ export async function hydrateLayoutContentLibraries(
         } satisfies CaseStudy
       })
       return { ...b, studies: next } as typeof block
+    }
+
+    if (b.blockType === 'resourceFeed') {
+      const featuredPage =
+        typeof b.featuredPage === 'number' && Number.isFinite(b.featuredPage)
+          ? (pageMap.get(b.featuredPage) ?? b.featuredPage)
+          : b.featuredPage
+      const pages =
+        Array.isArray(b.pages) && b.pages.length > 0
+          ? b.pages.map((x) => {
+              if (typeof x !== 'number' || !Number.isFinite(x)) return x
+              return pageMap.get(x) ?? x
+            })
+          : b.showAllPublished === false
+            ? []
+            : [...pageMap.values()]
+      return { ...b, featuredPage, pages } as typeof block
+    }
+
+    if (b.blockType === 'productFeed') {
+      const featuredProduct =
+        typeof b.featuredProduct === 'number' && Number.isFinite(b.featuredProduct)
+          ? (productMap.get(b.featuredProduct) ?? b.featuredProduct)
+          : b.featuredProduct
+      const manualProducts =
+        Array.isArray(b.products)
+          ? b.products.flatMap((x) => {
+              if (typeof x !== 'number' || !Number.isFinite(x)) {
+                return x && typeof x === 'object' && !Array.isArray(x) ? [x as Product] : []
+              }
+              const product = productMap.get(x)
+              return product ? [product] : []
+            })
+          : []
+      const products = resolveProductFeedProducts(
+        b as unknown as Extract<NonNullable<Page['layout']>[number], { blockType: 'productFeed' }>,
+        manualProducts,
+        [...productMap.values()],
+        locale,
+      )
+      return { ...b, featuredProduct, products } as typeof block
     }
 
     return block

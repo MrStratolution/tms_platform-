@@ -5,11 +5,55 @@ import { cmsBookingProfiles, cmsFormConfigs, cmsLayoutBlocks } from '@/db/schema
 import type { CmsDb } from '@/lib/cmsData'
 import type { Page } from '@/types/cms'
 
+export function mergeLayoutBlockReference(
+  sourceBlock: Record<string, unknown>,
+  refBlock: Record<string, unknown>,
+): Record<string, unknown> {
+  const inner = { ...sourceBlock }
+  const preserve = (key: string) => {
+    if (Object.prototype.hasOwnProperty.call(refBlock, key) && refBlock[key] != null) {
+      inner[key] = refBlock[key]
+    }
+  }
+
+  if (typeof refBlock.id === 'string' && refBlock.id) inner.id = refBlock.id
+  if (typeof refBlock.blockName === 'string') inner.blockName = refBlock.blockName
+  preserve('anchorId')
+  preserve('marginTop')
+  preserve('marginRight')
+  preserve('marginBottom')
+  preserve('marginLeft')
+  preserve('paddingTop')
+  preserve('paddingRight')
+  preserve('paddingBottom')
+  preserve('paddingLeft')
+  preserve('marginUnit')
+  preserve('paddingUnit')
+  preserve('sectionSpacingY')
+  preserve('widthMode')
+  preserve('zIndex')
+  preserve('animationPreset')
+  preserve('hoverPreset')
+  preserve('backgroundEffect')
+  preserve('heroEffect')
+  preserve('revealMode')
+  preserve('revealDelay')
+  preserve('customClass')
+  preserve('sectionHidden')
+  preserve('hideOnDesktop')
+  preserve('hideOnMobile')
+  return inner
+}
+
 /**
  * Expand `layout` blocks that reference `cms_form_config` / `cms_booking_profile` by numeric id
  * into full embedded objects for public rendering (FormBlock / BookingBlock).
  */
-export async function hydratePageLayoutRelations(db: CmsDb, page: Page): Promise<Page> {
+export async function hydratePageLayoutRelations(
+  db: CmsDb,
+  page: Page,
+  locale?: string | null,
+): Promise<Page> {
   const layout = page.layout
   if (!Array.isArray(layout) || layout.length === 0) return page
 
@@ -53,20 +97,7 @@ export async function hydratePageLayoutRelations(db: CmsDb, page: Page): Promise
         if (!r || !r.active) return block
         const raw = r.block
         if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return block
-        const inner = { ...(raw as Record<string, unknown>) }
-        const preserve = (key: string) => {
-          if (Object.prototype.hasOwnProperty.call(b, key) && b[key] != null) {
-            inner[key] = b[key]
-          }
-        }
-        if (typeof b.id === 'string' && b.id) inner.id = b.id
-        if (typeof b.blockName === 'string') inner.blockName = b.blockName
-        preserve('anchorId')
-        preserve('sectionSpacingY')
-        preserve('widthMode')
-        preserve('customClass')
-        preserve('sectionHidden')
-        return inner
+        return mergeLayoutBlockReference(raw as Record<string, unknown>, b)
       }
 
       if (b.blockType === 'booking' && typeof b.bookingProfile === 'number') {
@@ -99,6 +130,7 @@ export async function hydratePageLayoutRelations(db: CmsDb, page: Page): Promise
   const withLibraries = await hydrateLayoutContentLibraries(
     db,
     nextLayout as NonNullable<Page['layout']>,
+    locale,
   )
 
   return { ...page, layout: withLibraries }

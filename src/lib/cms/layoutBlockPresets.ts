@@ -22,6 +22,9 @@ export type LayoutBlockType =
   | 'comparison'
   | 'teamGrid'
   | 'caseStudyGrid'
+  | 'resourceFeed'
+  | 'productFeed'
+  | 'servicesFocus'
   | 'rich'
   | 'spacer'
 
@@ -79,6 +82,9 @@ export const LAYOUT_BLOCK_ADD_OPTIONS: { value: LayoutBlockType; label: string }
   { value: 'comparison', label: 'Comparison table' },
   { value: 'teamGrid', label: 'Team grid' },
   { value: 'caseStudyGrid', label: 'Case study grid' },
+  { value: 'resourceFeed', label: 'Resource / news feed' },
+  { value: 'productFeed', label: 'Product / project feed' },
+  { value: 'servicesFocus', label: 'Services focus' },
   { value: 'rich', label: 'Rich text (Lexical)' },
   { value: 'spacer', label: 'Spacer / divider' },
 ]
@@ -323,6 +329,58 @@ export function createDefaultLayoutBlock(blockType: LayoutBlockType): Record<str
         blockType: 'caseStudyGrid',
         sectionTitle: 'Case studies',
         studies: [],
+      }
+    case 'resourceFeed':
+      return {
+        id,
+        blockType: 'resourceFeed',
+        sectionTitle: 'Latest articles',
+        intro: 'Feature one editorial entry and list published resource pages below.',
+        featuredPage: null,
+        pages: [],
+        showAllPublished: true,
+        limit: 6,
+        ctaLabel: '',
+        ctaHref: '',
+      }
+    case 'productFeed':
+      return {
+        id,
+        blockType: 'productFeed',
+        sectionTitle: 'Projects',
+        intro: 'Feature one project and list project-ready showcase entries below.',
+        featuredProduct: null,
+        products: [],
+        selectionMode: 'hybrid',
+        contentKinds: ['project', 'concept', 'system', 'initiative'],
+        sortBy: 'listingPriority',
+        sortDirection: 'asc',
+        showOnlyProjectFeedEligible: true,
+        showAllPublished: false,
+        limit: 6,
+        ctaLabel: '',
+        ctaHref: '',
+      }
+    case 'servicesFocus':
+      return {
+        id,
+        blockType: 'servicesFocus',
+        sectionTitle: 'Services in focus',
+        intro: 'Highlight one core service at a time.',
+        items: [
+          {
+            id: newId(),
+            title: 'Brand Identity',
+            summary: 'Naming, narrative, and visual language.',
+            bullets: [
+              { id: newId(), text: 'Positioning' },
+              { id: newId(), text: 'Visual system' },
+              { id: newId(), text: 'Brand direction' },
+            ],
+            imageUrl: '/brand/tma-logo-black.png',
+            imageAlt: 'Brand identity visual',
+          },
+        ],
       }
     case 'rich':
       return {

@@ -1,6 +1,6 @@
+import { asc } from 'drizzle-orm'
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { asc } from 'drizzle-orm'
 
 import { getCustomDb } from '@/db/client'
 import { cmsEmailTemplates } from '@/db/schema'
@@ -17,13 +17,14 @@ export default async function ConsoleEmailTemplatesListPage() {
       ? await db
           .select({
             id: cmsEmailTemplates.id,
-            slug: cmsEmailTemplates.slug,
-            name: cmsEmailTemplates.name,
+            key: cmsEmailTemplates.key,
+            language: cmsEmailTemplates.language,
             subject: cmsEmailTemplates.subject,
+            active: cmsEmailTemplates.active,
             updatedAt: cmsEmailTemplates.updatedAt,
           })
           .from(cmsEmailTemplates)
-          .orderBy(asc(cmsEmailTemplates.slug))
+          .orderBy(asc(cmsEmailTemplates.key), asc(cmsEmailTemplates.language))
       : null
 
   return (
@@ -32,35 +33,30 @@ export default async function ConsoleEmailTemplatesListPage() {
         <div>
           <h1 className="tma-console-page-title">Email templates</h1>
           <p className="tma-console-lead">
-            <code>tma_custom.cms_email_template</code> — autoresponders and transactional copy (Resend).
+            System email templates for SMTP delivery. German is the default fallback when an English template is missing.
           </p>
         </div>
-        <Link href="/console/email-templates/new" className="tma-console-btn-secondary">
+        <Link href="/console/email-system/templates/new" className="tma-console-btn-secondary">
           New email template
         </Link>
       </div>
+
       {rows === null ? (
         <p className="tma-console-lead tma-console-lead--error" role="alert">
           Database is not configured. Set <code>DATABASE_URL</code>.
         </p>
       ) : rows.length === 0 ? (
-        <>
-          <p className="tma-console-lead">No email templates yet. Create the first one now.</p>
-          <div className="tma-console-actions">
-            <Link href="/console/email-templates/new" className="tma-console-submit">
-              Create first email template
-            </Link>
-          </div>
-        </>
+        <p className="tma-console-lead">No email templates found.</p>
       ) : (
         <div className="tma-console-table-wrap">
           <table className="tma-console-table">
             <thead>
               <tr>
                 <th scope="col">ID</th>
-                <th scope="col">Slug</th>
-                <th scope="col">Name</th>
+                <th scope="col">Key</th>
+                <th scope="col">Language</th>
                 <th scope="col">Subject</th>
+                <th scope="col">Status</th>
                 <th scope="col">Updated</th>
                 <th scope="col">
                   <span className="sr-only">Actions</span>
@@ -73,14 +69,15 @@ export default async function ConsoleEmailTemplatesListPage() {
                   <td className="tma-console-table-id">{row.id}</td>
                   <td>
                     <Link
-                      href={`/console/email-templates/${row.id}`}
+                      href={`/console/email-system/templates/${row.id}`}
                       style={{ fontWeight: 600, color: 'var(--tma-white)' }}
                     >
-                      <code>{row.slug}</code>
+                      <code>{row.key}</code>
                     </Link>
                   </td>
-                  <td>{row.name}</td>
+                  <td>{String(row.language).toUpperCase()}</td>
                   <td>{row.subject}</td>
+                  <td>{row.active ? 'Active' : 'Inactive'}</td>
                   <td>
                     <time dateTime={row.updatedAt.toISOString()}>
                       {row.updatedAt.toLocaleString(undefined, {
@@ -90,7 +87,7 @@ export default async function ConsoleEmailTemplatesListPage() {
                     </time>
                   </td>
                   <td className="tma-console-table-actions">
-                    <Link href={`/console/email-templates/${row.id}`}>Edit</Link>
+                    <Link href={`/console/email-system/templates/${row.id}`}>Edit</Link>
                   </td>
                 </tr>
               ))}

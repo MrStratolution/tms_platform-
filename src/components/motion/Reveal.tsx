@@ -1,39 +1,68 @@
 'use client'
 
-import { motion, useReducedMotion } from 'framer-motion'
-import type { ReactNode } from 'react'
+import { createElement } from 'react'
+import type { CSSProperties, ReactNode, Ref } from 'react'
+
+import { useRevealOnScroll } from './useRevealOnScroll'
+
+/**
+ * Reveal variant → maps to `.tma-reveal--{variant}` CSS class.
+ *
+ * fade      standard fade + translateY (default)
+ * blur      fade + blur-in (editorial / slower)
+ * slide-up  pronounced upward slide + fade (stats, cards)
+ * subtle    opacity-only fade, no position movement
+ * stagger   children animate in sequence (use on grid/list wrappers)
+ * none      no animation, renders immediately
+ */
+export type RevealVariant =
+  | 'fade'
+  | 'blur'
+  | 'slide-up'
+  | 'scale-in'
+  | 'subtle'
+  | 'stagger'
+  | 'none'
+type HtmlTag = keyof HTMLElementTagNameMap
 
 type Props = {
   children: ReactNode
   className?: string
-  /** `blur` = slower editorial reveal */
-  variant?: 'fade' | 'blur'
+  variant?: RevealVariant
+  /**
+   * Delay in milliseconds before the reveal animation starts.
+   * Useful for choreographing adjacent sections. Ignored when variant='none'.
+   */
+  delay?: number
+  as?: HtmlTag
 }
 
-export function Reveal({ children, className, variant = 'fade' }: Props) {
-  const reduceMotion = useReducedMotion()
-  const isBlur = variant === 'blur'
+const THRESHOLD_BY_VARIANT: Partial<Record<RevealVariant, number>> = {
+  blur: 0.1,
+  'slide-up': 0.12,
+  'scale-in': 0.12,
+  stagger: 0.08,
+}
 
-  if (reduceMotion) {
-    return <div className={className}>{children}</div>
-  }
+export function Reveal({ children, className, variant = 'fade', delay, as: Tag = 'div' }: Props) {
+  const { ref, state, motionEnabled } = useRevealOnScroll<HTMLElement>({
+    disabled: variant === 'none',
+    threshold: THRESHOLD_BY_VARIANT[variant] ?? 0.16,
+  })
 
-  return (
-    <motion.div
-      className={className}
-      initial={
-        isBlur
-          ? { opacity: 0, y: 24, filter: 'blur(12px)' }
-          : { opacity: 0, y: 14 }
-      }
-      whileInView={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
-      viewport={{ once: true, amount: 0.2 }}
-      transition={{
-        duration: isBlur ? 0.85 : 0.5,
-        ease: [0.22, 1, 0.36, 1],
-      }}
-    >
-      {children}
-    </motion.div>
+  const style: CSSProperties | undefined =
+    delay && delay > 0 && variant !== 'none'
+      ? { transitionDelay: `${delay}ms` }
+      : undefined
+
+  return createElement(
+    Tag,
+    {
+      ref: ref as Ref<HTMLElement>,
+      className: `tma-reveal tma-reveal--${variant}${className ? ` ${className}` : ''}`,
+      'data-reveal-state': motionEnabled ? state : 'visible',
+      style,
+    },
+    children,
   )
 }

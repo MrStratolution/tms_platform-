@@ -122,9 +122,6 @@ export async function SiteFooter({ site = null }: Props) {
             <p className="tma-footer__meta">
               {metaLine || `© ${year} ${t('footerTagline')} — ${t('footerRights')}`}
             </p>
-            <Link href="/console/login" className="tma-footer__admin">
-              {t('navConsole')}
-            </Link>
           </div>
         </div>
       </div>

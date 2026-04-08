@@ -7,7 +7,7 @@ import { cmsProducts } from '@/db/schema'
 import { MIGRATE_HINT, isMissingDbRelationError } from '@/lib/db/errors'
 
 export const metadata: Metadata = {
-  title: 'Products',
+  title: 'Projects / Products',
 }
 
 export default async function ConsoleProductsListPage() {
@@ -18,6 +18,8 @@ export default async function ConsoleProductsListPage() {
     slug: string
     name: string
     status: string
+    contentKind: string
+    showInProjectFeeds: boolean
     updatedAt: Date
   }
 
@@ -32,6 +34,8 @@ export default async function ConsoleProductsListPage() {
           slug: cmsProducts.slug,
           name: cmsProducts.name,
           status: cmsProducts.status,
+          contentKind: cmsProducts.contentKind,
+          showInProjectFeeds: cmsProducts.showInProjectFeeds,
           updatedAt: cmsProducts.updatedAt,
         })
         .from(cmsProducts)
@@ -48,12 +52,12 @@ export default async function ConsoleProductsListPage() {
 
   return (
     <main className="tma-console-main wide">
-        <h1 className="tma-console-page-title">Products</h1>
+        <h1 className="tma-console-page-title">Projects / Products</h1>
         <p className="tma-console-lead">
-          <code>tma_custom.cms_product</code> — offers and product content (strategy §7). Published
-          rows appear on <code>GET /api/products</code> and <code>/products/[slug]</code>.{' '}
+          <code>tma_custom.cms_product</code> — showcase entries for products, projects, concepts,
+          systems, and initiatives. Public detail pages render at <code>/products/[slug]</code>.{' '}
           <Link href="/console/products/new" className="tma-console-inline-link">
-            Create product
+            Create showcase entry
           </Link>
         </p>
         {rows === null ? (
@@ -68,7 +72,7 @@ export default async function ConsoleProductsListPage() {
           <p className="tma-console-lead">
             No products yet.{' '}
             <Link href="/console/products/new" className="tma-console-inline-link">
-              Create a product
+              Create a showcase entry
             </Link>{' '}
             or run <code>npm run seed</code> for a demo offer.
           </p>
@@ -81,6 +85,8 @@ export default async function ConsoleProductsListPage() {
                   <th scope="col">Slug</th>
                   <th scope="col">Name</th>
                   <th scope="col">Status</th>
+                  <th scope="col">Type</th>
+                  <th scope="col">Projects page</th>
                   <th scope="col">Updated</th>
                   <th scope="col"><span className="sr-only">Actions</span></th>
                 </tr>
@@ -100,6 +106,8 @@ export default async function ConsoleProductsListPage() {
                       </Link>
                     </td>
                     <td>{row.status}</td>
+                    <td>{row.contentKind}</td>
+                    <td>{row.showInProjectFeeds ? 'Yes' : 'No'}</td>
                     <td>
                       <time dateTime={row.updatedAt.toISOString()}>
                         {row.updatedAt.toLocaleString(undefined, {

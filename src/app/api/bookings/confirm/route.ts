@@ -13,12 +13,20 @@ import {
   type CmsDb,
 } from '@/lib/cmsData'
 import { fetchLeadById } from '@/lib/cmsLeadMap'
-import { sendBookingConfirmationToLead } from '@/lib/emailSend'
+import {
+  formatBookingDateForEmail,
+  notifyInternalNewLead,
+  sendBookingConfirmationToLead,
+} from '@/lib/emailSend'
+import { logEvent } from '@/lib/logger'
 import { checkRateLimit, clientIpFromRequest } from '@/lib/rateLimit'
+import { getPublicSiteSettingsDocument } from '@/lib/siteSettings'
+import { triggerZohoAutoSync } from '@/lib/zohoSyncJob'
 import type { EmailTemplate } from '@/types/cms'
 
 const bodySchema = z.object({
   bookingProfileKey: z.string().min(1),
+  language: z.string().optional(),
   scheduledFor: z.string().min(1),
   lead: z.object({
     email: z.string().email(),
@@ -40,8 +48,13 @@ async function resolveConfirmationTemplate(
 ): Promise<EmailTemplate | null> {
   const tpl = profile.confirmationEmailTemplate
   if (tpl == null) return null
-  if (typeof tpl === 'object' && tpl !== null && 'subject' in tpl && 'body' in tpl) {
-    return tpl as EmailTemplate
+  if (typeof tpl === 'object' && tpl !== null) {
+    if ('subject' in tpl && 'body' in tpl) {
+      return tpl as EmailTemplate
+    }
+    if ('key' in tpl || 'slug' in tpl) {
+      return tpl as EmailTemplate
+    }
   }
   if (typeof tpl === 'number') {
     return getEmailTemplateById(db, tpl)
@@ -178,6 +191,14 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Lead creation failed' }, { status: 500 })
   }
 
+  logEvent({
+    event: 'booking_lead_created',
+    leadId: leadRow.id,
+    correlationId,
+    bookingProfileId: profile.id,
+    sourcePageSlug: parsed.data.sourcePageSlug ?? null,
+  })
+
   const [event] = await db
     .insert(cmsBookingEvents)
     .values({
@@ -194,15 +215,50 @@ export async function POST(request: Request) {
     })
     .returning({ id: cmsBookingEvents.id })
 
-  const tpl = await resolveConfirmationTemplate(db, profile)
-  if (tpl) {
-    await sendBookingConfirmationToLead(db, leadRow, tpl, {
-      scheduledFor: scheduled,
+  void (async () => {
+    const site = await getPublicSiteSettingsDocument(db)
+    const siteEmail = site?.contactInfo?.email?.trim()
+    const extras = {
+      scheduledFor: formatBookingDateForEmail(scheduled),
+      slotEnd: formatBookingDateForEmail(slotEnd),
       bookingProfileName: profile.name ?? '',
-      durationMinutes: duration,
-      slotEnd,
+      durationMinutes: String(duration),
+    }
+
+    await notifyInternalNewLead(
+      db,
+      leadRow,
+      siteEmail ? [siteEmail] : [],
+      correlationId,
+      parsed.data.language,
+      extras,
+    )
+
+    const tpl = await resolveConfirmationTemplate(db, profile)
+    if (tpl) {
+      await sendBookingConfirmationToLead(
+        db,
+        leadRow,
+        tpl,
+        {
+          scheduledFor: scheduled,
+          bookingProfileName: profile.name ?? '',
+          durationMinutes: duration,
+          slotEnd,
+        },
+        parsed.data.language,
+      )
+    }
+  })().catch((error) => {
+    logEvent({
+      event: 'booking_email_dispatch_failed',
+      leadId: leadRow.id,
+      correlationId,
+      error: error instanceof Error ? error.message : 'Unknown booking email dispatch failure',
     })
-  }
+  })
+
+  triggerZohoAutoSync(leadRow.id, correlationId)
 
   return NextResponse.json({
     ok: true,

@@ -40,6 +40,8 @@ import {
   AlignJustify,
   Monitor,
   Smartphone,
+  Newspaper,
+  Boxes,
 } from 'lucide-react'
 import { type ComponentType, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
@@ -54,6 +56,7 @@ import {
 } from '@/components/console/ConsoleLayoutBlocksPanel'
 import { ConsolePageTranslationsPanel } from '@/components/console/ConsolePageTranslationsPanel'
 import { createDefaultLayoutBlock, type LayoutBlockType } from '@/lib/cms/layoutBlockPresets'
+import { canonicalizeHeroDocument } from '@/lib/cms/canonicalHeroBlock'
 import {
   extractPageSurfaceFromDocument,
   mergePageSurfaceIntoDocument,
@@ -61,6 +64,7 @@ import {
   type PageSurfaceFields,
 } from '@/lib/cms/pageSurfaceMerge'
 import { buildTemplateLayout, type BuilderTemplateId } from '@/lib/console/pageBuilderTemplates'
+import { getDocumentForLocaleEditor, upsertDocumentLocale } from '@/lib/documentLocalization'
 import { readResponseJson } from '@/lib/safeJson'
 
 const PAGE_TYPES = [
@@ -95,11 +99,14 @@ const BLOCK_PICKER_ITEMS: BlockPickerItem[] = [
   { type: 'proofBar', Icon: Star, label: 'Logo Strip' },
   { type: 'pricing', Icon: Wallet, label: 'Pricing' },
   { type: 'comparison', Icon: Table2, label: 'Compare' },
+  { type: 'servicesFocus', Icon: Layers, label: 'Services Focus' },
   { type: 'form', Icon: ClipboardList, label: 'Form' },
   { type: 'booking', Icon: CalendarCheck, label: 'Booking' },
   { type: 'testimonialSlider', Icon: MessageSquareQuote, label: 'Testimonials' },
   { type: 'teamGrid', Icon: Users, label: 'Team' },
   { type: 'caseStudyGrid', Icon: Folder, label: 'Case Studies' },
+  { type: 'resourceFeed', Icon: Newspaper, label: 'News Feed' },
+  { type: 'productFeed', Icon: Boxes, label: 'Projects Feed' },
   { type: 'download', Icon: Download, label: 'Download' },
   { type: 'rich', Icon: Type, label: 'Rich Text' },
   { type: 'spacer', Icon: MoveVertical, label: 'Spacer' },
@@ -115,6 +122,7 @@ type Props = {
   initialPageType: string
   initialStatus: PageStatus
   initialDocument: Record<string, unknown>
+  editingLocale?: 'de' | 'en'
   canEdit: boolean
   /** Admin/ops: can set published and move live pages. */
   canPublishLive?: boolean
@@ -189,6 +197,7 @@ export function ConsolePageEditorForm({
   initialPageType,
   initialStatus,
   initialDocument,
+  editingLocale = 'de',
   canEdit,
   canPublishLive = false,
   canEditCustomCss = false,
@@ -196,21 +205,30 @@ export function ConsolePageEditorForm({
   onSelectedBlockIdChange,
   previewSlot,
 }: Props) {
+  const initialEditableState = useMemo(
+    () =>
+      canonicalizeHeroDocument(getDocumentForLocaleEditor(initialDocument, editingLocale), {
+        stripLegacyFields: true,
+      }),
+    [initialDocument, editingLocale],
+  )
+  const initialEditableDocument = initialEditableState.document
   const initialSurface = useMemo(
-    () => extractPageSurfaceFromDocument(initialDocument),
-    [initialDocument],
+    () => extractPageSurfaceFromDocument(initialEditableDocument),
+    [initialEditableDocument],
   )
 
+  const [baseDocument, setBaseDocument] = useState<Record<string, unknown>>(initialDocument)
   const [slug, setSlug] = useState(initialSlug)
   const [pageType, setPageType] = useState(initialPageType)
   const [title, setTitle] = useState(initialTitle)
   const [status, setStatus] = useState<PageStatus>(normalizeStatus(initialStatus))
   const [surface, setSurface] = useState<PageSurfaceFields>(initialSurface)
   const [docText, setDocText] = useState(() =>
-    JSON.stringify(initialDocument, null, 2),
+    JSON.stringify(initialEditableDocument, null, 2),
   )
   const [selectedBlockIdLocal, setSelectedBlockIdLocal] = useState<string | null>(null)
-  const [history, setHistory] = useState<string[]>(() => [JSON.stringify(initialDocument, null, 2)])
+  const [history, setHistory] = useState<string[]>(() => [JSON.stringify(initialEditableDocument, null, 2)])
   const [historyIndex, setHistoryIndex] = useState(0)
   const historyIndexRef = useRef(historyIndex)
   historyIndexRef.current = historyIndex
@@ -229,9 +247,14 @@ export function ConsolePageEditorForm({
   const [pickerSearch, setPickerSearch] = useState('')
   const [editSubTab, setEditSubTab] = useState<'content' | 'style' | 'advanced'>('content')
 
-  const draftKey = `tma-builder-draft-${pageId}`
-  const revisionsKey = `tma-builder-revisions-${pageId}`
-  const dirty = docText !== history[0] || title !== initialTitle || slug !== initialSlug
+  const draftKey = `tma-builder-draft-${pageId}-${editingLocale}`
+  const revisionsKey = `tma-builder-revisions-${pageId}-${editingLocale}`
+  const localeMode = editingLocale === 'en' ? 'en' : 'de'
+  const localeScopedReadOnly = localeMode !== 'de'
+  const legacyHeroAutoConverted = initialEditableState.autoConvertedLegacyHero
+  const dirty =
+    docText !== history[0] ||
+    (!localeScopedReadOnly && (title !== initialTitle || slug !== initialSlug))
   const formRef = useRef<HTMLFormElement>(null)
   const publishChecks = useMemo(
     () => [
@@ -257,6 +280,14 @@ export function ConsolePageEditorForm({
   function updateSurface<K extends keyof PageSurfaceFields>(key: K, value: string) {
     setSurface((s) => ({ ...s, [key]: value }))
   }
+
+  const getCanonicalEditableDocument = useCallback(
+    (document: Record<string, unknown>) =>
+      canonicalizeHeroDocument(getDocumentForLocaleEditor(document, localeMode), {
+        stripLegacyFields: true,
+      }).document,
+    [localeMode],
+  )
 
   const applyDocText = useCallback((next: string, trackHistory = true) => {
     setDocText(next)
@@ -378,10 +409,12 @@ export function ConsolePageEditorForm({
   }
 
   function restoreRevision(rev: LocalRevision) {
-    setTitle(rev.title)
-    setSlug(rev.slug)
-    setPageType(rev.pageType)
-    setStatus(rev.status)
+    if (!localeScopedReadOnly) {
+      setTitle(rev.title)
+      setSlug(rev.slug)
+      setPageType(rev.pageType)
+      setStatus(rev.status)
+    }
     setSurface(rev.surface)
     setDocText(rev.docText)
     setHistory([rev.docText])
@@ -421,11 +454,14 @@ export function ConsolePageEditorForm({
       setSlug(data.page.slug)
       setPageType(data.page.pageType)
       setStatus(normalizeStatus(data.page.status))
-      const nextText = JSON.stringify(data.page.document, null, 2)
+      const nextBase = data.page.document
+      setBaseDocument(nextBase)
+      const nextEditable = getCanonicalEditableDocument(nextBase)
+      const nextText = JSON.stringify(nextEditable, null, 2)
       setDocText(nextText)
       setHistory([nextText])
       setHistoryIndex(0)
-      setSurface(extractPageSurfaceFromDocument(data.page.document))
+      setSurface(extractPageSurfaceFromDocument(nextEditable))
       setSuccess(`Revision restored at ${new Date(data.page.updatedAt).toLocaleString()}`)
     } catch {
       setError('Network error while restoring revision.')
@@ -506,6 +542,10 @@ export function ConsolePageEditorForm({
       documentPayload = rest
     }
 
+    if (localeMode === 'en') {
+      documentPayload = upsertDocumentLocale(baseDocument, 'en', documentPayload)
+    }
+
     const trimmed = title.trim()
     if (!trimmed) {
       setError('Title is required.')
@@ -558,11 +598,13 @@ export function ConsolePageEditorForm({
       if (data?.page?.status) setStatus(normalizeStatus(data.page.status))
       if (data?.page?.document && typeof data.page.document === 'object') {
         const d = data.page.document as Record<string, unknown>
-        const nextText = JSON.stringify(d, null, 2)
+        setBaseDocument(d)
+        const nextEditable = getCanonicalEditableDocument(d)
+        const nextText = JSON.stringify(nextEditable, null, 2)
         setDocText(nextText)
         setHistory([nextText])
         setHistoryIndex(0)
-        setSurface(extractPageSurfaceFromDocument(d))
+        setSurface(extractPageSurfaceFromDocument(nextEditable))
       }
       setPublishChecklistBypass(false)
       setPublishChecklistOpen(false)
@@ -575,6 +617,7 @@ export function ConsolePageEditorForm({
   }
 
   const readOnly = !canEdit
+  const baseSettingsDisabled = saving || readOnly || localeScopedReadOnly
   const statusLocked = !canPublishLive && status === 'published'
   useEffect(() => {
     if (status !== 'published') setPublishChecklistBypass(false)
@@ -652,11 +695,28 @@ export function ConsolePageEditorForm({
           <strong>View only.</strong> Your role cannot edit content.
         </div>
       ) : null}
+      {localeMode === 'en' ? (
+        <div className="tma-builder__message tma-builder__message--info">
+          <strong>Editing English overlay.</strong> Section content, hero, CTA, and SEO save into the
+          page&apos;s English localization overlay. Internal title, slug, status, and publish workflow stay
+          on the German base page.
+        </div>
+      ) : null}
+      {legacyHeroAutoConverted ? (
+        <div className="tma-builder__message tma-builder__message--info">
+          <strong>Legacy hero converted.</strong> This page previously used page-level hero fields. The
+          hero now appears as a normal section in the builder and will save back in the canonical
+          section layout format.
+        </div>
+      ) : null}
 
       <header className="tma-builder__topbar">
         <div className="tma-builder__topbar-left">
           <span className={`tma-builder__status${dirty ? ' tma-builder__status--dirty' : ''}`}>
             {dirty ? '● Unsaved' : '✓ Saved'}
+          </span>
+          <span className="tma-builder__locale-pill">
+            {localeMode === 'en' ? 'English overlay' : 'German base'}
           </span>
         </div>
         <div className="tma-builder__topbar-center">
@@ -665,7 +725,7 @@ export function ConsolePageEditorForm({
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             placeholder="Page title"
-            disabled={saving || readOnly}
+            disabled={saving || readOnly || localeScopedReadOnly}
             autoComplete="off"
           />
         </div>
@@ -674,7 +734,7 @@ export function ConsolePageEditorForm({
             className="tma-builder__status-select"
             value={status}
             onChange={(e) => setStatus(normalizeStatus(e.target.value))}
-            disabled={saving || readOnly || statusLocked}
+            disabled={saving || readOnly || statusLocked || localeScopedReadOnly}
           >
             {statusLocked ? (
               <option value="published">published</option>
@@ -1007,8 +1067,50 @@ export function ConsolePageEditorForm({
                           </div>
                           <div className="tma-builder-edit__color-row">
                             <span className="tma-builder-edit__color-label">Z-index</span>
-                            <input className={fieldClass} type="number" value={typeof blk.zIndex === 'number' ? blk.zIndex : ''} onChange={(e) => { const v = Number(e.target.value); patchBlock({ zIndex: Number.isFinite(v) ? v : undefined }) }} disabled={saving || readOnly} placeholder="auto" style={{ flex: 1, width: 0 }} />
+                            <input className={fieldClass} type="number" value={typeof blk.zIndex === 'number' ? blk.zIndex : ''} onChange={(e) => { const rawValue = e.target.value.trim(); if (!rawValue) { patchBlock({ zIndex: undefined }); return } const v = Number(rawValue); patchBlock({ zIndex: Number.isFinite(v) ? v : undefined }) }} disabled={saving || readOnly} placeholder="auto" style={{ flex: 1, width: 0 }} />
                           </div>
+                          <div className="tma-builder-edit__color-row">
+                            <span className="tma-builder-edit__color-label">Animation</span>
+                            <select className={fieldClass} value={blk.animationPreset === 'none' || blk.animationPreset === 'fade' || blk.animationPreset === 'slide-up' || blk.animationPreset === 'slide-blur' || blk.animationPreset === 'scale-in' ? String(blk.animationPreset) : 'inherit'} onChange={(e) => patchBlock({ animationPreset: e.target.value === 'inherit' ? undefined : e.target.value })} disabled={saving || readOnly} style={{ flex: 1 }}>
+                              <option value="inherit">Default</option>
+                              <option value="none">None</option>
+                              <option value="fade">Fade</option>
+                              <option value="slide-up">Slide up</option>
+                              <option value="slide-blur">Slide + blur</option>
+                              <option value="scale-in">Scale in</option>
+                            </select>
+                          </div>
+                          <div className="tma-builder-edit__color-row">
+                            <span className="tma-builder-edit__color-label">Hover</span>
+                            <select className={fieldClass} value={blk.hoverPreset === 'none' || blk.hoverPreset === 'lift' || blk.hoverPreset === 'scale' || blk.hoverPreset === 'glow' || blk.hoverPreset === 'border-highlight' ? String(blk.hoverPreset) : 'inherit'} onChange={(e) => patchBlock({ hoverPreset: e.target.value === 'inherit' ? undefined : e.target.value })} disabled={saving || readOnly} style={{ flex: 1 }}>
+                              <option value="inherit">Default</option>
+                              <option value="none">None</option>
+                              <option value="lift">Lift</option>
+                              <option value="scale">Scale</option>
+                              <option value="glow">Glow</option>
+                              <option value="border-highlight">Border highlight</option>
+                            </select>
+                          </div>
+                          <div className="tma-builder-edit__color-row">
+                            <span className="tma-builder-edit__color-label">Atmosphere</span>
+                            <select className={fieldClass} value={blk.backgroundEffect === 'none' || blk.backgroundEffect === 'glow' || blk.backgroundEffect === 'glass' || blk.backgroundEffect === 'noise' || blk.backgroundEffect === 'orb' ? String(blk.backgroundEffect) : 'inherit'} onChange={(e) => patchBlock({ backgroundEffect: e.target.value === 'inherit' ? undefined : e.target.value })} disabled={saving || readOnly} style={{ flex: 1 }}>
+                              <option value="inherit">Default</option>
+                              <option value="none">None</option>
+                              <option value="glow">Glow</option>
+                              <option value="glass">Glass</option>
+                              <option value="noise">Noise</option>
+                              <option value="orb">Orb</option>
+                            </select>
+                          </div>
+                          {blk.blockType === 'hero' || blk.blockType === 'promoBanner' || blk.blockType === 'imageBanner' ? (
+                            <div className="tma-builder-edit__color-row">
+                              <span className="tma-builder-edit__color-label">Hero effect</span>
+                              <select className={fieldClass} value={blk.heroEffect === 'rotating-text' ? 'rotating-text' : 'none'} onChange={(e) => patchBlock({ heroEffect: e.target.value === 'none' ? undefined : e.target.value })} disabled={saving || readOnly} style={{ flex: 1 }}>
+                                <option value="none">None</option>
+                                <option value="rotating-text">Rotating text</option>
+                              </select>
+                            </div>
+                          ) : null}
                         </div>
                       </details>
 
@@ -1079,15 +1181,20 @@ export function ConsolePageEditorForm({
                   <div className="tma-builder-settings__fields">
                     <label className="tma-builder-settings__label">
                       Slug
-                      <input className="tma-builder-settings__input" value={slug} onChange={(e) => setSlug(e.target.value)} disabled={saving || readOnly} autoComplete="off" />
+                      <input className="tma-builder-settings__input" value={slug} onChange={(e) => setSlug(e.target.value)} disabled={baseSettingsDisabled} autoComplete="off" />
                     </label>
                     <label className="tma-builder-settings__label">
                       Page type
-                      <select className="tma-builder-settings__input" value={pageType} onChange={(e) => setPageType(e.target.value)} disabled={saving || readOnly}>
+                      <select className="tma-builder-settings__input" value={pageType} onChange={(e) => setPageType(e.target.value)} disabled={baseSettingsDisabled}>
                         {!PAGE_TYPES.some((p) => p.value === pageType) ? <option value={pageType}>Current: {pageType}</option> : null}
                         {PAGE_TYPES.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
                       </select>
                     </label>
+                    {localeScopedReadOnly ? (
+                      <p className="tma-console-hint" style={{ marginBottom: 0 }}>
+                        Slug and page type stay on the German base page. Edit them from the German tab.
+                      </p>
+                    ) : null}
                   </div>
                 </details>
 
@@ -1120,16 +1227,21 @@ export function ConsolePageEditorForm({
                   <div className="tma-builder-settings__fields">
                     <label className="tma-builder-settings__label">
                       Nav label
-                      <input className="tma-builder-settings__input" value={surface.navigationLabel} onChange={(e) => updateSurface('navigationLabel', e.target.value)} placeholder="Appears in site header" disabled={saving || readOnly} />
+                      <input className="tma-builder-settings__input" value={surface.navigationLabel} onChange={(e) => updateSurface('navigationLabel', e.target.value)} placeholder="Appears in site header" disabled={baseSettingsDisabled} />
                     </label>
                     <label className="tma-builder-settings__label">
                       Nav href
-                      <input className="tma-builder-settings__input" value={surface.navigationHref} onChange={(e) => updateSurface('navigationHref', e.target.value)} placeholder="Leave blank for page path" disabled={saving || readOnly} />
+                      <input className="tma-builder-settings__input" value={surface.navigationHref} onChange={(e) => updateSurface('navigationHref', e.target.value)} placeholder="Leave blank for page path" disabled={baseSettingsDisabled} />
                     </label>
                     <label className="tma-builder-settings__label">
                       Sort order
-                      <input className="tma-builder-settings__input" inputMode="numeric" value={surface.navOrder} onChange={(e) => updateSurface('navOrder', e.target.value)} placeholder="10, 20, 30…" disabled={saving || readOnly} />
+                      <input className="tma-builder-settings__input" inputMode="numeric" value={surface.navOrder} onChange={(e) => updateSurface('navOrder', e.target.value)} placeholder="10, 20, 30…" disabled={baseSettingsDisabled} />
                     </label>
+                    {localeScopedReadOnly ? (
+                      <p className="tma-console-hint" style={{ marginBottom: 0 }}>
+                        Navigation placement stays on the German base page. English editing here covers content and SEO.
+                      </p>
+                    ) : null}
                   </div>
                 </details>
 
