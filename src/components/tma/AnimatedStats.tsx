@@ -1,7 +1,8 @@
 'use client'
 
-import { animate } from 'framer-motion'
 import { useEffect, useRef, useState } from 'react'
+
+import { useMotionEnabled } from '@/components/motion/useMotionEnabled'
 
 type Item = { value: string; suffix?: string | null; label: string; id?: string | null }
 
@@ -29,40 +30,58 @@ function StatFigure({
   const ref = useRef<HTMLDivElement>(null)
   const parts = splitNumeric(value)
   const suf = suffix?.trim() ?? ''
+  const motionEnabled = useMotionEnabled()
+  const finalDisplay = parts ? `${parts.before}${parts.n}${parts.after}${suf}` : `${value}${suf}`
 
-  const [display, setDisplay] = useState(() => {
-    if (!parts) return `${value}${suf}`
-    return `${parts.before}0${parts.after}${suf}`
-  })
+  const [display, setDisplay] = useState(finalDisplay)
 
   useEffect(() => {
     const el = ref.current
-    if (!el || !parts) return
+    if (!el || !parts || !motionEnabled) {
+      setDisplay(finalDisplay)
+      return
+    }
 
-    let ctrl: ReturnType<typeof animate> | undefined
+    const rect = el.getBoundingClientRect()
+    const viewportHeight = window.innerHeight || 0
+    if (rect.top <= viewportHeight * 0.85) {
+      setDisplay(finalDisplay)
+      return
+    }
+
+    const { before, n, after } = parts
+    const decimals = n % 1 !== 0 ? 1 : 0
+    const startDisplay = `${before}0${after}${suf}`
+    let frame = 0
+    let startedAt = 0
+
+    setDisplay(startDisplay)
+
+    const render = (timestamp: number) => {
+      if (!startedAt) startedAt = timestamp
+      const progress = Math.min((timestamp - startedAt) / 1350, 1)
+      const eased = 1 - Math.pow(1 - progress, 3)
+      const current = n * eased
+      const mid = decimals > 0 ? current.toFixed(decimals) : String(Math.round(current))
+      setDisplay(`${before}${mid}${after}${suf}`)
+      if (progress < 1) frame = window.requestAnimationFrame(render)
+    }
+
     const obs = new IntersectionObserver(
-      ([e]) => {
-        if (!e?.isIntersecting) return
+      ([entry]) => {
+        if (!entry?.isIntersecting) return
         obs.disconnect()
-        const { before, n, after } = parts
-        const dec = n % 1 !== 0 ? 1 : 0
-        ctrl = animate(0, n, {
-          duration: 1.35,
-          ease: [0.22, 1, 0.36, 1],
-          onUpdate: (v) => {
-            const mid = dec > 0 ? v.toFixed(1) : String(Math.round(v))
-            setDisplay(`${before}${mid}${after}${suf}`)
-          },
-        })
+        frame = window.requestAnimationFrame(render)
       },
       { threshold: 0.15 },
     )
+
     obs.observe(el)
     return () => {
       obs.disconnect()
-      ctrl?.stop()
+      if (frame !== 0) window.cancelAnimationFrame(frame)
     }
-  }, [parts, suf])
+  }, [finalDisplay, motionEnabled, parts, suf])
 
   return (
     <div ref={ref} className="tma-stat">

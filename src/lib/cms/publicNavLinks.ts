@@ -20,7 +20,6 @@ export type PublicNavLink = {
 const STATIC_FALLBACK: PublicNavLink[] = [
   { href: '/services', label: 'Services' },
   { href: '/contact', label: 'Contact' },
-  { href: '/book/strategy-call', label: 'Book a call' },
 ]
 
 type CmsNavRow = { slug: string; document: unknown }
@@ -92,6 +91,23 @@ export async function getPublicNavLinksFromCms(db: CmsDb): Promise<PublicNavLink
 
 export function getStaticNavFallbackOnly(): PublicNavLink[] {
   return [...STATIC_FALLBACK]
+}
+
+export function mergePublicNavLinks(
+  primary: PublicNavLink[],
+  secondary: PublicNavLink[],
+): PublicNavLink[] {
+  const seen = new Set<string>()
+  const out: PublicNavLink[] = []
+
+  for (const item of [...primary, ...secondary]) {
+    const href = normalizeNavHref(item.href)
+    if (!href || seen.has(href)) continue
+    seen.add(href)
+    out.push({ ...item, href })
+  }
+
+  return out
 }
 
 export function getManualNavLinksFromSiteSettings(

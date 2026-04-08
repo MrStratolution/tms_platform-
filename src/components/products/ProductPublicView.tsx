@@ -1,5 +1,6 @@
 import Link from 'next/link'
 
+import { resolveLocalizedDocument } from '@/lib/documentLocalization'
 import { localizePublicHref, type PublicLocale } from '@/lib/publicLocale'
 
 type FaqItem = { question: string; answer: string }
@@ -30,20 +31,28 @@ export function ProductPublicView(props: {
   document: unknown
   locale?: PublicLocale
 }) {
-  const doc = (props.document && typeof props.document === 'object'
+  const locale = props.locale ?? 'de'
+  const rawDoc = (props.document && typeof props.document === 'object'
     ? props.document
-    : {}) as ProductDoc
+    : {}) as Record<string, unknown>
+  const doc = resolveLocalizedDocument(rawDoc, locale) as ProductDoc
   const modules = Array.isArray(doc.modules) ? doc.modules : []
   const cta = doc.primaryCta
   const faqs = Array.isArray(doc.faqs) ? doc.faqs : []
   const pricing = doc.pricing
   const plans = Array.isArray(pricing?.plans) ? pricing!.plans! : []
+  const homeLabel = locale === 'en' ? 'Home' : 'Startseite'
+  const emptyLabel =
+    locale === 'en'
+      ? 'No modules in this offer yet — edit in the console.'
+      : 'Dieses Angebot hat noch keine Module. Bearbeite es in der Konsole.'
+  const pricingLabel = locale === 'en' ? 'Pricing' : 'Preise'
 
   return (
     <article className="tma-product-public">
       <header className="tma-product-public__header">
         <p className="tma-product-public__eyebrow">
-          <Link href={localizePublicHref('/', props.locale ?? 'de')}>Home</Link>
+          <Link href={localizePublicHref('/', locale)}>{homeLabel}</Link>
         </p>
         <h1 className="tma-product-public__title">{props.name}</h1>
         {doc.tagline ? <p className="tma-product-public__tagline">{doc.tagline}</p> : null}
@@ -59,15 +68,13 @@ export function ProductPublicView(props: {
           ))}
         </ol>
       ) : (
-        <p className="tma-product-public__empty">
-          No modules in this offer yet — edit in the console.
-        </p>
+        <p className="tma-product-public__empty">{emptyLabel}</p>
       )}
 
       {plans.length > 0 ? (
         <section className="tma-product-public__pricing" aria-labelledby="tma-product-pricing">
           <h2 id="tma-product-pricing" className="tma-product-public__section-title">
-            {pricing?.sectionTitle?.trim() || 'Pricing'}
+            {pricing?.sectionTitle?.trim() || pricingLabel}
           </h2>
           {pricing?.intro ? <p className="tma-product-public__section-intro">{pricing.intro}</p> : null}
           <ul className="tma-product-public__plans">
@@ -85,7 +92,10 @@ export function ProductPublicView(props: {
                 ) : null}
                 {plan.ctaLabel && plan.ctaHref ? (
                   <p>
-                    <a className="tma-btn tma-btn--secondary" href={plan.ctaHref}>
+                    <a
+                      className="tma-btn tma-btn--secondary"
+                      href={localizePublicHref(plan.ctaHref, locale)}
+                    >
                       {plan.ctaLabel}
                     </a>
                   </p>
@@ -99,7 +109,7 @@ export function ProductPublicView(props: {
       {faqs.length > 0 ? (
         <section className="tma-product-public__faqs" aria-labelledby="tma-product-faq">
           <h2 id="tma-product-faq" className="tma-product-public__section-title">
-            FAQs
+            {locale === 'en' ? 'FAQs' : 'FAQ'}
           </h2>
           <div className="block-faq">
             {faqs.map((item, i) => (
@@ -114,7 +124,7 @@ export function ProductPublicView(props: {
 
       {cta?.label && cta?.href ? (
         <p className="tma-product-public__cta">
-          <a className="tma-btn tma-btn--primary" href={cta.href}>
+          <a className="tma-btn tma-btn--primary" href={localizePublicHref(cta.href, locale)}>
             {cta.label}
           </a>
         </p>

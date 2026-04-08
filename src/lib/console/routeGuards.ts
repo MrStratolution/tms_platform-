@@ -10,7 +10,7 @@ export function requireConsoleTeamAdminRoute(session: ConsoleJwtPayload): void {
   }
 }
 
-/** `viewer` cannot open leads (PII); `admin`, `ops`, and `editor` can. */
+/** Lead pages contain PII; only `admin` and `ops` may open them. */
 export function requireConsoleLeadsRoute(session: ConsoleJwtPayload): void {
   if (!userHasConsolePermission(session.role, 'leads:read')) {
     redirect('/console')

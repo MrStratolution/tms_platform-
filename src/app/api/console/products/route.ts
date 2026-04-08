@@ -7,13 +7,46 @@ import { cmsProducts } from '@/db/schema'
 import { requireConsoleJsonAuth } from '@/lib/console/apiAuth'
 import { validatePageSlug } from '@/lib/cms/pageSlug'
 import { isMissingDbRelationError, missingRelationJsonResponse } from '@/lib/db/errors'
+import { normalizeProductContentKind } from '@/lib/productFeeds'
+import { PRODUCT_CONTENT_KIND_VALUES } from '@/types/cms'
+
+const productContentKindSchema = z.enum(PRODUCT_CONTENT_KIND_VALUES)
+const publishedAtSchema = z
+  .union([z.string().datetime({ offset: true }), z.string().regex(/^\d{4}-\d{2}-\d{2}$/), z.null()])
+  .optional()
 
 const createProductSchema = z.object({
   slug: z.string().min(1).max(200),
   name: z.string().min(1).max(500),
   status: z.enum(['draft', 'published']).default('draft'),
+  contentKind: productContentKindSchema.default('product'),
+  publishedAt: publishedAtSchema,
+  listingPriority: z.number().int().nullable().optional(),
+  showInProjectFeeds: z.boolean().default(false),
   document: z.record(z.unknown()).optional(),
 })
+
+function parseOptionalTimestamp(value: string | null | undefined): Date | null {
+  if (!value) return null
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    return new Date(`${value}T00:00:00.000Z`)
+  }
+  return new Date(value)
+}
+
+function localeAvailability(document: unknown) {
+  const base = document && typeof document === 'object' && !Array.isArray(document)
+    ? (document as Record<string, unknown>)
+    : null
+  const localizations =
+    base?.localizations && typeof base.localizations === 'object' && !Array.isArray(base.localizations)
+      ? (base.localizations as Record<string, unknown>)
+      : null
+  return {
+    de: true,
+    en: Boolean(localizations?.en && typeof localizations.en === 'object' && !Array.isArray(localizations.en)),
+  }
+}
 
 export async function GET(request: Request) {
   const auth = await requireConsoleJsonAuth(request, 'content:read')
@@ -32,6 +65,11 @@ export async function GET(request: Request) {
         slug: cmsProducts.slug,
         name: cmsProducts.name,
         status: cmsProducts.status,
+        contentKind: cmsProducts.contentKind,
+        publishedAt: cmsProducts.publishedAt,
+        listingPriority: cmsProducts.listingPriority,
+        showInProjectFeeds: cmsProducts.showInProjectFeeds,
+        document: cmsProducts.document,
         updatedAt: cmsProducts.updatedAt,
       })
       .from(cmsProducts)
@@ -44,7 +82,15 @@ export async function GET(request: Request) {
   return NextResponse.json({
     ok: true,
     products: rows.map((r) => ({
-      ...r,
+      id: r.id,
+      slug: r.slug,
+      name: r.name,
+      status: r.status,
+      contentKind: normalizeProductContentKind(r.contentKind),
+      publishedAt: r.publishedAt?.toISOString() ?? null,
+      listingPriority: r.listingPriority ?? null,
+      showInProjectFeeds: r.showInProjectFeeds,
+      localeAvailability: localeAvailability(r.document),
       updatedAt: r.updatedAt.toISOString(),
     })),
   })
@@ -96,6 +142,10 @@ export async function POST(request: Request) {
     modules: [],
     primaryCta: { label: 'Book a call', href: '/contact' },
   }
+  const publishedAt = parseOptionalTimestamp(parsed.data.publishedAt ?? null)
+  if (publishedAt && Number.isNaN(publishedAt.getTime())) {
+    return NextResponse.json({ error: 'Publishing date is invalid' }, { status: 400 })
+  }
 
   const now = new Date()
   try {
@@ -105,6 +155,10 @@ export async function POST(request: Request) {
         slug: slugCheck.slug,
         name: parsed.data.name.trim(),
         status: parsed.data.status,
+        contentKind: parsed.data.contentKind,
+        publishedAt,
+        listingPriority: parsed.data.listingPriority ?? null,
+        showInProjectFeeds: parsed.data.showInProjectFeeds,
         document,
         createdAt: now,
         updatedAt: now,
@@ -120,6 +174,10 @@ export async function POST(request: Request) {
         slug: row.slug,
         name: row.name,
         status: row.status,
+        contentKind: normalizeProductContentKind(row.contentKind),
+        publishedAt: row.publishedAt?.toISOString() ?? null,
+        listingPriority: row.listingPriority ?? null,
+        showInProjectFeeds: row.showInProjectFeeds,
         document: row.document,
         createdAt: row.createdAt.toISOString(),
         updatedAt: row.updatedAt.toISOString(),

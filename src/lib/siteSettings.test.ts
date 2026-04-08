@@ -109,6 +109,7 @@ describe('mergeSiteSettingsDocumentPatch', () => {
   it('merges structured header and footer settings without wiping existing chrome fields', () => {
     const prev = parseSiteSettingsDocument({
       header: {
+        navUtilityLabel: 'Intro call',
         navCtaLabel: 'Book',
         logoLightUrl: 'uploads/cms/logo-light.png',
         navigationItems: [
@@ -128,7 +129,15 @@ describe('mergeSiteSettingsDocumentPatch', () => {
 
     const merged = mergeSiteSettingsDocumentPatch(prev, {
       header: {
-        announcement: { enabled: true, text: 'Jetzt live' },
+        navUtilityLabelEn: 'Discovery call',
+        navUtilityHref: '/book/discovery',
+        announcement: {
+          enabled: true,
+          text: 'Jetzt live',
+          mode: 'running',
+          speed: 'fast',
+          pauseOnHover: false,
+        },
         navigationItems: [
           {
             id: 'nav-2',
@@ -143,17 +152,52 @@ describe('mergeSiteSettingsDocumentPatch', () => {
         ctaLabel: 'Book a call',
         showSocialLinks: false,
       },
+      cookieConsent: {
+        enabled: true,
+        title: 'Cookies',
+      },
     })
 
     expect(merged.ok).toBe(true)
     if (merged.ok) {
+      expect(merged.document.header?.navUtilityLabel).toBe('Intro call')
+      expect(merged.document.header?.navUtilityLabelEn).toBe('Discovery call')
+      expect(merged.document.header?.navUtilityHref).toBe('/book/discovery')
       expect(merged.document.header?.logoLightUrl).toBe('uploads/cms/logo-light.png')
       expect(merged.document.header?.announcement?.text).toBe('Jetzt live')
+      expect(merged.document.header?.announcement?.mode).toBe('running')
+      expect(merged.document.header?.announcement?.speed).toBe('fast')
+      expect(merged.document.header?.announcement?.pauseOnHover).toBe(false)
       expect(merged.document.header?.navigationItems?.[0]?.label).toBe('External')
+      expect(merged.document.cookieConsent?.enabled).toBe(true)
+      expect(merged.document.cookieConsent?.title).toBe('Cookies')
       expect(merged.document.footer?.straplineOverride).toBe('Old strapline')
       expect(merged.document.footer?.ctaLabel).toBe('Book a call')
       expect(merged.document.footer?.legalLinks?.[0]?.label).toBe('Privacy')
       expect(merged.document.footer?.showSocialLinks).toBe(false)
+    }
+  })
+
+  it('merges cookie consent settings without wiping existing strings', () => {
+    const prev = parseSiteSettingsDocument({
+      cookieConsent: {
+        enabled: true,
+        title: 'Cookies',
+        body: 'Alt',
+      },
+    })
+    const merged = mergeSiteSettingsDocumentPatch(prev, {
+      cookieConsent: {
+        bodyEn: 'English',
+        rejectLabel: 'Nur notwendige Cookies',
+      },
+    })
+    expect(merged.ok).toBe(true)
+    if (merged.ok) {
+      expect(merged.document.cookieConsent?.title).toBe('Cookies')
+      expect(merged.document.cookieConsent?.body).toBe('Alt')
+      expect(merged.document.cookieConsent?.bodyEn).toBe('English')
+      expect(merged.document.cookieConsent?.rejectLabel).toBe('Nur notwendige Cookies')
     }
   })
 })

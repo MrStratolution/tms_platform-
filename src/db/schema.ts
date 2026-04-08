@@ -6,6 +6,7 @@ import {
   serial,
   text,
   timestamp,
+  unique,
   uuid,
 } from 'drizzle-orm/pg-core'
 
@@ -40,6 +41,11 @@ export const cmsPages = tmaCustom.table('cms_page', {
   document: jsonb('document').notNull(),
   lastEditedByUserId: uuid('last_edited_by_user_id'),
   lastEditedByEmail: text('last_edited_by_email'),
+  /**
+   * Set to `true` by the demo seed. Lets the console page list show a "Demo"
+   * badge and lets ops bulk-delete demo pages before going live.
+   */
+  isDemoContent: boolean('is_demo_content').notNull().default(false),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 })
@@ -62,15 +68,41 @@ export const cmsBookingProfiles = tmaCustom.table('cms_booking_profile', {
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 })
 
-export const cmsEmailTemplates = tmaCustom.table('cms_email_template', {
+export const cmsSmtpSettings = tmaCustom.table('smtp_settings', {
   id: serial('id').primaryKey(),
-  slug: text('slug').notNull().unique(),
-  name: text('name').notNull(),
-  subject: text('subject').notNull(),
-  body: text('body').notNull(),
+  host: text('host').notNull(),
+  port: integer('port').notNull(),
+  secure: boolean('secure').notNull().default(false),
+  username: text('username').notNull(),
+  passwordEncrypted: text('password_encrypted').notNull(),
+  fromName: text('from_name').notNull(),
+  fromEmail: text('from_email').notNull(),
+  replyTo: text('reply_to'),
+  active: boolean('active').notNull().default(false),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 })
+
+export const cmsEmailTemplates = tmaCustom.table(
+  'email_templates',
+  {
+    id: serial('id').primaryKey(),
+    key: text('key').notNull(),
+    language: text('language').notNull().default('de'),
+    subject: text('subject').notNull(),
+    htmlBody: text('html_body').notNull(),
+    variablesJson: jsonb('variables_json').notNull(),
+    active: boolean('active').notNull().default(true),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => ({
+    keyLanguageUnique: unique('email_templates_key_language_unique').on(
+      table.key,
+      table.language,
+    ),
+  }),
+)
 
 export const cmsServices = tmaCustom.table('cms_service', {
   id: serial('id').primaryKey(),
@@ -117,6 +149,17 @@ export const cmsLeads = tmaCustom.table('cms_lead', {
   consentMarketing: boolean('consent_marketing').notNull().default(false),
   idempotencyKey: text('idempotency_key').unique(),
   submissionExtras: jsonb('submission_extras'),
+  /**
+   * Set to `true` by the demo seed script so ops can filter demo rows from
+   * production dashboards with `WHERE is_demo_content = false`.
+   * Never set to `true` by real form submissions.
+   */
+  isDemoContent: boolean('is_demo_content').notNull().default(false),
+  /**
+   * Admin user UUID assigned to own this lead (maps to admin_user.id).
+   * Null = unassigned. Set by ops in the lead dashboard.
+   */
+  assignedToUserId: uuid('assigned_to_user_id'),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 })
@@ -144,14 +187,20 @@ export const cmsCrmSyncLogs = tmaCustom.table('cms_crm_sync_log', {
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
 })
 
-export const cmsEmailLogs = tmaCustom.table('cms_email_log', {
+export const cmsEmailLogs = tmaCustom.table('email_logs', {
   id: serial('id').primaryKey(),
   leadId: integer('lead_id'),
   templateId: integer('template_id'),
+  templateKey: text('template_key').notNull(),
   recipient: text('recipient').notNull(),
+  language: text('language').notNull().default('de'),
+  subject: text('subject').notNull(),
   status: text('status').notNull(),
+  errorMessage: text('error_message'),
+  payloadJson: jsonb('payload_json'),
   providerMessageId: text('provider_message_id'),
-  sentAt: timestamp('sent_at', { withTimezone: true }).notNull(),
+  sentAt: timestamp('sent_at', { withTimezone: true }),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
 })
 
@@ -186,8 +235,22 @@ export const cmsPageLocalizations = tmaCustom.table('cms_page_localization', {
   pageId: integer('page_id').notNull(),
   locale: text('locale').notNull(),
   sourceLocale: text('source_locale'),
+  /** idle | queued | running | ready | failed */
   jobStatus: text('job_status'),
   lastError: text('last_error'),
+  /**
+   * Total translatable blocks on the source page when the job last ran.
+   * Used by the console to render a progress bar.
+   */
+  blocksTotal: integer('blocks_total'),
+  /**
+   * Blocks successfully translated so far. Progress % = blocksTranslated / blocksTotal.
+   */
+  blocksTranslated: integer('blocks_translated'),
+  /**
+   * Timestamp of the last completed (or failed) translation job run.
+   */
+  lastJobCompletedAt: timestamp('last_job_completed_at', { withTimezone: true }),
   heroHeadline: text('hero_headline'),
   heroSubheadline: text('hero_subheadline'),
   seoTitle: text('seo_title'),
@@ -205,6 +268,10 @@ export const cmsProducts = tmaCustom.table('cms_product', {
   slug: text('slug').notNull().unique(),
   name: text('name').notNull(),
   status: text('status').notNull().default('draft'),
+  contentKind: text('content_kind').notNull().default('product'),
+  publishedAt: timestamp('published_at', { withTimezone: true }),
+  listingPriority: integer('listing_priority'),
+  showInProjectFeeds: boolean('show_in_project_feeds').notNull().default(false),
   document: jsonb('document').notNull(),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),

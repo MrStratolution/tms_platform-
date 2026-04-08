@@ -1,23 +1,14 @@
 import { NextResponse } from 'next/server'
-import { eq } from 'drizzle-orm'
-import { z } from 'zod'
 
-import { getCustomDb } from '@/db/client'
-import { cmsEmailTemplates } from '@/db/schema'
 import { requireConsoleJsonAuth } from '@/lib/console/apiAuth'
+import {
+  getSystemEmailTemplateById,
+  updateSystemEmailTemplate,
+} from '@/lib/email/systemStore'
+import { emailTemplatePatchSchema } from '@/lib/email/systemSchemas'
+import { getCustomDb } from '@/db/client'
 
 type RouteContext = { params: Promise<{ id: string }> }
-
-const patchSchema = z
-  .object({
-    name: z.string().min(1, 'Name is required').max(500),
-    subject: z.string().min(1, 'Subject is required').max(998),
-    body: z.string(),
-  })
-  .partial()
-  .refine((d) => d.name !== undefined || d.subject !== undefined || d.body !== undefined, {
-    message: 'At least one of name, subject, body is required',
-  })
 
 export async function GET(request: Request, ctx: RouteContext) {
   const auth = await requireConsoleJsonAuth(request, 'content:read')
@@ -33,20 +24,16 @@ export async function GET(request: Request, ctx: RouteContext) {
     return NextResponse.json({ error: 'Database not configured' }, { status: 503 })
   }
 
-  const rows = await db.select().from(cmsEmailTemplates).where(eq(cmsEmailTemplates.id, id)).limit(1)
-  const row = rows[0]
+  const row = await getSystemEmailTemplateById(db, id)
   if (!row) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
   return NextResponse.json({
     ok: true,
     emailTemplate: {
-      id: row.id,
-      slug: row.slug,
-      name: row.name,
-      subject: row.subject,
-      body: row.body,
-      updatedAt: row.updatedAt.toISOString(),
-      createdAt: row.createdAt.toISOString(),
+      ...row,
+      name: `${row.key} (${row.language.toUpperCase()})`,
+      slug: row.key,
+      body: row.htmlBody,
     },
   })
 }
@@ -67,7 +54,27 @@ export async function PATCH(request: Request, ctx: RouteContext) {
     return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 })
   }
 
-  const parsed = patchSchema.safeParse(json)
+  const normalized =
+    json && typeof json === 'object'
+      ? {
+          subject:
+            typeof (json as { subject?: unknown }).subject === 'string'
+              ? (json as { subject: string }).subject
+              : '',
+          htmlBody:
+            typeof (json as { htmlBody?: unknown }).htmlBody === 'string'
+              ? (json as { htmlBody: string }).htmlBody
+              : typeof (json as { body?: unknown }).body === 'string'
+                ? (json as { body: string }).body
+                : '',
+          active:
+            typeof (json as { active?: unknown }).active === 'boolean'
+              ? (json as { active: boolean }).active
+              : true,
+        }
+      : null
+
+  const parsed = emailTemplatePatchSchema.safeParse(normalized)
   if (!parsed.success) {
     return NextResponse.json(
       { error: 'Validation failed', details: parsed.error.flatten() },
@@ -80,29 +87,16 @@ export async function PATCH(request: Request, ctx: RouteContext) {
     return NextResponse.json({ error: 'Database not configured' }, { status: 503 })
   }
 
-  const existing = await db.select().from(cmsEmailTemplates).where(eq(cmsEmailTemplates.id, id)).limit(1)
-  if (!existing[0]) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+  const row = await updateSystemEmailTemplate(db, id, parsed.data)
+  if (!row) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
-  const now = new Date()
-  const update: Partial<typeof cmsEmailTemplates.$inferInsert> = { updatedAt: now }
-  if (parsed.data.name !== undefined) update.name = parsed.data.name.trim()
-  if (parsed.data.subject !== undefined) update.subject = parsed.data.subject.trim()
-  if (parsed.data.body !== undefined) update.body = parsed.data.body
-
-  await db.update(cmsEmailTemplates).set(update).where(eq(cmsEmailTemplates.id, id))
-
-  const rows = await db.select().from(cmsEmailTemplates).where(eq(cmsEmailTemplates.id, id)).limit(1)
-  const row = rows[0]!
   return NextResponse.json({
     ok: true,
     emailTemplate: {
-      id: row.id,
-      slug: row.slug,
-      name: row.name,
-      subject: row.subject,
-      body: row.body,
-      updatedAt: row.updatedAt.toISOString(),
-      createdAt: row.createdAt.toISOString(),
+      ...row,
+      name: `${row.key} (${row.language.toUpperCase()})`,
+      slug: row.key,
+      body: row.htmlBody,
     },
   })
 }

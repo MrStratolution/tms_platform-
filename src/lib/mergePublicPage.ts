@@ -2,7 +2,14 @@ import { and, eq, isNull, or } from 'drizzle-orm'
 
 import { cmsAbVariants, cmsPageLocalizations } from '@/db/schema'
 import { defaultAbCookieName } from '@/lib/abCookies'
+import {
+  canonicalizeHeroDocument,
+  canonicalizePageHero,
+  getFirstHeroBlockIndex,
+  patchPrimaryHeroBlock,
+} from '@/lib/cms/canonicalHeroBlock'
 import { hydratePageLayoutRelations } from '@/lib/cms/hydratePageLayoutRelations'
+import { resolveLocalizedDocument } from '@/lib/documentLocalization'
 import type { Page } from '@/types/cms'
 
 import type { CmsDb } from './cmsData'
@@ -51,19 +58,45 @@ export async function mergeAbVariantIntoPage(
   const row = docs.find((d) => d.variantKey === chosen)
   if (!row) return page
 
-  const out: Page = { ...page, hero: { ...(page.hero || {}) }, seo: { ...(page.seo || {}) } }
+  let out: Page = canonicalizePageHero({
+    ...page,
+    hero: { ...(page.hero || {}) },
+    seo: { ...(page.seo || {}) },
+    layout: Array.isArray(page.layout) ? page.layout.map((block) => ({ ...block })) : page.layout,
+  })
 
+  const heroPatch: Record<string, string> = {}
   if (row.heroHeadline != null && row.heroHeadline.trim() !== '') {
-    out.hero = { ...out.hero, headline: row.heroHeadline }
+    heroPatch.headline = row.heroHeadline
   }
   if (row.heroSubheadline != null && row.heroSubheadline.trim() !== '') {
-    out.hero = { ...out.hero, subheadline: row.heroSubheadline }
+    heroPatch.subheadline = row.heroSubheadline
   }
+  if (Object.keys(heroPatch).length > 0) {
+    if (getFirstHeroBlockIndex(out.layout) >= 0) {
+      out = { ...out, layout: patchPrimaryHeroBlock(out.layout, heroPatch) }
+    } else {
+      out.hero = { ...out.hero, ...heroPatch }
+    }
+  }
+
+  const heroCtaPatch: Record<string, string> = {}
   if (row.primaryCtaLabel != null && row.primaryCtaLabel.trim() !== '') {
-    out.primaryCta = { ...out.primaryCta, label: row.primaryCtaLabel }
+    heroCtaPatch.ctaLabel = row.primaryCtaLabel
   }
   if (row.primaryCtaHref != null && row.primaryCtaHref.trim() !== '') {
-    out.primaryCta = { ...out.primaryCta, href: row.primaryCtaHref }
+    heroCtaPatch.ctaHref = row.primaryCtaHref
+  }
+  if (Object.keys(heroCtaPatch).length > 0) {
+    if (getFirstHeroBlockIndex(out.layout) >= 0) {
+      out = { ...out, layout: patchPrimaryHeroBlock(out.layout, heroCtaPatch) }
+    } else {
+      out.primaryCta = {
+        ...out.primaryCta,
+        ...(heroCtaPatch.ctaLabel ? { label: heroCtaPatch.ctaLabel } : {}),
+        ...(heroCtaPatch.ctaHref ? { href: heroCtaPatch.ctaHref } : {}),
+      }
+    }
   }
   if (row.seoTitle != null && row.seoTitle.trim() !== '') {
     out.seo = { ...out.seo, title: row.seoTitle }
@@ -101,13 +134,19 @@ export async function mergeLocalizationIntoPage(
   const loc = rows[0]
   if (!loc) return page
 
-  const out: Page = { ...page, hero: { ...(page.hero || {}) }, seo: { ...(page.seo || {}) } }
+  let out: Page = canonicalizePageHero({
+    ...page,
+    hero: { ...(page.hero || {}) },
+    seo: { ...(page.seo || {}) },
+    layout: Array.isArray(page.layout) ? page.layout.map((block) => ({ ...block })) : page.layout,
+  })
 
+  const heroPatch: Record<string, string> = {}
   if (loc.heroHeadline != null && loc.heroHeadline.trim() !== '') {
-    out.hero = { ...out.hero, headline: loc.heroHeadline }
+    heroPatch.headline = loc.heroHeadline
   }
   if (loc.heroSubheadline != null && loc.heroSubheadline.trim() !== '') {
-    out.hero = { ...out.hero, subheadline: loc.heroSubheadline }
+    heroPatch.subheadline = loc.heroSubheadline
   }
   if (loc.seoTitle != null && loc.seoTitle.trim() !== '') {
     out.seo = { ...out.seo, title: loc.seoTitle }
@@ -117,11 +156,22 @@ export async function mergeLocalizationIntoPage(
   }
 
   const locLayout = loc.layoutJson
+  const locHasHeroBlock =
+    Array.isArray(locLayout) &&
+    getFirstHeroBlockIndex(locLayout as Page['layout']) >= 0
   if (Array.isArray(locLayout) && locLayout.length > 0) {
     out.layout = locLayout as Page['layout']
   }
 
-  return out
+  if (!locHasHeroBlock && Object.keys(heroPatch).length > 0) {
+    if (getFirstHeroBlockIndex(out.layout) >= 0) {
+      out = { ...out, layout: patchPrimaryHeroBlock(out.layout, heroPatch) }
+    } else {
+      out.hero = { ...out.hero, ...heroPatch }
+    }
+  }
+
+  return canonicalizePageHero(out)
 }
 
 export async function resolvePageForPublicView(
@@ -142,8 +192,17 @@ export async function resolvePageForPublicView(
       queryVariant: ctx.queryVariant,
     })
     const langCookie = ctx.cookieStore.get('tma_lang')?.value
-    merged = await mergeLocalizationIntoPage(db, merged, ctx.queryLang || langCookie)
-    return await hydratePageLayoutRelations(db, merged)
+    const targetLocale = ctx.queryLang || langCookie
+    merged = await mergeLocalizationIntoPage(db, merged, targetLocale)
+    merged = canonicalizeHeroDocument(
+      resolveLocalizedDocument(merged as unknown as Record<string, unknown>, targetLocale),
+      {
+        preferLegacyValuesForExistingHero: Boolean(
+          targetLocale?.trim() && targetLocale.trim().toLowerCase() !== 'de',
+        ),
+      },
+    ).document as unknown as Page
+    return await hydratePageLayoutRelations(db, merged, targetLocale)
   } catch (e) {
     if (process.env.NODE_ENV === 'development') {
       console.error('[resolvePageForPublicView] A/B or localization merge skipped:', e)

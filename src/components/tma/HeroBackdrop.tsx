@@ -1,4 +1,8 @@
+import { MotionHeading } from '@/components/motion/MotionHeading'
+import { NoiseOverlay } from '@/components/motion/NoiseOverlay'
+import { SectionGlow } from '@/components/motion/SectionGlow'
 import { absoluteMediaUrl } from '@/lib/mediaUrl'
+import type { PublicLocale } from '@/lib/publicLocale'
 import type { Media } from '@/types/cms'
 
 import { CtaButton } from './CtaButton'
@@ -10,6 +14,8 @@ type Props = {
   mediaUrl?: string | null
   ctaLabel?: string | null
   ctaHref?: string | null
+  secondaryCtaLabel?: string | null
+  secondaryCtaHref?: string | null
   /** e.g. page-level primary CTA under headline */
   footerSlot?: React.ReactNode
   /** Slightly smaller type scale for in-flow layout blocks */
@@ -22,6 +28,8 @@ type Props = {
   mediaFit?: 'cover' | 'contain' | null
   mediaPositionX?: 'left' | 'center' | 'right' | null
   mediaPositionY?: 'top' | 'center' | 'bottom' | null
+  heroEffect?: 'none' | 'rotating-text' | 'canvas-accent'
+  locale?: PublicLocale
 }
 
 export function HeroBackdrop({
@@ -31,6 +39,8 @@ export function HeroBackdrop({
   mediaUrl,
   ctaLabel,
   ctaHref,
+  secondaryCtaLabel,
+  secondaryCtaHref,
   footerSlot,
   size = 'page',
   headingId = 'tma-hero-heading',
@@ -40,6 +50,8 @@ export function HeroBackdrop({
   mediaFit = 'cover',
   mediaPositionX = 'center',
   mediaPositionY = 'center',
+  heroEffect = 'none',
+  locale = 'de',
 }: Props) {
   const m = typeof media === 'object' && media != null ? media : null
   const src = mediaUrl || (m ? absoluteMediaUrl(m.url) : null)
@@ -84,16 +96,35 @@ export function HeroBackdrop({
           <div className="tma-hero__mesh" />
         )}
         <div className="tma-hero__scrim" />
+        <SectionGlow className="tma-hero__glow" tone="lime" />
+        <NoiseOverlay className="tma-hero__noise" strength="soft" />
       </div>
       <div className="tma-hero__content">
-        <h1 id={headingId} className="tma-hero__title">
-          {title}
-        </h1>
+        {heroEffect === 'canvas-accent' ? (
+          <div className="tma-hero__canvas-accent" aria-hidden="true" />
+        ) : null}
+        {typeof title === 'string' ? (
+          <MotionHeading
+            as="h1"
+            id={headingId}
+            className="tma-hero__title"
+            text={title}
+            intervalMs={2600}
+            enabled={heroEffect === 'rotating-text'}
+          />
+        ) : (
+          <h1 id={headingId} className="tma-hero__title">
+            {title}
+          </h1>
+        )}
         {lead ? <div className="tma-hero__lead">{lead}</div> : null}
-        {(ctaLabel && ctaHref) || footerSlot ? (
+        {(ctaLabel && ctaHref) || (secondaryCtaLabel && secondaryCtaHref) || footerSlot ? (
           <div className="tma-hero__cta-row">
             {ctaLabel && ctaHref ? (
-              <CtaButton label={ctaLabel} href={ctaHref} variant="primary" />
+              <CtaButton label={ctaLabel} href={ctaHref} variant="primary" locale={locale} />
+            ) : null}
+            {secondaryCtaLabel && secondaryCtaHref ? (
+              <CtaButton label={secondaryCtaLabel} href={secondaryCtaHref} variant="ghost" locale={locale} />
             ) : null}
             {footerSlot}
           </div>

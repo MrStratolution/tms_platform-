@@ -14,7 +14,7 @@ type Props = { params: Promise<{ id: string }> }
 
 export async function generateMetadata(props: Props): Promise<Metadata> {
   const { id } = await props.params
-  return { title: `Product ${id}` }
+  return { title: `Showcase entry ${id}` }
 }
 
 export default async function ConsoleProductEditPage(props: Props) {
@@ -64,14 +64,18 @@ export default async function ConsoleProductEditPage(props: Props) {
   return (
     <main className="tma-console-main wide">
       <p className="tma-console-back">
-        <Link href="/console/products">← All products</Link>
+        <Link href="/console/products">← All entries</Link>
       </p>
-      <h1 className="tma-console-page-title">Product</h1>
+      <h1 className="tma-console-page-title">Project / Product entry</h1>
       <ConsoleProductEditor
         id={row.id}
         initialSlug={row.slug}
         initialName={row.name}
         initialStatus={row.status}
+        initialContentKind={row.contentKind}
+        initialPublishedAt={row.publishedAt?.toISOString() ?? null}
+        initialListingPriority={row.listingPriority}
+        initialShowInProjectFeeds={row.showInProjectFeeds}
         initialDocument={doc}
         canEdit={canEdit}
       />

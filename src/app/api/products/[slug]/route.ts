@@ -4,6 +4,7 @@ import { and, eq } from 'drizzle-orm'
 import { getCustomDb } from '@/db/client'
 import { cmsProducts } from '@/db/schema'
 import { isMissingDbRelationError, missingRelationJsonResponse } from '@/lib/db/errors'
+import { normalizeProductContentKind } from '@/lib/productFeeds'
 
 type RouteContext = { params: Promise<{ slug: string }> }
 
@@ -27,6 +28,10 @@ export async function GET(_request: Request, ctx: RouteContext) {
       .select({
         slug: cmsProducts.slug,
         name: cmsProducts.name,
+        contentKind: cmsProducts.contentKind,
+        publishedAt: cmsProducts.publishedAt,
+        listingPriority: cmsProducts.listingPriority,
+        showInProjectFeeds: cmsProducts.showInProjectFeeds,
         document: cmsProducts.document,
         updatedAt: cmsProducts.updatedAt,
       })
@@ -44,6 +49,10 @@ export async function GET(_request: Request, ctx: RouteContext) {
       product: {
         slug: row.slug,
         name: row.name,
+        contentKind: normalizeProductContentKind(row.contentKind),
+        publishedAt: row.publishedAt?.toISOString() ?? null,
+        listingPriority: row.listingPriority ?? null,
+        showInProjectFeeds: row.showInProjectFeeds,
         document: row.document,
         updatedAt: row.updatedAt.toISOString(),
       },

@@ -2,6 +2,7 @@ import { eq } from 'drizzle-orm'
 
 import { translatePageHeroSeo, translatePageLayoutBlocks } from '@/lib/aiLocalizePage'
 import { cmsPageLocalizations, cmsPages } from '@/db/schema'
+import { getPrimaryHeroBlock } from '@/lib/cms/canonicalHeroBlock'
 import { validateTranslatedLayout } from '@/lib/layoutTranslationGuard'
 import type { CmsDb } from './cmsData'
 import { rowToPage } from './cmsData'
@@ -56,11 +57,12 @@ export async function processOneLocalizationJob(
     .where(eq(cmsPageLocalizations.id, jobId))
 
   try {
+    const heroBlock = getPrimaryHeroBlock(p.layout)
     const translated = await translatePageHeroSeo({
       sourceLocale,
       targetLocale,
-      heroHeadline: p.hero?.headline || p.title || '',
-      heroSubheadline: p.hero?.subheadline || '',
+      heroHeadline: heroBlock?.headline || p.hero?.headline || p.title || '',
+      heroSubheadline: heroBlock?.subheadline || p.hero?.subheadline || '',
       seoTitle: p.seo?.title || p.title || '',
       seoDescription: p.seo?.description || '',
     })

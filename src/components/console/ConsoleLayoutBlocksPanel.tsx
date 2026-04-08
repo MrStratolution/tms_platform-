@@ -13,8 +13,11 @@ import { SortableContext, arrayMove, sortableKeyboardCoordinates, verticalListSo
 import { useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react'
 
 import {
+  CaseStudyGridPicker,
   DownloadAssetPicker,
   FaqLibraryPicker,
+  ProductFeedPicker,
+  ResourceFeedPicker,
   TestimonialSliderPicker,
 } from '@/components/console/ConsoleLibraryPickers'
 import { ConsoleInlineMediaField } from '@/components/console/ConsoleInlineMediaField'
@@ -362,6 +365,30 @@ export function SectionChromeQuickFields(props: {
     o.widthMode === 'default' || o.widthMode === 'narrow' || o.widthMode === 'full'
       ? String(o.widthMode)
       : 'inherit'
+  const animationVal =
+    o.animationPreset === 'none' ||
+    o.animationPreset === 'fade' ||
+    o.animationPreset === 'slide-up' ||
+    o.animationPreset === 'slide-blur' ||
+    o.animationPreset === 'scale-in'
+      ? String(o.animationPreset)
+      : 'inherit'
+  const hoverVal =
+    o.hoverPreset === 'none' ||
+    o.hoverPreset === 'lift' ||
+    o.hoverPreset === 'scale' ||
+    o.hoverPreset === 'glow' ||
+    o.hoverPreset === 'border-highlight'
+      ? String(o.hoverPreset)
+      : 'inherit'
+  const backgroundVal =
+    o.backgroundEffect === 'none' ||
+    o.backgroundEffect === 'glow' ||
+    o.backgroundEffect === 'glass' ||
+    o.backgroundEffect === 'noise' ||
+    o.backgroundEffect === 'orb'
+      ? String(o.backgroundEffect)
+      : 'inherit'
 
   return (
     <div className="tma-console-section-chrome" style={{ marginBottom: '0.75rem' }}>
@@ -415,6 +442,85 @@ export function SectionChromeQuickFields(props: {
           <option value="default">Default</option>
           <option value="narrow">Narrow</option>
           <option value="full">Full width</option>
+        </select>
+      </label>
+      <label className="tma-console-label">
+        Animation
+        <select
+          className={fieldClass}
+          value={animationVal}
+          onChange={(e) => {
+            const v = e.target.value
+            if (v === 'inherit') set({ animationPreset: undefined })
+            else
+              set({
+                animationPreset: v as
+                  | 'none'
+                  | 'fade'
+                  | 'slide-up'
+                  | 'slide-blur'
+                  | 'scale-in',
+              })
+          }}
+          disabled={disabled}
+        >
+          <option value="inherit">Default</option>
+          <option value="none">None</option>
+          <option value="fade">Fade</option>
+          <option value="slide-up">Slide up</option>
+          <option value="slide-blur">Slide + blur</option>
+          <option value="scale-in">Scale in</option>
+        </select>
+      </label>
+      <label className="tma-console-label">
+        Hover
+        <select
+          className={fieldClass}
+          value={hoverVal}
+          onChange={(e) => {
+            const v = e.target.value
+            if (v === 'inherit') set({ hoverPreset: undefined })
+            else
+              set({
+                hoverPreset: v as
+                  | 'none'
+                  | 'lift'
+                  | 'scale'
+                  | 'glow'
+                  | 'border-highlight',
+              })
+          }}
+          disabled={disabled}
+        >
+          <option value="inherit">Default</option>
+          <option value="none">None</option>
+          <option value="lift">Lift</option>
+          <option value="scale">Scale</option>
+          <option value="glow">Glow</option>
+          <option value="border-highlight">Border highlight</option>
+        </select>
+      </label>
+      <label className="tma-console-label">
+        Background effect
+        <select
+          className={fieldClass}
+          value={backgroundVal}
+          onChange={(e) => {
+            const v = e.target.value
+            if (v === 'inherit') set({ backgroundEffect: undefined })
+            else
+              set({
+                backgroundEffect: v as 'none' | 'glow' | 'glass' | 'noise' | 'orb',
+              })
+          }}
+          disabled={disabled}
+        >
+          <option value="inherit">Default</option>
+          <option value="none">None</option>
+          <option value="glow">Glow</option>
+          <option value="glass">Glass</option>
+          <option value="noise">Noise</option>
+          <option value="orb">Orb</option>
         </select>
       </label>
       <label className="tma-console-label">
@@ -492,6 +598,8 @@ export function LayoutBlockQuickFields(props: {
         o.mediaPositionX === 'left' || o.mediaPositionX === 'right' ? String(o.mediaPositionX) : 'center'
       const heroPosY =
         o.mediaPositionY === 'top' || o.mediaPositionY === 'bottom' ? String(o.mediaPositionY) : 'center'
+      const heroEffect =
+        o.heroEffect === 'rotating-text' ? 'rotating-text' : 'none'
       return (
         <div className="tma-console-block-fields">
           <label className="tma-console-label">
@@ -509,6 +617,43 @@ export function LayoutBlockQuickFields(props: {
           <label className="tma-console-label">
             CTA URL (optional)
             <input className={fieldClass} value={String(o.ctaHref ?? '')} onChange={(e) => set({ ctaHref: e.target.value })} disabled={disabled} />
+          </label>
+          <label className="tma-console-label">
+            Secondary CTA label (optional)
+            <input
+              className={fieldClass}
+              value={String(o.secondaryCtaLabel ?? '')}
+              onChange={(e) => set({ secondaryCtaLabel: e.target.value })}
+              disabled={disabled}
+            />
+          </label>
+          <label className="tma-console-label">
+            Secondary CTA URL (optional)
+            <input
+              className={fieldClass}
+              value={String(o.secondaryCtaHref ?? '')}
+              onChange={(e) => set({ secondaryCtaHref: e.target.value })}
+              disabled={disabled}
+            />
+          </label>
+          <label className="tma-console-label">
+            Hero enhancement
+            <select
+              className={fieldClass}
+              value={heroEffect}
+              onChange={(e) =>
+                set({
+                  heroEffect:
+                    e.target.value === 'none'
+                      ? undefined
+                      : (e.target.value as 'rotating-text'),
+                })
+              }
+              disabled={disabled}
+            >
+              <option value="none">None</option>
+              <option value="rotating-text">Rotating text</option>
+            </select>
           </label>
           <ConsoleInlineMediaField
             label="Hero background image"
@@ -1375,7 +1520,9 @@ export function LayoutBlockQuickFields(props: {
         </div>
       )
     }
-    case 'promoBanner':
+    case 'promoBanner': {
+      const promoHeroEffect =
+        o.heroEffect === 'rotating-text' ? 'rotating-text' : 'none'
       return (
         <div className="tma-console-block-fields">
           <label className="tma-console-label">
@@ -1462,8 +1609,28 @@ export function LayoutBlockQuickFields(props: {
               <option value="center">Center</option>
             </select>
           </label>
+          <label className="tma-console-label">
+            Headline effect
+            <select
+              className={fieldClass}
+              value={promoHeroEffect}
+              onChange={(e) =>
+                set({
+                  heroEffect:
+                    e.target.value === 'none'
+                      ? undefined
+                      : (e.target.value as 'rotating-text'),
+                })
+              }
+              disabled={disabled}
+            >
+              <option value="none">None</option>
+              <option value="rotating-text">Rotating text</option>
+            </select>
+          </label>
         </div>
       )
+    }
     case 'imageBanner': {
       const mediaWidth =
         o.mediaWidth === 'narrow' || o.mediaWidth === 'wide' || o.mediaWidth === 'full'
@@ -1489,6 +1656,8 @@ export function LayoutBlockQuickFields(props: {
         o.mediaPositionX === 'left' || o.mediaPositionX === 'right' ? String(o.mediaPositionX) : 'center'
       const posY =
         o.mediaPositionY === 'top' || o.mediaPositionY === 'bottom' ? String(o.mediaPositionY) : 'center'
+      const imageHeroEffect =
+        o.heroEffect === 'rotating-text' ? 'rotating-text' : 'none'
       return (
         <div className="tma-console-block-fields">
           <p className="tma-console-block-fields-hint">
@@ -1549,6 +1718,25 @@ export function LayoutBlockQuickFields(props: {
               onChange={(e) => set({ ctaHref: e.target.value })}
               disabled={disabled}
             />
+          </label>
+          <label className="tma-console-label">
+            Headline effect
+            <select
+              className={fieldClass}
+              value={imageHeroEffect}
+              onChange={(e) =>
+                set({
+                  heroEffect:
+                    e.target.value === 'none'
+                      ? undefined
+                      : (e.target.value as 'rotating-text'),
+                })
+              }
+              disabled={disabled}
+            >
+              <option value="none">None</option>
+              <option value="rotating-text">Rotating text</option>
+            </select>
           </label>
           <label className="tma-console-label">
             Overlay darkness
@@ -2167,11 +2355,255 @@ export function LayoutBlockQuickFields(props: {
             Section title
             <input className={fieldClass} value={String(o.sectionTitle ?? '')} onChange={(e) => set({ sectionTitle: e.target.value })} disabled={disabled} />
           </label>
-          <p className="tma-console-block-fields-hint">
-            Case studies are managed under <strong>Libraries → Case Studies</strong>. The block will render the referenced studies. Add or remove them there.
-          </p>
+          <label className="tma-console-label">
+            Intro (optional)
+            <textarea
+              className={fieldClass}
+              rows={2}
+              value={String(o.intro ?? '')}
+              onChange={(e) => set({ intro: e.target.value })}
+              disabled={disabled}
+            />
+          </label>
+          <CaseStudyGridPicker o={o} set={set} disabled={disabled} />
+          <div className="tma-console-field-row">
+            <label className="tma-console-label">
+              CTA label (optional)
+              <input
+                className={fieldClass}
+                value={String(o.ctaLabel ?? '')}
+                onChange={(e) => set({ ctaLabel: e.target.value })}
+                disabled={disabled}
+              />
+            </label>
+            <label className="tma-console-label">
+              CTA URL (optional)
+              <input
+                className={fieldClass}
+                value={String(o.ctaHref ?? '')}
+                onChange={(e) => set({ ctaHref: e.target.value })}
+                disabled={disabled}
+              />
+            </label>
+          </div>
         </div>
       )
+    case 'resourceFeed':
+      return (
+        <div className="tma-console-block-fields">
+          <label className="tma-console-label">
+            Section title
+            <input
+              className={fieldClass}
+              value={String(o.sectionTitle ?? '')}
+              onChange={(e) => set({ sectionTitle: e.target.value })}
+              disabled={disabled}
+            />
+          </label>
+          <label className="tma-console-label">
+            Intro (optional)
+            <textarea
+              className={fieldClass}
+              rows={2}
+              value={String(o.intro ?? '')}
+              onChange={(e) => set({ intro: e.target.value })}
+              disabled={disabled}
+            />
+          </label>
+          <ResourceFeedPicker o={o} set={set} disabled={disabled} />
+          <div className="tma-console-field-row">
+            <label className="tma-console-label">
+              CTA label (optional)
+              <input
+                className={fieldClass}
+                value={String(o.ctaLabel ?? '')}
+                onChange={(e) => set({ ctaLabel: e.target.value })}
+                disabled={disabled}
+              />
+            </label>
+            <label className="tma-console-label">
+              CTA URL (optional)
+              <input
+                className={fieldClass}
+                value={String(o.ctaHref ?? '')}
+                onChange={(e) => set({ ctaHref: e.target.value })}
+                disabled={disabled}
+              />
+            </label>
+          </div>
+        </div>
+      )
+    case 'productFeed':
+      return (
+        <div className="tma-console-block-fields">
+          <label className="tma-console-label">
+            Section title
+            <input
+              className={fieldClass}
+              value={String(o.sectionTitle ?? '')}
+              onChange={(e) => set({ sectionTitle: e.target.value })}
+              disabled={disabled}
+            />
+          </label>
+          <label className="tma-console-label">
+            Intro (optional)
+            <textarea
+              className={fieldClass}
+              rows={2}
+              value={String(o.intro ?? '')}
+              onChange={(e) => set({ intro: e.target.value })}
+              disabled={disabled}
+            />
+          </label>
+          <ProductFeedPicker o={o} set={set} disabled={disabled} />
+          <div className="tma-console-field-row">
+            <label className="tma-console-label">
+              CTA label (optional)
+              <input
+                className={fieldClass}
+                value={String(o.ctaLabel ?? '')}
+                onChange={(e) => set({ ctaLabel: e.target.value })}
+                disabled={disabled}
+              />
+            </label>
+            <label className="tma-console-label">
+              CTA URL (optional)
+              <input
+                className={fieldClass}
+                value={String(o.ctaHref ?? '')}
+                onChange={(e) => set({ ctaHref: e.target.value })}
+                disabled={disabled}
+              />
+            </label>
+          </div>
+        </div>
+      )
+    case 'servicesFocus': {
+      const items = asRecordArray(o.items)
+      const updateItem = (idx: number, patch: Record<string, unknown>) => {
+        const next = items.map((row, j) => {
+          if (j !== idx) return row
+          const merged = { ...row, ...patch }
+          if (typeof merged.id !== 'string' || !merged.id) merged.id = newBlockId()
+          return merged
+        })
+        set({ items: next })
+      }
+      const addItem = () => {
+        set({
+          items: [
+            ...items,
+            {
+              id: newBlockId(),
+              title: 'New service',
+              summary: '',
+              bullets: [{ id: newBlockId(), text: 'Add a bullet' }],
+              imageUrl: '',
+              imageAlt: '',
+            },
+          ],
+        })
+      }
+      const removeItem = (idx: number) => set({ items: items.filter((_, j) => j !== idx) })
+      return (
+        <div className="tma-console-block-fields">
+          <label className="tma-console-label">
+            Section title
+            <input
+              className={fieldClass}
+              value={String(o.sectionTitle ?? '')}
+              onChange={(e) => set({ sectionTitle: e.target.value })}
+              disabled={disabled}
+            />
+          </label>
+          <label className="tma-console-label">
+            Intro (optional)
+            <textarea
+              className={fieldClass}
+              rows={2}
+              value={String(o.intro ?? '')}
+              onChange={(e) => set({ intro: e.target.value })}
+              disabled={disabled}
+            />
+          </label>
+          {items.map((item, idx) => {
+            const bullets = asRecordArray(item.bullets)
+            return (
+              <div
+                key={typeof item.id === 'string' ? item.id : `service-${idx}`}
+                className="tma-console-nested-block"
+              >
+                <div className="tma-console-nested-block__head">
+                  <span className="tma-console-nested-block__title">Service {idx + 1}</span>
+                  <button
+                    type="button"
+                    className="tma-console-btn-danger tma-console-btn-danger--small"
+                    onClick={() => removeItem(idx)}
+                    disabled={disabled}
+                  >
+                    Remove
+                  </button>
+                </div>
+                <label className="tma-console-label">
+                  Title
+                  <input
+                    className={fieldClass}
+                    value={String(item.title ?? '')}
+                    onChange={(e) => updateItem(idx, { title: e.target.value })}
+                    disabled={disabled}
+                  />
+                </label>
+                <label className="tma-console-label">
+                  Summary (optional)
+                  <textarea
+                    className={fieldClass}
+                    rows={2}
+                    value={String(item.summary ?? '')}
+                    onChange={(e) => updateItem(idx, { summary: e.target.value })}
+                    disabled={disabled}
+                  />
+                </label>
+                <label className="tma-console-label">
+                  Bullets (one per line)
+                  <textarea
+                    className={fieldClass}
+                    rows={4}
+                    value={bullets.map((bullet) => String(bullet.text ?? '')).join('\n')}
+                    onChange={(e) =>
+                      updateItem(idx, {
+                        bullets: e.target.value
+                          .split('\n')
+                          .map((text) => text.trim())
+                          .filter(Boolean)
+                          .map((text) => ({ id: newBlockId(), text })),
+                      })
+                    }
+                    disabled={disabled}
+                  />
+                </label>
+                <ConsoleInlineMediaField
+                  label="Service visual"
+                  value={typeof item.imageUrl === 'string' ? item.imageUrl : undefined}
+                  onChange={(next) => updateItem(idx, { imageUrl: next ?? '' })}
+                  altValue={typeof item.imageAlt === 'string' ? item.imageAlt : ''}
+                  onAltChange={(next) => updateItem(idx, { imageAlt: next })}
+                  disabled={disabled}
+                  folderSuggestion="services"
+                />
+              </div>
+            )
+          })}
+          <button
+            type="button"
+            className="tma-console-btn-secondary"
+            onClick={addItem}
+            disabled={disabled}
+          >
+            Add service
+          </button>
+        </div>
+      )
+    }
     case 'rich':
       return (
         <div className="tma-console-block-fields">
@@ -2732,7 +3164,12 @@ export function ConsoleLayoutBlocksPanel({
       ) : layout.length === 0 ? (
         <p className="tma-console-lead">No sections yet.{!compact ? ' Choose a block type below and click "Add to layout".' : ''}</p>
       ) : allHaveIds ? (
-        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+        <DndContext
+          id="console-layout-blocks-dnd"
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragEnd={handleDragEnd}
+        >
           <SortableContext items={sortableIds} strategy={verticalListSortingStrategy}>
             <ul className="tma-console-layout-list">{listContent}</ul>
           </SortableContext>

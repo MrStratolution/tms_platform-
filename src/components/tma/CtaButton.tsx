@@ -1,5 +1,7 @@
 import Link from 'next/link'
 
+import { localizePublicHref, type PublicLocale } from '@/lib/publicLocale'
+
 type Variant = 'primary' | 'secondary' | 'ghost'
 
 type Props = {
@@ -7,6 +9,7 @@ type Props = {
   href: string
   variant?: Variant
   className?: string
+  locale?: PublicLocale
 }
 
 function isExternal(href: string) {
@@ -18,19 +21,37 @@ function isExternal(href: string) {
   )
 }
 
-export function CtaButton({ label, href, variant = 'primary', className = '' }: Props) {
-  const cls = `tma-btn tma-btn--${variant}${className ? ` ${className}` : ''}`
-  if (isExternal(href)) {
+export function CtaButton({
+  label,
+  href,
+  variant = 'primary',
+  className = '',
+  locale = 'de',
+}: Props) {
+  const cls = `tma-btn tma-btn--${variant}${variant !== 'ghost' ? ' tma-btn--with-arrow' : ''}${
+    className ? ` ${className}` : ''
+  }`
+  const content = (
+    <>
+      <span className="tma-btn__label">{label}</span>
+      {variant !== 'ghost' ? (
+        <span className="tma-btn__arrow" aria-hidden="true">
+          →
+        </span>
+      ) : null}
+    </>
+  )
+  if (isExternal(href) || href.startsWith('#')) {
     return (
       <a href={href} className={cls}>
-        {label}
+        {content}
       </a>
     )
   }
-  const path = href.startsWith('/') ? href : `/${href}`
+  const path = href.startsWith('/') ? localizePublicHref(href, locale) : localizePublicHref(`/${href}`, locale)
   return (
     <Link href={path} className={cls}>
-      {label}
+      {content}
     </Link>
   )
 }

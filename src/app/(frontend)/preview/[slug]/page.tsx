@@ -5,6 +5,7 @@ import { notFound } from 'next/navigation'
 import { PageLivePreview } from '@/components/pages/PageLivePreview'
 import { tryGetCmsDb, getPreviewPageBySlug } from '@/lib/cmsData'
 import { resolvePageForPublicView } from '@/lib/mergePublicPage'
+import { normalizePublicLocale } from '@/lib/publicLocale'
 import { firstQueryParam } from '@/lib/queryParam'
 import { getPublicShortcodeVars } from '@/lib/publicShortcodeVars'
 import { serializePageForClient } from '@/lib/serializePage'
@@ -44,11 +45,12 @@ export default async function PreviewPage({ params, searchParams }: Props) {
   const page = await getPreviewPageBySlug(cms.db, slug)
   if (!page) notFound()
 
+  const locale = normalizePublicLocale(firstQueryParam(sp, 'lang'))
   const cookieStore = await cookies()
   const merged = await resolvePageForPublicView(cms.db, page, {
     cookieStore,
     queryVariant: firstQueryParam(sp, 'tma_variant'),
-    queryLang: firstQueryParam(sp, 'lang'),
+    queryLang: locale,
   })
 
   const embedShortcodeVars = await getPublicShortcodeVars()
@@ -67,6 +69,8 @@ export default async function PreviewPage({ params, searchParams }: Props) {
       <PageLivePreview
         page={serializePageForClient(merged)}
         embedShortcodeVars={embedShortcodeVars}
+        locale={locale}
+        trackingConsentGranted={false}
       />
     </div>
   )

@@ -3,6 +3,8 @@
 import { useMemo, useState } from 'react'
 
 import { TurnstileWidget } from '@/components/forms/TurnstileWidget'
+import { resolveLocalizedDocument } from '@/lib/documentLocalization'
+import type { PublicLocale } from '@/lib/publicLocale'
 import { parseFormFieldDefinitions } from '@/lib/formFields'
 import { readResponseJson } from '@/lib/safeJson'
 import type { FormConfig } from '@/types/cms'
@@ -13,6 +15,7 @@ type Props = {
   serviceInterestSlug?: string
   industrySlug?: string
   width?: 'narrow' | 'default' | 'wide' | 'full' | null
+  locale?: PublicLocale
 }
 
 const USE_TURNSTILE_UI = Boolean(process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY)
@@ -23,14 +26,23 @@ export function FormBlock({
   serviceInterestSlug,
   industrySlug,
   width = 'default',
+  locale = 'de',
 }: Props) {
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
   const [message, setMessage] = useState<string | null>(null)
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null)
+  const localizedConfig = useMemo(
+    () =>
+      resolveLocalizedDocument(
+        formConfig as unknown as Record<string, unknown>,
+        locale,
+      ) as unknown as FormConfig,
+    [formConfig, locale],
+  )
 
   const fieldDefs = useMemo(
-    () => parseFormFieldDefinitions(formConfig.fields),
-    [formConfig.fields],
+    () => parseFormFieldDefinitions(localizedConfig.fields),
+    [localizedConfig.fields],
   )
 
   const customFieldsMissingEmail =
@@ -40,30 +52,46 @@ export function FormBlock({
   const formWidth =
     width && width !== 'default'
       ? width
-      : typeof formConfig.layout === 'object' &&
-          formConfig.layout != null &&
-          'width' in formConfig.layout &&
-          (formConfig.layout as { width?: unknown }).width &&
+      : typeof localizedConfig.layout === 'object' &&
+          localizedConfig.layout != null &&
+          'width' in localizedConfig.layout &&
+          (localizedConfig.layout as { width?: unknown }).width &&
           ['narrow', 'default', 'wide', 'full'].includes(
-            String((formConfig.layout as { width?: unknown }).width),
+            String((localizedConfig.layout as { width?: unknown }).width),
           )
-        ? (formConfig.layout as { width: 'narrow' | 'default' | 'wide' | 'full' }).width
+        ? (localizedConfig.layout as { width: 'narrow' | 'default' | 'wide' | 'full' }).width
         : 'default'
 
   const formColumns =
-    typeof formConfig.layout === 'object' &&
-    formConfig.layout != null &&
-    'columns' in formConfig.layout &&
-    Number((formConfig.layout as { columns?: unknown }).columns) === 1
+    typeof localizedConfig.layout === 'object' &&
+    localizedConfig.layout != null &&
+    'columns' in localizedConfig.layout &&
+    Number((localizedConfig.layout as { columns?: unknown }).columns) === 1
       ? 1
       : 2
 
-  const submitLabel = formConfig.submitLabel?.trim() || 'Submit'
+  const fallbackStrings =
+    locale === 'en'
+      ? {
+          submit: 'Submit',
+          success: 'Thank you. We will be in touch.',
+          duplicate: "You're already on our list — thank you.",
+          error: 'Something went wrong',
+          network: 'Network error. Please try again.',
+        }
+      : {
+          submit: 'Absenden',
+          success: 'Danke. Wir melden uns in Kürze.',
+          duplicate: 'Ihre Anfrage ist bereits bei uns eingegangen — vielen Dank.',
+          error: 'Etwas ist schiefgelaufen',
+          network: 'Netzwerkfehler. Bitte versuchen Sie es erneut.',
+        }
+  const submitLabel = localizedConfig.submitLabel?.trim() || fallbackStrings.submit
   const successMessage =
-    formConfig.successMessage?.trim() || 'Thank you. We will be in touch.'
+    localizedConfig.successMessage?.trim() || fallbackStrings.success
   const consent =
-    typeof formConfig.consent === 'object' && formConfig.consent != null
-      ? (formConfig.consent as {
+    typeof localizedConfig.consent === 'object' && localizedConfig.consent != null
+      ? (localizedConfig.consent as {
           enabled?: unknown
           label?: unknown
           required?: unknown
@@ -74,7 +102,8 @@ export function FormBlock({
     e.preventDefault()
     setStatus('loading')
     setMessage(null)
-    const fd = new FormData(e.currentTarget)
+    const formElement = e.currentTarget
+    const fd = new FormData(formElement)
 
     const extras: Record<string, string> = {}
     if (fieldDefs?.length) {
@@ -90,7 +119,8 @@ export function FormBlock({
     const emailVal = (fd.get('email') as string) || ''
 
     const body: Record<string, unknown> = {
-      formType: formConfig.formType,
+      formType: localizedConfig.formType,
+      language: locale,
       sourcePageSlug: pageSlug,
       lead: {
         firstName: (fd.get('firstName') as string) || undefined,
@@ -119,33 +149,33 @@ export function FormBlock({
         body: JSON.stringify(body),
       })
       const data = await readResponseJson<{ error?: string; duplicate?: boolean }>(res)
-      if (!res.ok) {
+      if (!res.ok && !(res.status === 409 && data?.duplicate)) {
         setStatus('error')
-        setMessage(data?.error ?? 'Something went wrong')
+        setMessage(data?.error ?? fallbackStrings.error)
         setTurnstileToken(null)
         return
       }
       setStatus('success')
       setMessage(
         data?.duplicate
-          ? "You're already on our list — thank you."
+          ? fallbackStrings.duplicate
           : successMessage,
       )
-      e.currentTarget.reset()
+      formElement.reset()
       setTurnstileToken(null)
     } catch {
       setStatus('error')
-      setMessage('Network error. Please try again.')
+      setMessage(fallbackStrings.network)
       setTurnstileToken(null)
     }
   }
 
   return (
     <div className={`block-form block-form--${formWidth}`}>
-      <h2 className="block-form__title">{formConfig.name}</h2>
-      {formConfig.intro?.trim() ? (
+      <h2 className="block-form__title">{localizedConfig.name}</h2>
+      {localizedConfig.intro?.trim() ? (
         <p className="tma-muted" style={{ margin: '0 0 1.25rem' }}>
-          {formConfig.intro}
+          {localizedConfig.intro}
         </p>
       ) : null}
       {status === 'success' ? (
@@ -169,7 +199,7 @@ export function FormBlock({
                 </label>
               ) : null}
               {fieldDefs.map((f) => {
-                const id = `f-${formConfig.id}-${f.name}`
+                const id = `f-${localizedConfig.id}-${f.name}`
                 if (f.type === 'section') {
                   return (
                     <div key={f.name} style={{ gridColumn: '1 / -1', paddingTop: '0.25rem' }}>

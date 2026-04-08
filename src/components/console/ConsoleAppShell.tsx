@@ -32,6 +32,7 @@ const NAV_LIBRARIES: NavItem[] = [
 const NAV_CAPTURE: NavItem[] = [
   { href: '/console/forms', label: 'Forms', description: 'Field configs' },
   { href: '/console/email-templates', label: 'Email templates', description: 'Autoresponders' },
+  { href: '/console/email-system', label: 'SMTP email', description: 'Templates & delivery' },
   { href: '/console/booking-profiles', label: 'Booking', description: 'Schedules' },
 ]
 
@@ -168,6 +169,8 @@ export function ConsoleAppShell(props: {
                   ? adminCopy(uiLocale, 'navForms')
                   : item.href === '/console/email-templates'
                     ? adminCopy(uiLocale, 'navEmailTemplates')
+                    : item.href === '/console/email-system'
+                      ? adminCopy(uiLocale, 'navEmailSystem')
                     : adminCopy(uiLocale, 'navBooking'),
             }),
           )}

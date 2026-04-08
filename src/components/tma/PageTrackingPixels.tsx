@@ -6,6 +6,7 @@ type Props = {
   metaPixelId?: string | null
   linkedInPartnerId?: string | null
   pageGtmOverride?: string | null
+  enabled?: boolean
 }
 
 /**
@@ -13,12 +14,17 @@ type Props = {
  * Renders only if the relevant ID is set on the page's trackingOverrides.
  * GTM override uses the same GTM script pattern but with the page-specific ID.
  */
-export function PageTrackingPixels({ metaPixelId, linkedInPartnerId, pageGtmOverride }: Props) {
+export function PageTrackingPixels({
+  metaPixelId,
+  linkedInPartnerId,
+  pageGtmOverride,
+  enabled = true,
+}: Props) {
   const hasMeta = metaPixelId?.trim()
   const hasLinkedIn = linkedInPartnerId?.trim()
   const hasGtm = pageGtmOverride?.trim()
 
-  if (!hasMeta && !hasLinkedIn && !hasGtm) return null
+  if (!enabled || (!hasMeta && !hasLinkedIn && !hasGtm)) return null
 
   return (
     <>

@@ -5,6 +5,7 @@ import { tryGetCmsDb } from '@/lib/cmsData'
 import {
   getPublicNavLinksFromCms,
   getManualNavLinksFromSiteSettings,
+  mergePublicNavLinks,
   getStaticNavFallbackOnly,
 } from '@/lib/cms/publicNavLinks'
 import { resolvePublicHtmlLang } from '@/lib/localeDirection'
@@ -32,19 +33,23 @@ export async function SiteHeader({ site = null }: Props) {
 
   let middleLinks: { href: string; label: string }[] = getStaticNavFallbackOnly()
   const manualLinks = getManualNavLinksFromSiteSettings(site, locale)
+  let cmsLinks: { href: string; label: string }[] = []
 
-  if (manualLinks.length > 0) {
-    middleLinks = manualLinks
-  } else {
-    try {
-      const cms = tryGetCmsDb()
-      if (cms.ok) {
-        middleLinks = await getPublicNavLinksFromCms(cms.db)
-      }
-    } catch {
-      /* DB down at build/runtime — keep static nav */
+  try {
+    const cms = tryGetCmsDb()
+    if (cms.ok) {
+      cmsLinks = await getPublicNavLinksFromCms(cms.db)
     }
+  } catch {
+    /* DB down at build/runtime — keep fallback links */
   }
+  middleLinks =
+    manualLinks.length > 0
+      ? mergePublicNavLinks(manualLinks, cmsLinks)
+      : cmsLinks.length > 0
+        ? cmsLinks
+        : getStaticNavFallbackOnly()
+
   middleLinks = middleLinks.map((item) => ({
     ...item,
     href: localizePublicHref(item.href, locale),
@@ -65,6 +70,17 @@ export async function SiteHeader({ site = null }: Props) {
           variant: site.header.navCtaStyle ?? 'primary',
         }
       : undefined
+  const navUtilityCta =
+    site?.header?.navUtilityLabel?.trim() && site?.header?.navUtilityHref?.trim()
+      ? {
+          label:
+            locale === 'en'
+              ? site.header.navUtilityLabelEn?.trim() || site.header.navUtilityLabel.trim()
+              : site.header.navUtilityLabel.trim(),
+          href: site.header.navUtilityHref.trim(),
+          variant: site.header.navUtilityStyle ?? 'ghost',
+        }
+      : undefined
   const announcement =
     site?.header?.announcement?.enabled && site.header.announcement.text?.trim()
       ? {
@@ -74,15 +90,22 @@ export async function SiteHeader({ site = null }: Props) {
               : site.header.announcement.text.trim(),
           href: site.header.announcement.href?.trim() || undefined,
           style: site.header.announcement.style ?? 'subtle',
+          mode: site.header.announcement.mode ?? 'static',
+          speed: site.header.announcement.speed ?? 'normal',
+          pauseOnHover: site.header.announcement.pauseOnHover !== false,
         }
       : undefined
 
   return (
     <SiteHeaderShell
       navHome={t('navHome')}
-      navConsole={t('navConsole')}
       middleLinks={middleLinks}
-      langSwitcher={
+      desktopLangSwitcher={
+        <Suspense fallback={null}>
+          <PublicLanguageSwitcher label={t('langLabel')} currentLocale={uiLang} />
+        </Suspense>
+      }
+      mobileLangSwitcher={
         <Suspense fallback={null}>
           <PublicLanguageSwitcher label={t('langLabel')} currentLocale={uiLang} />
         </Suspense>
@@ -91,6 +114,11 @@ export async function SiteHeader({ site = null }: Props) {
       brandAlt={brandAlt}
       logoWidthDesktop={site?.header?.logoWidthDesktop ?? 220}
       logoWidthMobile={site?.header?.logoWidthMobile ?? 132}
+      navUtilityCta={
+        navUtilityCta
+          ? { ...navUtilityCta, href: localizePublicHref(navUtilityCta.href, locale) }
+          : undefined
+      }
       navCta={navCta ? { ...navCta, href: localizePublicHref(navCta.href, locale) } : undefined}
       announcement={
         announcement

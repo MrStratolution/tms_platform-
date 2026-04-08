@@ -1,0 +1,21 @@
+<svg width="1280" height="720" viewBox="0 0 1280 720" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="video-bg" x1="108" y1="94" x2="1114" y2="618" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0C1015"/>
+      <stop offset="1" stop-color="#070A0E"/>
+    </linearGradient>
+    <radialGradient id="video-glow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(912 192) rotate(144.301) scale(248.315 204.394)">
+      <stop stop-color="#E7F8C8" stop-opacity="0.24"/>
+      <stop offset="1" stop-color="#E7F8C8" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="1280" height="720" rx="40" fill="#06090D"/>
+  <rect x="88" y="84" width="1104" height="552" rx="30" fill="url(#video-bg)" stroke="rgba(255,255,255,0.08)" stroke-width="2"/>
+  <circle cx="912" cy="192" r="232" fill="url(#video-glow)"/>
+  <rect x="146" y="142" width="988" height="436" rx="26" fill="rgba(255,255,255,0.03)" stroke="rgba(255,255,255,0.08)"/>
+  <path d="M388 248H878" stroke="rgba(255,255,255,0.08)" stroke-width="2"/>
+  <path d="M388 354H1040" stroke="rgba(255,255,255,0.08)" stroke-width="2"/>
+  <path d="M388 460H972" stroke="rgba(255,255,255,0.08)" stroke-width="2"/>
+  <circle cx="316" cy="360" r="88" fill="rgba(231,248,200,0.78)"/>
+  <path d="M286 314L386 360L286 406V314Z" fill="#0A1015"/>
+</svg>

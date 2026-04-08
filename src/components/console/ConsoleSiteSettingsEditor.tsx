@@ -84,6 +84,10 @@ type FormState = {
   layoutSectionY: string
   layoutGutter: string
   layoutRadius: string
+  headerNavUtilityLabel: string
+  headerNavUtilityLabelEn: string
+  headerNavUtilityHref: string
+  headerNavUtilityStyle: 'primary' | 'secondary' | 'ghost'
   headerNavCtaLabel: string
   headerNavCtaLabelEn: string
   headerNavCtaHref: string
@@ -102,6 +106,9 @@ type FormState = {
   headerAnnouncementTextEn: string
   headerAnnouncementHref: string
   headerAnnouncementStyle: 'subtle' | 'highlight' | 'outline'
+  headerAnnouncementMode: 'static' | 'running'
+  headerAnnouncementSpeed: 'slow' | 'normal' | 'fast'
+  headerAnnouncementPauseOnHover: boolean
   headerNavItems: HeaderNavItem[]
   footerStrap: string
   footerStrapEn: string
@@ -126,6 +133,18 @@ type FormState = {
   footerLegal1Href: string
   footerLegal2Label: string
   footerLegal2Href: string
+  cookieConsentEnabled: boolean
+  cookieConsentTitle: string
+  cookieConsentTitleEn: string
+  cookieConsentBody: string
+  cookieConsentBodyEn: string
+  cookieConsentAcceptLabel: string
+  cookieConsentAcceptLabelEn: string
+  cookieConsentRejectLabel: string
+  cookieConsentRejectLabelEn: string
+  cookieConsentPolicyHref: string
+  cookieConsentPolicyLabel: string
+  cookieConsentPolicyLabelEn: string
   motionTransitions: string
   colorPrimary: string
   colorSecondary: string
@@ -145,6 +164,7 @@ function docToForm(d: SiteSettingsDocument): FormState {
   const t = d.typography ?? {}
   const l = d.layout ?? {}
   const h = d.header ?? {}
+  const cc = d.cookieConsent ?? {}
   const f = d.footer ?? {}
   const links = f.legalLinks ?? []
   const footerContact = f.contact ?? d.contactInfo ?? {}
@@ -167,6 +187,10 @@ function docToForm(d: SiteSettingsDocument): FormState {
     layoutSectionY: l.sectionPaddingY ?? '',
     layoutGutter: l.containerPaddingX ?? '',
     layoutRadius: l.borderRadiusScale ?? '',
+    headerNavUtilityLabel: h.navUtilityLabel ?? '',
+    headerNavUtilityLabelEn: h.navUtilityLabelEn ?? '',
+    headerNavUtilityHref: h.navUtilityHref ?? '',
+    headerNavUtilityStyle: h.navUtilityStyle ?? 'ghost',
     headerNavCtaLabel: h.navCtaLabel ?? '',
     headerNavCtaLabelEn: h.navCtaLabelEn ?? '',
     headerNavCtaHref: h.navCtaHref ?? '',
@@ -185,6 +209,9 @@ function docToForm(d: SiteSettingsDocument): FormState {
     headerAnnouncementTextEn: h.announcement?.textEn ?? '',
     headerAnnouncementHref: h.announcement?.href ?? '',
     headerAnnouncementStyle: h.announcement?.style ?? 'subtle',
+    headerAnnouncementMode: h.announcement?.mode ?? 'static',
+    headerAnnouncementSpeed: h.announcement?.speed ?? 'normal',
+    headerAnnouncementPauseOnHover: h.announcement?.pauseOnHover !== false,
     headerNavItems: h.navigationItems ?? [],
     footerStrap: f.straplineOverride ?? '',
     footerStrapEn: f.straplineOverrideEn ?? '',
@@ -209,6 +236,18 @@ function docToForm(d: SiteSettingsDocument): FormState {
     footerLegal1Href: links[0]?.href ?? '',
     footerLegal2Label: links[1]?.label ?? '',
     footerLegal2Href: links[1]?.href ?? '',
+    cookieConsentEnabled: cc.enabled === true,
+    cookieConsentTitle: cc.title ?? '',
+    cookieConsentTitleEn: cc.titleEn ?? '',
+    cookieConsentBody: cc.body ?? '',
+    cookieConsentBodyEn: cc.bodyEn ?? '',
+    cookieConsentAcceptLabel: cc.acceptLabel ?? '',
+    cookieConsentAcceptLabelEn: cc.acceptLabelEn ?? '',
+    cookieConsentRejectLabel: cc.rejectLabel ?? '',
+    cookieConsentRejectLabelEn: cc.rejectLabelEn ?? '',
+    cookieConsentPolicyHref: cc.policyHref ?? '',
+    cookieConsentPolicyLabel: cc.policyLabel ?? '',
+    cookieConsentPolicyLabelEn: cc.policyLabelEn ?? '',
     motionTransitions:
       d.motion?.transitionsEnabled === false
         ? 'off'
@@ -263,6 +302,10 @@ function formToPatch(f: FormState): SiteSettingsPatchDocument {
       borderRadiusScale: f.layoutRadius,
     },
     header: {
+      navUtilityLabel: f.headerNavUtilityLabel,
+      navUtilityLabelEn: f.headerNavUtilityLabelEn,
+      navUtilityHref: f.headerNavUtilityHref,
+      navUtilityStyle: f.headerNavUtilityStyle,
       navCtaLabel: f.headerNavCtaLabel,
       navCtaLabelEn: f.headerNavCtaLabelEn,
       navCtaHref: f.headerNavCtaHref,
@@ -282,8 +325,25 @@ function formToPatch(f: FormState): SiteSettingsPatchDocument {
         textEn: f.headerAnnouncementTextEn,
         href: f.headerAnnouncementHref,
         style: f.headerAnnouncementStyle,
+        mode: f.headerAnnouncementMode,
+        speed: f.headerAnnouncementSpeed,
+        pauseOnHover: f.headerAnnouncementPauseOnHover,
       },
       navigationItems: f.headerNavItems,
+    },
+    cookieConsent: {
+      enabled: f.cookieConsentEnabled,
+      title: f.cookieConsentTitle,
+      titleEn: f.cookieConsentTitleEn,
+      body: f.cookieConsentBody,
+      bodyEn: f.cookieConsentBodyEn,
+      acceptLabel: f.cookieConsentAcceptLabel,
+      acceptLabelEn: f.cookieConsentAcceptLabelEn,
+      rejectLabel: f.cookieConsentRejectLabel,
+      rejectLabelEn: f.cookieConsentRejectLabelEn,
+      policyHref: f.cookieConsentPolicyHref,
+      policyLabel: f.cookieConsentPolicyLabel,
+      policyLabelEn: f.cookieConsentPolicyLabelEn,
     },
     footer: {
       straplineOverride: f.footerStrap,
@@ -371,6 +431,7 @@ export function ConsoleSiteSettingsEditor({
   const [loadError, setLoadError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [lastAddedNavItemId, setLastAddedNavItemId] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
 
   useEffect(() => {
@@ -402,6 +463,18 @@ export function ConsoleSiteSettingsEditor({
       cancelled = true
     }
   }, [])
+
+  useEffect(() => {
+    if (!lastAddedNavItemId) return
+    const frame = window.requestAnimationFrame(() => {
+      const el = document.getElementById(`header-nav-item-${lastAddedNavItemId}`)
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+      }
+      setLastAddedNavItemId(null)
+    })
+    return () => window.cancelAnimationFrame(frame)
+  }, [lastAddedNavItemId])
 
   useEffect(() => {
     let cancelled = false
@@ -509,10 +582,12 @@ export function ConsoleSiteSettingsEditor({
   }
 
   function addNavItem(type: HeaderLinkType) {
+    const item = newNavItemForType(type)
     setForm((current) => ({
       ...current,
-      headerNavItems: [...current.headerNavItems, newNavItemForType(type)],
+      headerNavItems: [item, ...current.headerNavItems],
     }))
+    setLastAddedNavItemId(item.id)
   }
 
   function updateFooterSocial(index: number, patch: Partial<SocialLink>) {
@@ -783,6 +858,110 @@ export function ConsoleSiteSettingsEditor({
               </select>
             </label>
           </div>
+          <div className="tma-console-field-row">
+            <label className="tma-console-label">
+              Behavior
+              <select
+                className="tma-console-input"
+                value={form.headerAnnouncementMode}
+                onChange={(e) =>
+                  setForm((f) => ({
+                    ...f,
+                    headerAnnouncementMode: e.target.value as FormState['headerAnnouncementMode'],
+                  }))
+                }
+                disabled={saving || readOnly}
+              >
+                <option value="static">Static</option>
+                <option value="running">Running marquee</option>
+              </select>
+            </label>
+            <label className="tma-console-label">
+              Speed
+              <select
+                className="tma-console-input"
+                value={form.headerAnnouncementSpeed}
+                onChange={(e) =>
+                  setForm((f) => ({
+                    ...f,
+                    headerAnnouncementSpeed: e.target.value as FormState['headerAnnouncementSpeed'],
+                  }))
+                }
+                disabled={saving || readOnly}
+              >
+                <option value="slow">Slow</option>
+                <option value="normal">Normal</option>
+                <option value="fast">Fast</option>
+              </select>
+            </label>
+          </div>
+          <label className="tma-console-label tma-console-label--inline">
+            <input
+              type="checkbox"
+              checked={form.headerAnnouncementPauseOnHover}
+              onChange={(e) =>
+                setForm((f) => ({ ...f, headerAnnouncementPauseOnHover: e.target.checked }))
+              }
+              disabled={saving || readOnly}
+            />{' '}
+            Pause running announcement on hover
+          </label>
+        </fieldset>
+
+        <fieldset className="tma-console-fieldset" style={{ marginTop: '1rem' }}>
+          <legend className="tma-console-subheading">Header utility CTA</legend>
+          <div className="tma-console-field-row">
+            <label className="tma-console-label">
+              Label (DE/default)
+              <input
+                type="text"
+                className="tma-console-input"
+                value={form.headerNavUtilityLabel}
+                onChange={(e) => setForm((f) => ({ ...f, headerNavUtilityLabel: e.target.value }))}
+                disabled={saving || readOnly}
+              />
+            </label>
+            <label className="tma-console-label">
+              Label (EN)
+              <input
+                type="text"
+                className="tma-console-input"
+                value={form.headerNavUtilityLabelEn}
+                onChange={(e) => setForm((f) => ({ ...f, headerNavUtilityLabelEn: e.target.value }))}
+                disabled={saving || readOnly}
+              />
+            </label>
+          </div>
+          <div className="tma-console-field-row">
+            <label className="tma-console-label">
+              CTA URL
+              <input
+                type="text"
+                className="tma-console-input"
+                value={form.headerNavUtilityHref}
+                onChange={(e) => setForm((f) => ({ ...f, headerNavUtilityHref: e.target.value }))}
+                disabled={saving || readOnly}
+              />
+            </label>
+            <label className="tma-console-label">
+              CTA style
+              <select
+                className="tma-console-input"
+                value={form.headerNavUtilityStyle}
+                onChange={(e) =>
+                  setForm((f) => ({
+                    ...f,
+                    headerNavUtilityStyle: e.target.value as FormState['headerNavUtilityStyle'],
+                  }))
+                }
+                disabled={saving || readOnly}
+              >
+                <option value="primary">Primary</option>
+                <option value="secondary">Secondary</option>
+                <option value="ghost">Ghost</option>
+              </select>
+            </label>
+          </div>
         </fieldset>
 
         <fieldset className="tma-console-fieldset" style={{ marginTop: '1rem' }}>
@@ -871,6 +1050,7 @@ export function ConsoleSiteSettingsEditor({
               `${navTypeLabel(item.type)} link`
             return (
               <div
+                id={`header-nav-item-${item.id}`}
                 key={item.id}
                 style={{
                   border: '1px solid rgba(231, 248, 200, 0.12)',
@@ -1437,40 +1617,37 @@ export function ConsoleSiteSettingsEditor({
             autoComplete="off"
           />
         </label>
-        <label className="tma-console-label">
-          Logo (light header) URL
-          <input
-            type="text"
-            className="tma-console-input"
-            value={form.brandLogoLight}
-            onChange={(e) => setForm((f) => ({ ...f, brandLogoLight: e.target.value }))}
-            disabled={saving || readOnly}
-            placeholder="/brand/tma-logo-white.png"
-            autoComplete="off"
-          />
-        </label>
-        <label className="tma-console-label">
-          Logo (dark / alt) URL
-          <input
-            type="text"
-            className="tma-console-input"
-            value={form.brandLogoDark}
-            onChange={(e) => setForm((f) => ({ ...f, brandLogoDark: e.target.value }))}
-            disabled={saving || readOnly}
-            autoComplete="off"
-          />
-        </label>
-        <label className="tma-console-label">
-          Favicon URL
-          <input
-            type="text"
-            className="tma-console-input"
-            value={form.brandFavicon}
-            onChange={(e) => setForm((f) => ({ ...f, brandFavicon: e.target.value }))}
-            disabled={saving || readOnly}
-            autoComplete="off"
-          />
-        </label>
+        <ConsoleInlineMediaField
+          label="Logo (light header)"
+          value={form.brandLogoLight}
+          onChange={(next) => setForm((f) => ({ ...f, brandLogoLight: next ?? '' }))}
+          disabled={saving || readOnly}
+          helpText="Used as the default light logo in metadata and brand surfaces."
+          folderSuggestion="brand"
+          chooseLabel="Choose logo"
+          uploadLabel="Upload logo"
+        />
+        <ConsoleInlineMediaField
+          label="Logo (dark / alt)"
+          value={form.brandLogoDark}
+          onChange={(next) => setForm((f) => ({ ...f, brandLogoDark: next ?? '' }))}
+          disabled={saving || readOnly}
+          helpText="Optional alternate logo for dark or inverted brand placements."
+          folderSuggestion="brand"
+          chooseLabel="Choose alt logo"
+          uploadLabel="Upload alt logo"
+        />
+        <ConsoleInlineMediaField
+          label="Favicon"
+          value={form.brandFavicon}
+          onChange={(next) => setForm((f) => ({ ...f, brandFavicon: next ?? '' }))}
+          disabled={saving || readOnly}
+          helpText="Used for the browser tab icon and app icon. Square SVG, PNG, or ICO works best."
+          folderSuggestion="brand"
+          accept="image/*,.svg,.ico"
+          chooseLabel="Choose favicon"
+          uploadLabel="Upload favicon"
+        />
       </fieldset>
 
       <fieldset className="tma-console-fieldset" style={{ marginTop: '1.5rem' }}>
@@ -1824,6 +2001,143 @@ export function ConsoleSiteSettingsEditor({
           Injected on the public site only. Leave empty to disable GTM. First-party events still use{' '}
           <code>POST /api/tracking/event</code>.
         </p>
+      </fieldset>
+
+      <fieldset className="tma-console-fieldset" style={{ marginTop: '1.5rem' }}>
+        <legend className="tma-console-subheading">Cookie consent</legend>
+        <p className="tma-console-note" style={{ marginTop: 0 }}>
+          When enabled, analytics scripts only load after the visitor accepts cookies. German remains
+          the default copy with English fallback.
+        </p>
+        <label className="tma-console-label tma-console-label--inline">
+          <input
+            type="checkbox"
+            checked={form.cookieConsentEnabled}
+            onChange={(e) => setForm((f) => ({ ...f, cookieConsentEnabled: e.target.checked }))}
+            disabled={saving || readOnly}
+          />{' '}
+          Show cookie banner and gate analytics
+        </label>
+        <div className="tma-console-field-row">
+          <label className="tma-console-label">
+            Title (DE/default)
+            <input
+              type="text"
+              className="tma-console-input"
+              value={form.cookieConsentTitle}
+              onChange={(e) => setForm((f) => ({ ...f, cookieConsentTitle: e.target.value }))}
+              disabled={saving || readOnly}
+            />
+          </label>
+          <label className="tma-console-label">
+            Title (EN)
+            <input
+              type="text"
+              className="tma-console-input"
+              value={form.cookieConsentTitleEn}
+              onChange={(e) => setForm((f) => ({ ...f, cookieConsentTitleEn: e.target.value }))}
+              disabled={saving || readOnly}
+            />
+          </label>
+        </div>
+        <div className="tma-console-field-row">
+          <label className="tma-console-label">
+            Body (DE/default)
+            <textarea
+              className="tma-console-textarea-prose"
+              rows={3}
+              value={form.cookieConsentBody}
+              onChange={(e) => setForm((f) => ({ ...f, cookieConsentBody: e.target.value }))}
+              disabled={saving || readOnly}
+            />
+          </label>
+          <label className="tma-console-label">
+            Body (EN)
+            <textarea
+              className="tma-console-textarea-prose"
+              rows={3}
+              value={form.cookieConsentBodyEn}
+              onChange={(e) => setForm((f) => ({ ...f, cookieConsentBodyEn: e.target.value }))}
+              disabled={saving || readOnly}
+            />
+          </label>
+        </div>
+        <div className="tma-console-field-row">
+          <label className="tma-console-label">
+            Accept label (DE/default)
+            <input
+              type="text"
+              className="tma-console-input"
+              value={form.cookieConsentAcceptLabel}
+              onChange={(e) => setForm((f) => ({ ...f, cookieConsentAcceptLabel: e.target.value }))}
+              disabled={saving || readOnly}
+            />
+          </label>
+          <label className="tma-console-label">
+            Accept label (EN)
+            <input
+              type="text"
+              className="tma-console-input"
+              value={form.cookieConsentAcceptLabelEn}
+              onChange={(e) => setForm((f) => ({ ...f, cookieConsentAcceptLabelEn: e.target.value }))}
+              disabled={saving || readOnly}
+            />
+          </label>
+        </div>
+        <div className="tma-console-field-row">
+          <label className="tma-console-label">
+            Reject label (DE/default)
+            <input
+              type="text"
+              className="tma-console-input"
+              value={form.cookieConsentRejectLabel}
+              onChange={(e) => setForm((f) => ({ ...f, cookieConsentRejectLabel: e.target.value }))}
+              disabled={saving || readOnly}
+            />
+          </label>
+          <label className="tma-console-label">
+            Reject label (EN)
+            <input
+              type="text"
+              className="tma-console-input"
+              value={form.cookieConsentRejectLabelEn}
+              onChange={(e) => setForm((f) => ({ ...f, cookieConsentRejectLabelEn: e.target.value }))}
+              disabled={saving || readOnly}
+            />
+          </label>
+        </div>
+        <div className="tma-console-field-row">
+          <label className="tma-console-label">
+            Policy label (DE/default)
+            <input
+              type="text"
+              className="tma-console-input"
+              value={form.cookieConsentPolicyLabel}
+              onChange={(e) => setForm((f) => ({ ...f, cookieConsentPolicyLabel: e.target.value }))}
+              disabled={saving || readOnly}
+            />
+          </label>
+          <label className="tma-console-label">
+            Policy label (EN)
+            <input
+              type="text"
+              className="tma-console-input"
+              value={form.cookieConsentPolicyLabelEn}
+              onChange={(e) => setForm((f) => ({ ...f, cookieConsentPolicyLabelEn: e.target.value }))}
+              disabled={saving || readOnly}
+            />
+          </label>
+        </div>
+        <label className="tma-console-label">
+          Policy URL
+          <input
+            type="text"
+            className="tma-console-input"
+            value={form.cookieConsentPolicyHref}
+            onChange={(e) => setForm((f) => ({ ...f, cookieConsentPolicyHref: e.target.value }))}
+            disabled={saving || readOnly}
+          />
+        </label>
       </fieldset>
 
       {canEditCustomCss ? (

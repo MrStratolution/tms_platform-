@@ -3,6 +3,7 @@
 import { useCallback, useState } from 'react'
 
 import { readResponseJson } from '@/lib/safeJson'
+import { PRODUCT_CONTENT_KIND_VALUES, type ProductContentKind } from '@/types/cms'
 
 const fieldClass = 'tma-console-input tma-console-input--compact'
 
@@ -29,8 +30,17 @@ type Props = {
   initialSlug: string
   initialName: string
   initialStatus: string
+  initialContentKind: string
+  initialPublishedAt?: string | null
+  initialListingPriority?: number | null
+  initialShowInProjectFeeds?: boolean | null
   initialDocument: Record<string, unknown>
   canEdit: boolean
+}
+
+function dateInputValue(value?: string | null) {
+  if (!value) return ''
+  return value.slice(0, 10)
 }
 
 export function ConsoleProductEditor({
@@ -38,12 +48,26 @@ export function ConsoleProductEditor({
   initialSlug,
   initialName,
   initialStatus,
+  initialContentKind,
+  initialPublishedAt,
+  initialListingPriority,
+  initialShowInProjectFeeds,
   initialDocument,
   canEdit,
 }: Props) {
   const [slug, setSlug] = useState(initialSlug)
   const [name, setName] = useState(initialName)
   const [status, setStatus] = useState(initialStatus === 'published' ? 'published' : 'draft')
+  const [contentKind, setContentKind] = useState<ProductContentKind>(
+    PRODUCT_CONTENT_KIND_VALUES.includes(initialContentKind as ProductContentKind)
+      ? (initialContentKind as ProductContentKind)
+      : 'product',
+  )
+  const [publishedAt, setPublishedAt] = useState(() => dateInputValue(initialPublishedAt))
+  const [listingPriority, setListingPriority] = useState(
+    initialListingPriority == null ? '' : String(initialListingPriority),
+  )
+  const [showInProjectFeeds, setShowInProjectFeeds] = useState(initialShowInProjectFeeds === true)
   const [doc, setDoc] = useState<Record<string, unknown>>(() => ({ ...initialDocument }))
   const [rawMode, setRawMode] = useState(false)
   const [rawText, setRawText] = useState(() => JSON.stringify(initialDocument, null, 2))
@@ -120,12 +144,31 @@ export function ConsoleProductEditor({
       const res = await fetch(`/api/console/products/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: nameTrim, slug: slugTrim, status, document }),
+        body: JSON.stringify({
+          name: nameTrim,
+          slug: slugTrim,
+          status,
+          contentKind,
+          publishedAt: publishedAt || null,
+          listingPriority: listingPriority === '' ? null : Number.parseInt(listingPriority, 10),
+          showInProjectFeeds,
+          document,
+        }),
       })
       const data = await readResponseJson<{
         ok?: boolean
         error?: string
-        product?: { updatedAt: string; document?: unknown; slug?: string; name?: string; status?: string }
+        product?: {
+          updatedAt: string
+          document?: unknown
+          slug?: string
+          name?: string
+          status?: string
+          contentKind?: string
+          publishedAt?: string | null
+          listingPriority?: number | null
+          showInProjectFeeds?: boolean
+        }
       }>(res)
       if (!res.ok) {
         setError(data?.error ?? 'Save failed')
@@ -141,6 +184,12 @@ export function ConsoleProductEditor({
       if (typeof p?.slug === 'string') setSlug(p.slug)
       if (typeof p?.name === 'string') setName(p.name)
       if (typeof p?.status === 'string') setStatus(p.status === 'published' ? 'published' : 'draft')
+      if (typeof p?.contentKind === 'string' && PRODUCT_CONTENT_KIND_VALUES.includes(p.contentKind as ProductContentKind)) {
+        setContentKind(p.contentKind as ProductContentKind)
+      }
+      setPublishedAt(dateInputValue(p?.publishedAt ?? null))
+      setListingPriority(p?.listingPriority == null ? '' : String(p.listingPriority))
+      setShowInProjectFeeds(p?.showInProjectFeeds === true)
     } catch {
       setError('Network error while saving.')
     } finally {
@@ -172,7 +221,7 @@ export function ConsoleProductEditor({
       </p>
 
       <fieldset className="tma-console-fieldset">
-        <legend className="tma-console-subheading">Product basics</legend>
+        <legend className="tma-console-subheading">Showcase basics</legend>
         <label className="tma-console-label">
           Name
           <input className="tma-console-input" value={name} onChange={(e) => setName(e.target.value)} disabled={dis} autoComplete="off" />
@@ -187,6 +236,58 @@ export function ConsoleProductEditor({
             <option value="draft">draft</option>
             <option value="published">published</option>
           </select>
+        </label>
+        <label className="tma-console-label">
+          Content type
+          <select
+            className="tma-console-input"
+            value={contentKind}
+            onChange={(e) =>
+              setContentKind(
+                PRODUCT_CONTENT_KIND_VALUES.includes(e.target.value as ProductContentKind)
+                  ? (e.target.value as ProductContentKind)
+                  : 'product',
+              )
+            }
+            disabled={dis}
+          >
+            {PRODUCT_CONTENT_KIND_VALUES.map((value) => (
+              <option key={value} value={value}>
+                {value}
+              </option>
+            ))}
+          </select>
+        </label>
+        <div className="tma-console-field-row">
+          <label className="tma-console-label">
+            Publishing date
+            <input
+              className="tma-console-input"
+              type="date"
+              value={publishedAt}
+              onChange={(e) => setPublishedAt(e.target.value)}
+              disabled={dis}
+            />
+          </label>
+          <label className="tma-console-label">
+            Listing priority
+            <input
+              className="tma-console-input"
+              type="number"
+              value={listingPriority}
+              onChange={(e) => setListingPriority(e.target.value)}
+              disabled={dis}
+            />
+          </label>
+        </div>
+        <label className="tma-console-label" style={{ display: 'flex', gap: '0.55rem', alignItems: 'center' }}>
+          <input
+            type="checkbox"
+            checked={showInProjectFeeds}
+            onChange={(e) => setShowInProjectFeeds(e.target.checked)}
+            disabled={dis}
+          />
+          Show in Projects page feeds
         </label>
       </fieldset>
 

@@ -1,0 +1,7 @@
+<svg width="320" height="120" viewBox="0 0 320 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="320" height="120" rx="24" fill="#F6F4EE"/>
+  <circle cx="62" cy="60" r="28" fill="#101820"/>
+  <circle cx="62" cy="60" r="14" fill="#D8FF72"/>
+  <text x="108" y="55" font-family="monospace" font-size="18" fill="#101820">ATLAS</text>
+  <text x="108" y="77" font-family="monospace" font-size="14" fill="#69716C">NEURAL SYSTEMS</text>
+</svg>

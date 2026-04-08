@@ -1,0 +1,18 @@
+<svg width="1280" height="840" viewBox="0 0 1280 840" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="audit-bg" x1="116" y1="102" x2="1098" y2="708" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0D1117"/>
+      <stop offset="1" stop-color="#07090D"/>
+    </linearGradient>
+  </defs>
+  <rect width="1280" height="840" rx="40" fill="#07090D"/>
+  <rect x="82" y="82" width="1116" height="676" rx="30" fill="url(#audit-bg)" stroke="rgba(255,255,255,0.08)" stroke-width="2"/>
+  <rect x="118" y="120" width="1044" height="600" rx="30" fill="rgba(255,255,255,0.03)" stroke="rgba(255,255,255,0.08)"/>
+  <circle cx="342" cy="320" r="134" stroke="rgba(231,248,200,0.75)" stroke-width="18"/>
+  <path d="M434 412L530 508" stroke="rgba(255,255,255,0.72)" stroke-width="20" stroke-linecap="round"/>
+  <rect x="628" y="232" width="368" height="18" rx="9" fill="rgba(255,255,255,0.66)"/>
+  <rect x="628" y="292" width="414" height="12" rx="6" fill="rgba(255,255,255,0.24)"/>
+  <rect x="628" y="336" width="384" height="12" rx="6" fill="rgba(255,255,255,0.18)"/>
+  <rect x="628" y="432" width="454" height="82" rx="18" fill="rgba(255,255,255,0.03)" stroke="rgba(255,255,255,0.07)"/>
+  <rect x="628" y="536" width="280" height="82" rx="18" fill="rgba(255,255,255,0.03)" stroke="rgba(255,255,255,0.07)"/>
+</svg>

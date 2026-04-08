@@ -1,0 +1,28 @@
+<svg width="1280" height="840" viewBox="0 0 1280 840" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="positioning-bg" x1="122" y1="94" x2="1106" y2="746" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0D1218"/>
+      <stop offset="1" stop-color="#06080C"/>
+    </linearGradient>
+    <radialGradient id="positioning-glow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(984 198) rotate(140.962) scale(260.78 218.372)">
+      <stop stop-color="#E7F8C8" stop-opacity="0.26"/>
+      <stop offset="1" stop-color="#E7F8C8" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="1280" height="840" rx="40" fill="#070A0F"/>
+  <rect x="70" y="68" width="1140" height="704" rx="30" fill="url(#positioning-bg)" stroke="rgba(255,255,255,0.08)" stroke-width="2"/>
+  <circle cx="992" cy="196" r="244" fill="url(#positioning-glow)"/>
+  <rect x="128" y="138" width="332" height="562" rx="28" fill="rgba(255,255,255,0.03)" stroke="rgba(255,255,255,0.08)"/>
+  <rect x="182" y="208" width="220" height="18" rx="9" fill="rgba(231,248,200,0.82)"/>
+  <rect x="182" y="248" width="180" height="12" rx="6" fill="rgba(255,255,255,0.34)"/>
+  <rect x="182" y="278" width="202" height="12" rx="6" fill="rgba(255,255,255,0.18)"/>
+  <rect x="182" y="368" width="228" height="108" rx="18" fill="rgba(255,255,255,0.03)" stroke="rgba(255,255,255,0.07)"/>
+  <rect x="182" y="502" width="228" height="142" rx="18" fill="rgba(255,255,255,0.03)" stroke="rgba(255,255,255,0.07)"/>
+  <rect x="530" y="190" width="598" height="130" rx="24" fill="rgba(255,255,255,0.03)" stroke="rgba(255,255,255,0.07)"/>
+  <rect x="530" y="352" width="280" height="278" rx="24" fill="rgba(255,255,255,0.03)" stroke="rgba(255,255,255,0.07)"/>
+  <rect x="848" y="352" width="280" height="278" rx="24" fill="rgba(255,255,255,0.03)" stroke="rgba(255,255,255,0.07)"/>
+  <path d="M574 254H1084" stroke="rgba(255,255,255,0.08)" stroke-width="10" stroke-linecap="round"/>
+  <path d="M574 286H984" stroke="rgba(255,255,255,0.18)" stroke-width="10" stroke-linecap="round"/>
+  <circle cx="982" cy="490" r="98" stroke="rgba(231,248,200,0.7)" stroke-width="16"/>
+  <path d="M672 442L744 486L672 530" fill="rgba(231,248,200,0.78)"/>
+</svg>

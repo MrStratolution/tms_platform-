@@ -1,9 +1,9 @@
 'use client'
 
-import { motion } from 'framer-motion'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 
+import { GlassCard } from '@/components/motion/GlassCard'
 import { readResponseJson } from '@/lib/safeJson'
 import type { BookingProfile } from '@/types/cms'
 
@@ -71,7 +71,7 @@ export function BookingBlock({ profile, width = 'default' }: Props) {
   }
 
   return (
-    <div className={`block-booking block-booking--${profileWidth}`}>
+    <GlassCard className={`block-booking block-booking--${profileWidth}`}>
       <h2 className="block-booking__title">Book a time</h2>
       <p className="tma-muted">{profile.name}</p>
       {profile.helperText?.trim() ? (
@@ -84,17 +84,17 @@ export function BookingBlock({ profile, width = 'default' }: Props) {
           {error}
         </p>
       ) : null}
-      <motion.button
+      <button
         type="button"
         className="tma-btn tma-btn--primary book-flow__submit"
         onClick={() => void startBooking()}
         disabled={status === 'loading'}
-        whileHover={status === 'loading' ? undefined : { y: -2 }}
-        whileTap={status === 'loading' ? undefined : { scale: 0.98 }}
-        transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
       >
-        {status === 'loading' ? 'Opening…' : ctaLabel}
-      </motion.button>
-    </div>
+        <span className="tma-btn__label">{status === 'loading' ? 'Opening…' : ctaLabel}</span>
+        <span className="tma-btn__arrow" aria-hidden="true">
+          →
+        </span>
+      </button>
+    </GlassCard>
   )
 }

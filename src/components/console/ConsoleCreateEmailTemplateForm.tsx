@@ -1,89 +1,69 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 
-import type { EmailTemplateUseCase } from '@/lib/emailTemplateContent'
 import { readResponseJson } from '@/lib/safeJson'
 
-const USE_CASE_OPTIONS: Array<{
-  value: EmailTemplateUseCase
-  label: string
-  defaultName: string
-  defaultSlug: string
-  defaultSubject: string
-}> = [
-  {
-    value: 'generic',
-    label: 'Generic message',
-    defaultName: 'General email',
-    defaultSlug: 'general-email',
-    defaultSubject: 'A message from TMA',
+const PRESETS = {
+  lead_admin_notification: {
+    subject: 'Neuer Lead von {{name}}',
+    htmlBody:
+      '<div><p>Ein neuer Lead wurde erfasst.</p><ul><li>Name: {{name}}</li><li>E-Mail: {{email}}</li><li>Telefon: {{phone}}</li><li>Firma: {{company}}</li><li>Service: {{service}}</li><li>Nachricht: {{message}}</li><li>Seite: {{source_page}}</li></ul></div>',
+    variablesJson: ['name', 'email', 'phone', 'company', 'service', 'message', 'source_page'],
   },
-  {
-    value: 'lead_thank_you',
-    label: 'Lead thank-you',
-    defaultName: 'Lead thank-you',
-    defaultSlug: 'lead-thank-you',
-    defaultSubject: 'Thanks for reaching out, {{firstName}}',
+  lead_user_confirmation: {
+    subject: 'Danke für Ihre Anfrage, {{name}}',
+    htmlBody:
+      '<div><p>Hallo {{name}},</p><p>vielen Dank für Ihre Anfrage. Wir haben Ihre Nachricht erhalten und melden uns kurzfristig.</p><ul><li>E-Mail: {{email}}</li><li>Telefon: {{phone}}</li><li>Firma: {{company}}</li><li>Service: {{service}}</li><li>Seite: {{source_page}}</li></ul></div>',
+    variablesJson: ['name', 'email', 'phone', 'company', 'service', 'message', 'source_page'],
   },
-  {
-    value: 'booking_confirmation',
-    label: 'Booking confirmation',
-    defaultName: 'Booking confirmation',
-    defaultSlug: 'booking-confirmation',
-    defaultSubject: 'Your {{bookingProfileName}} is confirmed',
+  'booking-cancellation': {
+    subject: 'Termin abgesagt: {{bookingProfileName}} am {{scheduledFor}}',
+    htmlBody:
+      '<div><p>Hallo {{firstName}},</p><p>Ihr Termin wurde abgesagt.</p><ul><li>Profil: {{bookingProfileName}}</li><li>Termin: {{scheduledFor}}</li><li>Grund: {{reason}}</li></ul><p>Antworten Sie auf diese E-Mail, wenn Sie einen neuen Termin buchen möchten.</p></div>',
+    variablesJson: ['firstName', 'bookingProfileName', 'scheduledFor', 'reason'],
   },
-  {
-    value: 'booking_reminder',
-    label: 'Booking reminder',
-    defaultName: 'Booking reminder',
-    defaultSlug: 'booking-reminder',
-    defaultSubject: 'Reminder: your {{bookingProfileName}} is coming up',
+  generic: {
+    subject: 'Neue Nachricht von TMA',
+    htmlBody: '<div><p>Hallo {{name}},</p><p>Ihre Nachricht wird hier eingefügt.</p></div>',
+    variablesJson: ['name'],
   },
-  {
-    value: 'internal_lead_notification',
-    label: 'Internal lead notification',
-    defaultName: 'Internal lead notification',
-    defaultSlug: 'internal-lead-notification',
-    defaultSubject: 'New lead: {{email}}',
-  },
-  {
-    value: 'internal_sync_alert',
-    label: 'Internal sync alert',
-    defaultName: 'Internal sync alert',
-    defaultSlug: 'internal-sync-alert',
-    defaultSubject: 'TMA sync alert',
-  },
-]
+} as const
+
+type TemplateKey = keyof typeof PRESETS
 
 export function ConsoleCreateEmailTemplateForm() {
   const router = useRouter()
-  const [useCase, setUseCase] = useState<EmailTemplateUseCase>('generic')
-  const [name, setName] = useState('General email')
-  const [slug, setSlug] = useState('general-email')
-  const [subject, setSubject] = useState('A message from TMA')
+  const [templateKey, setTemplateKey] = useState<TemplateKey>('lead_admin_notification')
+  const [language, setLanguage] = useState<'de' | 'en'>('de')
+  const [subject, setSubject] = useState<string>(PRESETS.lead_admin_notification.subject)
+  const [htmlBody, setHtmlBody] = useState<string>(PRESETS.lead_admin_notification.htmlBody)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const currentPreset = useMemo(
-    () => USE_CASE_OPTIONS.find((option) => option.value === useCase) ?? USE_CASE_OPTIONS[0],
-    [useCase],
-  )
+  function applyPreset(nextKey: TemplateKey) {
+    setTemplateKey(nextKey)
+    setSubject(PRESETS[nextKey].subject)
+    setHtmlBody(PRESETS[nextKey].htmlBody)
+  }
 
   async function onSubmit(event: React.FormEvent) {
     event.preventDefault()
     setBusy(true)
     setError(null)
     try {
-      const res = await fetch('/api/console/email-templates', {
+      const preset = PRESETS[templateKey]
+      const res = await fetch('/api/console/email-system/templates', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          useCase,
-          name: name.trim(),
-          slug: slug.trim(),
-          subject: subject.trim(),
+          key: templateKey,
+          language,
+          subject,
+          htmlBody,
+          variablesJson: preset.variablesJson,
+          active: true,
         }),
       })
       const data = await readResponseJson<{ error?: string; emailTemplate?: { id: number } }>(res)
@@ -91,7 +71,7 @@ export function ConsoleCreateEmailTemplateForm() {
         setError(data?.error ?? 'Create failed')
         return
       }
-      router.push(`/console/email-templates/${data.emailTemplate.id}`)
+      router.push(`/console/email-system/templates/${data.emailTemplate.id}`)
       router.refresh()
     } catch {
       setError('Network error')
@@ -100,70 +80,64 @@ export function ConsoleCreateEmailTemplateForm() {
     }
   }
 
-  function applyPreset(nextUseCase: EmailTemplateUseCase) {
-    const preset = USE_CASE_OPTIONS.find((option) => option.value === nextUseCase)
-    if (!preset) return
-    setUseCase(nextUseCase)
-    setName(preset.defaultName)
-    setSlug(preset.defaultSlug)
-    setSubject(preset.defaultSubject)
-  }
-
   return (
     <form className="tma-console-form" onSubmit={onSubmit}>
       <p className="tma-console-lead">
-        Start from a structured email preset. You can refine the copy, CTA, preview, and advanced HTML after creation.
+        Create a bilingual transactional template. German is the default fallback language.
       </p>
-      <label className="tma-console-label">
-        Use case
-        <select
-          className="tma-console-input"
-          value={useCase}
-          onChange={(event) => applyPreset(event.target.value as EmailTemplateUseCase)}
-          disabled={busy}
-        >
-          {USE_CASE_OPTIONS.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </select>
-      </label>
-      <label className="tma-console-label">
-        Display name
-        <input
-          className="tma-console-input"
-          value={name}
-          onChange={(event) => setName(event.target.value)}
-          required
-          disabled={busy}
-          autoComplete="off"
-        />
-      </label>
-      <label className="tma-console-label">
-        Slug
-        <input
-          className="tma-console-input"
-          value={slug}
-          onChange={(event) => setSlug(event.target.value)}
-          required
-          disabled={busy}
-          autoComplete="off"
-          placeholder={currentPreset.defaultSlug}
-        />
-      </label>
+
+      <div className="tma-console-field-row">
+        <label className="tma-console-label">
+          Template key
+          <select
+            className="tma-console-input"
+            value={templateKey}
+            onChange={(event) => applyPreset(event.target.value as TemplateKey)}
+            disabled={busy}
+          >
+            <option value="lead_admin_notification">lead_admin_notification</option>
+            <option value="lead_user_confirmation">lead_user_confirmation</option>
+            <option value="booking-cancellation">booking-cancellation</option>
+            <option value="generic">generic</option>
+          </select>
+        </label>
+        <label className="tma-console-label">
+          Language
+          <select
+            className="tma-console-input"
+            value={language}
+            onChange={(event) => setLanguage(event.target.value as 'de' | 'en')}
+            disabled={busy}
+          >
+            <option value="de">German (DE)</option>
+            <option value="en">English (EN)</option>
+          </select>
+        </label>
+      </div>
+
       <label className="tma-console-label">
         Subject
         <input
           className="tma-console-input"
           value={subject}
           onChange={(event) => setSubject(event.target.value)}
-          required
           disabled={busy}
-          autoComplete="off"
         />
       </label>
+
+      <label className="tma-console-label">
+        HTML body
+        <textarea
+          className="tma-console-textarea-json"
+          rows={16}
+          value={htmlBody}
+          onChange={(event) => setHtmlBody(event.target.value)}
+          disabled={busy}
+        />
+      </label>
+
       {error ? <p className="tma-console-error">{error}</p> : null}
+
       <div className="tma-console-actions">
         <button type="submit" className="tma-console-submit" disabled={busy}>
           {busy ? 'Creating…' : 'Create email template'}

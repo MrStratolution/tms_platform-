@@ -98,7 +98,7 @@ git commit -m "Initial TMA platform scaffold"
 
 **Scripts:** `npm run db:up` / `npm run db:down` — start/stop Compose Postgres only.
 
-5. **Seed** — migration checkpoint + demo CMS rows (pages, contact form, booking profile, email templates) when `lead-thanks` is not already present:
+5. **Seed** — migration checkpoint + demo CMS rows (pages, contact form, booking profile, email templates) when the lead confirmation template is not already present:
 
    ```bash
    npm run seed
@@ -116,7 +116,7 @@ git commit -m "Initial TMA platform scaffold"
 
    For the default Next port **3000** instead: `npm run dev:3000` and set **`NEXT_PUBLIC_SERVER_URL=http://localhost:3000`** in `.env`.
 
-7. **Custom admin (`/console`)** — After **`npm run setup:local`**, `.env` should include **`ADMIN_SESSION_SECRET`** (or run **`npm run ensure-console-secret`**). Create a console user: `npm run create-console-admin -- you@company.com 'secure-password'`. Open [http://localhost:4069/console/login](http://localhost:4069/console/login). Then use **`/console/pages`** to edit marketing content and **`/console/leads`** to inspect submissions (see [`docs/CONSOLE_CMS_RUNBOOK.md`](./docs/CONSOLE_CMS_RUNBOOK.md)).
+7. **Custom admin (`/console`)** — After **`npm run setup:local`**, `.env` should include **`ADMIN_SESSION_SECRET`** (or run **`npm run ensure-console-secret`**). Create a console user: `npm run create-console-admin -- you@company.com 'secure-password'`. Open [http://localhost:4069/console/login](http://localhost:4069/console/login). Then use **`/console/pages`** to edit marketing content, **`/console/leads`** to inspect submissions, and **`/console/email-system`** to manage SMTP settings, lead email templates, and delivery logs (see [`docs/CONSOLE_CMS_RUNBOOK.md`](./docs/CONSOLE_CMS_RUNBOOK.md)).
 
 8. **Public site** — After **`npm run seed`**, open [http://localhost:4069/](http://localhost:4069/) and [http://localhost:4069/book/strategy-call](http://localhost:4069/book/strategy-call).
 
@@ -234,6 +234,6 @@ Then follow **Optional production hardening** below (WAF, logs, monitoring).
 
 **Preview** — Draft JSON: `GET /api/pages/[slug]/preview` (secured). **`NEXT_PUBLIC_SERVER_URL`** should match the site origin for absolute media and links.
 
-**Email** uses [Resend](https://resend.com) when `RESEND_API_KEY` is set. **Captcha**: Turnstile or hCaptcha secrets + optional `NEXT_PUBLIC_TURNSTILE_SITE_KEY` for the widget.
+**Email** can now run through the built-in SMTP system in **`/console/email-system`**. Set **`SMTP_ENCRYPTION_KEY`** (or reuse **`ADMIN_SESSION_SECRET`**) before saving SMTP credentials. The older Resend flow still remains as a compatibility fallback when SMTP is not active. **Captcha**: Turnstile or hCaptcha secrets + optional `NEXT_PUBLIC_TURNSTILE_SITE_KEY` for the widget.
 
 Full checklist: [`docs/TASK_LIST.md`](./docs/TASK_LIST.md).

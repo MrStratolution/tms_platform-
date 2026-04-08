@@ -1,0 +1,6 @@
+<svg width="320" height="120" viewBox="0 0 320 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="320" height="120" rx="24" fill="#E6EAE1"/>
+  <path d="M42 82V38L64 56L86 38V82" stroke="#101820" stroke-width="10" stroke-linejoin="round"/>
+  <text x="116" y="56" font-family="monospace" font-size="18" fill="#101820">NORTHGATE</text>
+  <text x="116" y="80" font-family="monospace" font-size="14" fill="#56605B">GRID SYSTEMS</text>
+</svg>

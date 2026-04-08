@@ -1,0 +1,42 @@
+<svg width="1600" height="900" viewBox="0 0 1600 900" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="hero-bg" x1="180" y1="96" x2="1414" y2="834" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0A0D12"/>
+      <stop offset="0.48" stop-color="#10161D"/>
+      <stop offset="1" stop-color="#05070A"/>
+    </linearGradient>
+    <radialGradient id="hero-lime" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(1230 176) rotate(138.993) scale(362.432 320.511)">
+      <stop stop-color="#E7F8C8" stop-opacity="0.28"/>
+      <stop offset="0.46" stop-color="#A7D06D" stop-opacity="0.12"/>
+      <stop offset="1" stop-color="#0A0D12" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="hero-ice" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(454 664) rotate(51.8338) scale(406.899 277.005)">
+      <stop stop-color="#E6EEF8" stop-opacity="0.16"/>
+      <stop offset="0.52" stop-color="#5A6B83" stop-opacity="0.08"/>
+      <stop offset="1" stop-color="#0A0D12" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="hero-panel" x1="322" y1="198" x2="1148" y2="708" gradientUnits="userSpaceOnUse">
+      <stop stop-color="rgba(255,255,255,0.12)"/>
+      <stop offset="1" stop-color="rgba(255,255,255,0.02)"/>
+    </linearGradient>
+  </defs>
+  <rect width="1600" height="900" rx="36" fill="url(#hero-bg)"/>
+  <rect x="80" y="80" width="1440" height="740" rx="32" fill="#0D1218" stroke="rgba(255,255,255,0.08)" stroke-width="2"/>
+  <rect x="164" y="154" width="1272" height="592" rx="28" fill="#0A0F15" stroke="rgba(255,255,255,0.06)"/>
+  <rect x="248" y="226" width="1104" height="448" rx="24" fill="url(#hero-panel)" stroke="rgba(255,255,255,0.07)"/>
+  <circle cx="1230" cy="176" r="364" fill="url(#hero-lime)"/>
+  <circle cx="436" cy="684" r="332" fill="url(#hero-ice)"/>
+  <path d="M248 338H1352" stroke="rgba(255,255,255,0.06)"/>
+  <path d="M248 450H1352" stroke="rgba(255,255,255,0.06)"/>
+  <path d="M248 562H1352" stroke="rgba(255,255,255,0.06)"/>
+  <path d="M456 226V674" stroke="rgba(255,255,255,0.05)"/>
+  <path d="M800 226V674" stroke="rgba(255,255,255,0.05)"/>
+  <path d="M1144 226V674" stroke="rgba(255,255,255,0.05)"/>
+  <rect x="318" y="302" width="356" height="22" rx="11" fill="rgba(231,248,200,0.8)"/>
+  <rect x="318" y="348" width="424" height="16" rx="8" fill="rgba(255,255,255,0.34)"/>
+  <rect x="318" y="382" width="390" height="16" rx="8" fill="rgba(255,255,255,0.22)"/>
+  <rect x="318" y="478" width="202" height="168" rx="18" fill="rgba(255,255,255,0.03)" stroke="rgba(255,255,255,0.07)"/>
+  <rect x="550" y="478" width="254" height="168" rx="18" fill="rgba(255,255,255,0.03)" stroke="rgba(255,255,255,0.07)"/>
+  <rect x="836" y="478" width="420" height="88" rx="18" fill="rgba(255,255,255,0.03)" stroke="rgba(255,255,255,0.07)"/>
+  <rect x="836" y="586" width="420" height="60" rx="18" fill="rgba(255,255,255,0.03)" stroke="rgba(255,255,255,0.07)"/>
+</svg>

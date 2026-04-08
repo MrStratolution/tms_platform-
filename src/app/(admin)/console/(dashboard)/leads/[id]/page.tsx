@@ -1,11 +1,11 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { eq } from 'drizzle-orm'
+import { desc, eq } from 'drizzle-orm'
 
 import { ConsoleLeadUpdateForm } from '@/components/console/ConsoleLeadUpdateForm'
 import { getCustomDb } from '@/db/client'
-import { cmsLeads } from '@/db/schema'
+import { cmsBookingEvents, cmsBookingProfiles, cmsLeads } from '@/db/schema'
 import { consoleUserCanWriteLeads } from '@/lib/console/rbac'
 import { requireConsoleSession } from '@/lib/console/requireConsoleSession'
 import { requireConsoleLeadsRoute } from '@/lib/console/routeGuards'
@@ -39,6 +39,33 @@ export default async function ConsoleLeadDetailPage(props: Props) {
   if (!lead) notFound()
 
   const canEditLead = consoleUserCanWriteLeads(session.role)
+  const bookingRows = await db
+    .select()
+    .from(cmsBookingEvents)
+    .where(eq(cmsBookingEvents.leadId, lead.id))
+    .orderBy(desc(cmsBookingEvents.scheduledFor), desc(cmsBookingEvents.id))
+    .limit(1)
+  const bookingEvent = bookingRows[0] ?? null
+  const bookingProfileRows =
+    bookingEvent?.bookingProfileId != null
+      ? await db
+          .select({
+            id: cmsBookingProfiles.id,
+            document: cmsBookingProfiles.document,
+          })
+          .from(cmsBookingProfiles)
+          .where(eq(cmsBookingProfiles.id, bookingEvent.bookingProfileId))
+          .limit(1)
+      : []
+  const bookingProfile = bookingProfileRows[0] ?? null
+  const bookingProfileDoc =
+    bookingProfile?.document &&
+    typeof bookingProfile.document === 'object' &&
+    !Array.isArray(bookingProfile.document)
+      ? (bookingProfile.document as { name?: unknown })
+      : null
+  const bookingProfileName =
+    typeof bookingProfileDoc?.name === 'string' ? bookingProfileDoc.name : null
 
   const entries: [string, string][] = [
     ['ID', String(lead.id)],
@@ -82,6 +109,16 @@ export default async function ConsoleLeadDetailPage(props: Props) {
         initialLeadStatus={lead.leadStatus}
         initialNotes={lead.notes}
         canEdit={canEditLead}
+        bookingEvent={
+          bookingEvent
+            ? {
+                id: bookingEvent.id,
+                status: bookingEvent.status,
+                scheduledFor: bookingEvent.scheduledFor?.toISOString() ?? null,
+                bookingProfileName,
+              }
+            : null
+        }
       />
       <dl className="tma-console-dl">
         {entries.map(([k, v]) => (

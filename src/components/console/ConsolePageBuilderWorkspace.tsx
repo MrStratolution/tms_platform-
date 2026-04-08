@@ -12,6 +12,7 @@ type Props = {
   initialPageType: string
   initialStatus: 'draft' | 'review' | 'published' | 'archived' | 'trashed'
   initialDocument: Record<string, unknown>
+  editingLocale?: 'de' | 'en'
   canEdit: boolean
   canPublishLive: boolean
   canEditCustomCss: boolean
@@ -30,6 +31,7 @@ export function ConsolePageBuilderWorkspace(props: Props) {
       initialPageType={props.initialPageType}
       initialStatus={props.initialStatus}
       initialDocument={props.initialDocument}
+      editingLocale={props.editingLocale}
       canEdit={props.canEdit}
       canPublishLive={props.canPublishLive}
       canEditCustomCss={props.canEditCustomCss}
@@ -47,4 +49,3 @@ export function ConsolePageBuilderWorkspace(props: Props) {
     />
   )
 }
-

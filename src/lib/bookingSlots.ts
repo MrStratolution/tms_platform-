@@ -16,6 +16,8 @@ export type AvailabilityConfig = {
   windows?: AvailabilityWindow[] | null
   /** Gap between slot starts; defaults to `durationMinutes`. */
   slotStepMinutes?: number | null
+  bufferBeforeMinutes?: number | null
+  bufferAfterMinutes?: number | null
 }
 
 const DEFAULT_WINDOWS: AvailabilityWindow[] = [
@@ -89,4 +91,41 @@ export function generateSlotStartsISO(params: {
   }
 
   return slots
+}
+
+export function filterBookedSlotStartsISO(params: {
+  slotStartsIso: string[]
+  bookedStarts: (Date | string)[]
+  durationMinutes: number
+  bufferBeforeMinutes?: number
+  bufferAfterMinutes?: number
+}): string[] {
+  const durationMs = Math.max(1, params.durationMinutes) * 60_000
+  const bufferBeforeMs = Math.max(0, params.bufferBeforeMinutes ?? 0) * 60_000
+  const bufferAfterMs = Math.max(0, params.bufferAfterMinutes ?? 0) * 60_000
+
+  const bookedRanges = params.bookedStarts
+    .map((value) => {
+      const at = value instanceof Date ? value.getTime() : Date.parse(value)
+      if (!Number.isFinite(at)) return null
+      return {
+        start: at - bufferBeforeMs,
+        end: at + durationMs + bufferAfterMs,
+      }
+    })
+    .filter((range): range is { start: number; end: number } => range != null)
+
+  if (bookedRanges.length === 0) return params.slotStartsIso
+
+  return params.slotStartsIso.filter((slotIso) => {
+    const slotAt = Date.parse(slotIso)
+    if (!Number.isFinite(slotAt)) return false
+    const slotRange = {
+      start: slotAt - bufferBeforeMs,
+      end: slotAt + durationMs + bufferAfterMs,
+    }
+    return !bookedRanges.some(
+      (booked) => slotRange.start < booked.end && slotRange.end > booked.start,
+    )
+  })
 }

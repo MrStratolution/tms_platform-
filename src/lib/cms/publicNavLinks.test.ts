@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest'
 
-import { buildCmsNavEntries, getManualNavLinksFromSiteSettings } from '@/lib/cms/publicNavLinks'
+import {
+  buildCmsNavEntries,
+  getManualNavLinksFromSiteSettings,
+  mergePublicNavLinks,
+} from '@/lib/cms/publicNavLinks'
 
 describe('buildCmsNavEntries', () => {
   it('skips home and rows without navigationLabel', () => {
@@ -82,6 +86,25 @@ describe('buildCmsNavEntries', () => {
         showOnDesktop: true,
         showOnMobile: false,
       },
+    ])
+  })
+
+  it('merges manual and cms nav while deduping by href', () => {
+    const out = mergePublicNavLinks(
+      [
+        { href: '/services', label: 'Services' },
+        { href: '/contact', label: 'Contact' },
+      ],
+      [
+        { href: '/work', label: 'Work' },
+        { href: '/services', label: 'Leistungen' },
+      ],
+    )
+
+    expect(out).toEqual([
+      { href: '/services', label: 'Services' },
+      { href: '/contact', label: 'Contact' },
+      { href: '/work', label: 'Work' },
     ])
   })
 })

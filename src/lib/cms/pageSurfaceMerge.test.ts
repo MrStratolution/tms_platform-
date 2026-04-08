@@ -8,8 +8,6 @@ import {
 
 function emptySurface(over: Partial<PageSurfaceFields> = {}): PageSurfaceFields {
   return {
-    heroHeadline: '',
-    heroSubheadline: '',
     seoTitle: '',
     seoDescription: '',
     seoCanonicalUrl: '',
@@ -17,9 +15,6 @@ function emptySurface(over: Partial<PageSurfaceFields> = {}): PageSurfaceFields 
     navigationLabel: '',
     navigationHref: '',
     navOrder: '',
-    heroInsertIndex: '',
-    primaryCtaLabel: '',
-    primaryCtaHref: '',
     pageTheme: 'inherit',
     maxWidthMode: 'inherit',
     sectionSpacingPreset: 'inherit',
@@ -33,32 +28,21 @@ function emptySurface(over: Partial<PageSurfaceFields> = {}): PageSurfaceFields 
   }
 }
 
-describe('pageSurfaceMerge heroInsertIndex', () => {
-  it('extracts heroInsertIndex from document', () => {
-    const s = extractPageSurfaceFromDocument({ heroInsertIndex: 2, layout: [] })
-    expect(s.heroInsertIndex).toBe('2')
-  })
-
-  it('merges positive heroInsertIndex onto document', () => {
+describe('pageSurfaceMerge legacy hero cleanup', () => {
+  it('removes legacy hero fields while preserving layout blocks', () => {
     const out = mergePageSurfaceIntoDocument(
-      { layout: [{ blockType: 'cta', label: 'x', href: '/' }] },
-      emptySurface({ heroInsertIndex: '1' }),
+      {
+        hero: { headline: 'Legacy' },
+        primaryCta: { label: 'Book', href: '/book' },
+        heroInsertIndex: 2,
+        layout: [{ blockType: 'hero', id: 'hero-1', headline: 'Canonical' }],
+      },
+      emptySurface(),
     )
-    expect(out.heroInsertIndex).toBe(1)
-  })
-
-  it('removes heroInsertIndex when 0 or empty', () => {
-    const cleared = mergePageSurfaceIntoDocument(
-      { heroInsertIndex: 3, layout: [] },
-      emptySurface({ heroInsertIndex: '' }),
-    )
-    expect(cleared.heroInsertIndex).toBeUndefined()
-
-    const zero = mergePageSurfaceIntoDocument(
-      { heroInsertIndex: 3, layout: [] },
-      emptySurface({ heroInsertIndex: '0' }),
-    )
-    expect(zero.heroInsertIndex).toBeUndefined()
+    expect(out.hero).toBeUndefined()
+    expect(out.primaryCta).toBeUndefined()
+    expect(out.heroInsertIndex).toBeUndefined()
+    expect(out.layout).toEqual([{ blockType: 'hero', id: 'hero-1', headline: 'Canonical' }])
   })
 })
 

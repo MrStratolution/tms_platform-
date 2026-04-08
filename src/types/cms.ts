@@ -287,25 +287,52 @@ export interface CaseStudy {
   updatedAt: string;
   createdAt: string;
 }
+export interface Product {
+  id: number;
+  slug: string;
+  name: string;
+  status: 'draft' | 'published';
+  contentKind: ProductContentKind;
+  publishedAt?: string | null;
+  listingPriority?: number | null;
+  showInProjectFeeds?: boolean | null;
+  document?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  updatedAt: string;
+  createdAt: string;
+}
+export const PRODUCT_CONTENT_KIND_VALUES = ['product', 'project', 'concept', 'system', 'initiative'] as const;
+export type ProductContentKind = (typeof PRODUCT_CONTENT_KIND_VALUES)[number];
 /**
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "email-templates".
  */
 export interface EmailTemplate {
   id: number;
-  name: string;
-  slug: string;
+  key: string;
+  language: 'de' | 'en';
   subject: string;
-  body: string;
-  preheader?: string | null;
-  useCase?:
-    | 'generic'
-    | 'lead_thank_you'
-    | 'booking_confirmation'
-    | 'booking_reminder'
-    | 'internal_lead_notification'
-    | 'internal_sync_alert'
+  htmlBody: string;
+  variablesJson?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
     | null;
+  active?: boolean | null;
+  name?: string | null;
+  slug?: string | null;
+  body?: string | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -437,8 +464,83 @@ export interface BookingProfile {
 /** Optional chrome on any layout block (stored as extra keys on layout JSON). */
 export interface LayoutBlockChromeFields {
   anchorId?: string | null
+  marginTop?: string | null
+  marginRight?: string | null
+  marginBottom?: string | null
+  marginLeft?: string | null
+  paddingTop?: string | null
+  paddingRight?: string | null
+  paddingBottom?: string | null
+  paddingLeft?: string | null
+  marginUnit?: 'px' | '%' | 'em' | 'rem' | 'vw' | null
+  paddingUnit?: 'px' | '%' | 'em' | 'rem' | 'vw' | null
   sectionSpacingY?: 'inherit' | 'none' | 'sm' | 'md' | 'lg' | null
   widthMode?: 'inherit' | 'default' | 'narrow' | 'full' | null
+  zIndex?: number | null
+  /**
+   * High-level section animation preset.
+   *
+   * inherit    → use renderer defaults for this block type
+   * none       → no reveal motion
+   * fade       → fade + slight rise
+   * slide-up   → stronger upward travel
+   * slide-blur → blur + rise reveal
+   * scale-in   → fade + gentle scale entrance
+   */
+  animationPreset?:
+    | 'inherit'
+    | 'none'
+    | 'fade'
+    | 'slide-up'
+    | 'slide-blur'
+    | 'scale-in'
+    | null
+  /**
+   * High-level hover styling preset for the section shell.
+   * Applied only on devices that support hover.
+   */
+  hoverPreset?:
+    | 'inherit'
+    | 'none'
+    | 'lift'
+    | 'scale'
+    | 'glow'
+    | 'border-highlight'
+    | null
+  /**
+   * Optional atmosphere/background treatment around the section shell.
+   */
+  backgroundEffect?:
+    | 'inherit'
+    | 'none'
+    | 'glow'
+    | 'glass'
+    | 'noise'
+    | 'orb'
+    | null
+  /**
+   * Optional enhancement for hero-like headline treatments.
+   * `canvas-accent` is reserved for a later phase.
+   */
+  heroEffect?: 'inherit' | 'none' | 'rotating-text' | 'canvas-accent' | null
+  /**
+   * Controls the scroll-triggered reveal animation for this section.
+   *
+   * inherit  → use the page-level reveal preset (default cascade behaviour)
+   * default  → standard fade+translateY reveal (tma-reveal--fade)
+   * subtle   → softer fade only, no movement
+   * blur     → fade + blur-in entrance (tma-reveal--blur)
+   * slide-up → pronounced upward slide + fade (great for stats / cards)
+   * stagger  → children animate in sequence (requires blockType support)
+   * off      → no animation, section renders immediately
+   */
+  revealMode?: 'inherit' | 'default' | 'subtle' | 'blur' | 'slide-up' | 'stagger' | 'off' | null
+  /**
+   * Delay (ms) before reveal animation starts. Useful when two sections
+   * are stacked without spacing and should feel choreographed.
+   * Ignored when revealMode is 'off'.
+   */
+  revealDelay?: number | null
   customClass?: string | null
   sectionHidden?: boolean | null
   /** Responsive visibility: hide on specific device classes. */
@@ -503,6 +605,11 @@ export interface Page {
   footerVariant?: ('inherit' | 'default' | 'minimal') | null
   /** Advanced: scoped CSS for this page only (console: ops/admin). */
   customCss?: string | null
+  /**
+   * True for pages inserted by the demo seed. Console page list shows a "Demo"
+   * badge and ops can bulk-archive these before going live.
+   */
+  isDemoContent?: boolean | null
   /** Page-level tracking overrides (merge with global GTM, or add per-page pixel IDs). */
   trackingOverrides?: {
     /** Override or supplement global GTM container for this page. */
@@ -522,6 +629,8 @@ export interface Page {
             backgroundMediaUrl?: string | null;
             ctaLabel?: string | null;
             ctaHref?: string | null;
+            secondaryCtaLabel?: string | null;
+            secondaryCtaHref?: string | null;
             height?: ('short' | 'medium' | 'tall') | null;
             mediaFit?: ('cover' | 'contain') | null;
             mediaPositionX?: ('left' | 'center' | 'right') | null;
@@ -687,9 +796,65 @@ export interface Page {
         | {
             sectionTitle?: string | null;
             studies: (number | CaseStudy)[];
+            intro?: string | null;
+            ctaLabel?: string | null;
+            ctaHref?: string | null;
             id?: string | null;
             blockName?: string | null;
             blockType: 'caseStudyGrid';
+          }
+        | {
+            sectionTitle?: string | null;
+            intro?: string | null;
+            featuredPage?: (number | null) | Page;
+            pages?: (number | Page)[] | null;
+            showAllPublished?: boolean | null;
+            limit?: number | null;
+            ctaLabel?: string | null;
+            ctaHref?: string | null;
+            id?: string | null;
+            blockName?: string | null;
+            blockType: 'resourceFeed';
+          }
+        | {
+            sectionTitle?: string | null;
+            intro?: string | null;
+            featuredProduct?: (number | null) | Product;
+            products?: (number | Product)[] | null;
+            selectionMode?: ('manual' | 'automatic' | 'hybrid') | null;
+            contentKinds?: (('product' | 'project' | 'concept' | 'system' | 'initiative')[]) | null;
+            sortBy?: ('listingPriority' | 'publishedAt' | 'manual') | null;
+            sortDirection?: ('asc' | 'desc') | null;
+            showOnlyProjectFeedEligible?: boolean | null;
+            showAllPublished?: boolean | null;
+            limit?: number | null;
+            ctaLabel?: string | null;
+            ctaHref?: string | null;
+            id?: string | null;
+            blockName?: string | null;
+            blockType: 'productFeed';
+          }
+        | {
+            sectionTitle?: string | null;
+            intro?: string | null;
+            items?:
+              | {
+                  title: string;
+                  summary?: string | null;
+                  bullets?:
+                    | {
+                        text: string;
+                        id?: string | null;
+                      }[]
+                    | null;
+                  imageUrl?: string | null;
+                  imageAlt?: string | null;
+                  id?: string | null;
+                }[]
+              | null;
+            id?: string | null;
+            blockName?: string | null;
+            blockType: 'servicesFocus';
           }
         | {
             sectionTitle?: string | null;
@@ -901,8 +1066,34 @@ export interface PageLocalization {
    * Base language on the page when the job runs.
    */
   sourceLocale?: string | null;
+  /**
+   * Machine translation job state.
+   *
+   * idle     → not yet queued
+   * queued   → in the AI job queue, waiting to run
+   * running  → actively being translated by the AI worker
+   * ready    → translation complete, available for editor review
+   * failed   → last run failed (see lastError)
+   */
   jobStatus?: ('idle' | 'queued' | 'running' | 'ready' | 'failed') | null;
   lastError?: string | null;
+  /**
+   * Total number of translatable text blocks on the source page at the time
+   * the translation job ran. Used to compute progress percentage.
+   * Null when no job has run yet.
+   */
+  blocksTotal?: number | null;
+  /**
+   * Number of blocks that have been successfully translated so far.
+   * Null when no job has run yet.
+   * Progress % = Math.round((blocksTranslated / blocksTotal) * 100)
+   */
+  blocksTranslated?: number | null;
+  /**
+   * ISO timestamp of when the last translation job completed (or failed).
+   * Null when no job has ever run.
+   */
+  lastJobCompletedAt?: string | null;
   heroHeadline?: string | null;
   heroSubheadline?: string | null;
   seoTitle?: string | null;
@@ -961,6 +1152,16 @@ export interface Lead {
     | number
     | boolean
     | null;
+  /**
+   * True for rows created by the demo seed script. Lets ops filter out demo
+   * leads in the dashboard and exclude them from CRM sync counts.
+   */
+  isDemoContent?: boolean | null;
+  /**
+   * UUID of the admin user who owns this lead (foreign key: admin_user.id).
+   * Null = unassigned. Set by ops via the lead dashboard assignment control.
+   */
+  assignedToUserId?: string | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -1026,8 +1227,21 @@ export interface EmailLog {
   id: number;
   lead?: (number | null) | Lead;
   template?: (number | null) | EmailTemplate;
+  templateKey: string;
   recipient: string;
+  language: 'de' | 'en';
+  subject: string;
   status: 'queued' | 'sent' | 'failed';
+  errorMessage?: string | null;
+  payloadJson?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
   providerMessageId?: string | null;
   sentAt?: string | null;
   updatedAt: string;
@@ -1468,6 +1682,42 @@ export interface PagesSelect<T extends boolean = true> {
           | {
               sectionTitle?: T;
               studies?: T;
+              intro?: T;
+              ctaLabel?: T;
+              ctaHref?: T;
+              id?: T;
+              blockName?: T;
+            };
+        resourceFeed?:
+          | T
+          | {
+              sectionTitle?: T;
+              intro?: T;
+              featuredPage?: T;
+              pages?: T;
+              showAllPublished?: T;
+              limit?: T;
+              ctaLabel?: T;
+              ctaHref?: T;
+              id?: T;
+              blockName?: T;
+            };
+        productFeed?:
+          | T
+          | {
+              sectionTitle?: T;
+              intro?: T;
+              featuredProduct?: T;
+              products?: T;
+              selectionMode?: T;
+              contentKinds?: T;
+              sortBy?: T;
+              sortDirection?: T;
+              showOnlyProjectFeedEligible?: T;
+              showAllPublished?: T;
+              limit?: T;
+              ctaLabel?: T;
+              ctaHref?: T;
               id?: T;
               blockName?: T;
             };

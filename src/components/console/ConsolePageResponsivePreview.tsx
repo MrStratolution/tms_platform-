@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 type DevicePreset = {
   id: string
@@ -19,6 +19,22 @@ const DEVICE_PRESETS: DevicePreset[] = [
   { id: 'full', label: 'Fluid', width: null, hint: 'Uses full preview panel width' },
 ]
 
+function withBuilderPreviewFlag(url: string): string {
+  const isAbsolute = /^[a-zA-Z][a-zA-Z\d+\-.]*:/.test(url)
+  try {
+    const base = isAbsolute ? undefined : 'http://tma-preview.local'
+    const parsed = base ? new URL(url, base) : new URL(url)
+    parsed.searchParams.set('builderPreview', '1')
+    if (base && parsed.origin === 'http://tma-preview.local') {
+      return `${parsed.pathname}${parsed.search}${parsed.hash}`
+    }
+    return parsed.toString()
+  } catch {
+    const joiner = url.includes('?') ? '&' : '?'
+    return `${url}${joiner}builderPreview=1`
+  }
+}
+
 type Props = {
   visualPreviewUrl: string | null
   slug: string
@@ -31,11 +47,13 @@ export function ConsolePageResponsivePreview({
   visualPreviewUrl,
   slug,
   publicPath,
+  selectedBlockId,
   onSelectedBlockIdChange,
 }: Props) {
   const [deviceId, setDeviceId] = useState<string>('tablet')
   const [iframeKey, setIframeKey] = useState(0)
   const [iframeLoaded, setIframeLoaded] = useState(false)
+  const iframeRef = useRef<HTMLIFrameElement | null>(null)
 
   const device = useMemo(
     () => DEVICE_PRESETS.find((d) => d.id === deviceId) ?? DEVICE_PRESETS[2],
@@ -46,6 +64,41 @@ export function ConsolePageResponsivePreview({
     setIframeLoaded(false)
     setIframeKey((k) => k + 1)
   }, [])
+
+  const postToPreview = useCallback((payload: Record<string, unknown>) => {
+    try {
+      iframeRef.current?.contentWindow?.postMessage(payload, '*')
+    } catch {
+      // ignored: iframe may be reloading or unavailable
+    }
+  }, [])
+
+  const pickBlockAtPoint = useCallback(
+    (clientX: number, clientY: number) => {
+      const iframe = iframeRef.current
+      if (!iframe) return
+      try {
+        const rect = iframe.getBoundingClientRect()
+        const x = clientX - rect.left
+        const y = clientY - rect.top
+        const doc = iframe.contentDocument
+        if (!doc) return
+        const hit = doc.elementFromPoint(x, y)
+        const block = hit?.closest?.('[data-tma-block-id]')
+        const blockId = block?.getAttribute('data-tma-block-id')
+        if (blockId?.trim()) {
+          onSelectedBlockIdChange?.(blockId)
+          postToPreview({
+            type: 'tma-preview-highlight-block',
+            blockId,
+          })
+        }
+      } catch {
+        // ignored: preview may still be loading
+      }
+    },
+    [onSelectedBlockIdChange, postToPreview],
+  )
 
   useEffect(() => {
     function onMessage(ev: MessageEvent) {
@@ -59,15 +112,44 @@ export function ConsolePageResponsivePreview({
     return () => window.removeEventListener('message', onMessage)
   }, [onSelectedBlockIdChange])
 
+  useEffect(() => {
+    if (!iframeLoaded) return
+    postToPreview({
+      type: 'tma-preview-highlight-block',
+      blockId: selectedBlockId ?? null,
+    })
+  }, [iframeLoaded, postToPreview, selectedBlockId])
+
+  useEffect(() => {
+    const iframe = iframeRef.current
+    if (!iframe) return
+
+    const markLoaded = () => {
+      setIframeLoaded(true)
+      postToPreview({
+        type: 'tma-preview-highlight-block',
+        blockId: selectedBlockId ?? null,
+      })
+    }
+
+    const onLoad = () => markLoaded()
+    iframe.addEventListener('load', onLoad)
+
+    try {
+      const readyState = iframe.contentDocument?.readyState
+      if (readyState === 'interactive' || readyState === 'complete') {
+        markLoaded()
+      }
+    } catch {
+      // ignored: iframe may not be ready yet
+    }
+
+    return () => iframe.removeEventListener('load', onLoad)
+  }, [iframeKey, postToPreview, selectedBlockId])
+
   const previewUrlWithBuilderFlag = useMemo(() => {
     if (!visualPreviewUrl) return null
-    try {
-      const u = new URL(visualPreviewUrl)
-      u.searchParams.set('builderPreview', '1')
-      return u.toString()
-    } catch {
-      return visualPreviewUrl
-    }
+    return withBuilderPreviewFlag(visualPreviewUrl)
   }, [visualPreviewUrl])
 
   if (!visualPreviewUrl) {
@@ -178,12 +260,31 @@ export function ConsolePageResponsivePreview({
               Loading preview…
             </div>
             <iframe
+              ref={iframeRef}
               key={iframeKey}
               title={`Page preview at ${device.label}`}
               src={previewUrlWithBuilderFlag ?? visualPreviewUrl}
               className={`tma-console-preview-dock__iframe${iframeLoaded ? '' : ' tma-console-preview-dock__iframe--pending'}`}
-              onLoad={() => setIframeLoaded(true)}
               sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox"
+            />
+            <div
+              className="tma-console-preview-dock__hitbox"
+              hidden={!iframeLoaded}
+              aria-hidden="true"
+              onClick={(event) => {
+                event.preventDefault()
+                pickBlockAtPoint(event.clientX, event.clientY)
+              }}
+              onWheel={(event) => {
+                const iframe = iframeRef.current
+                if (!iframe?.contentWindow) return
+                event.preventDefault()
+                iframe.contentWindow.scrollBy({
+                  top: event.deltaY,
+                  left: event.deltaX,
+                  behavior: 'auto',
+                })
+              }}
             />
           </div>
         </div>

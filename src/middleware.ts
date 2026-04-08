@@ -28,6 +28,7 @@ function isLocaleAwarePublicPath(pathname: string): boolean {
   return (
     pathname === '/' ||
     /^\/(products|preview|book)(\/|$)/.test(pathname) ||
+    /^\/work\/[a-z0-9-]+$/.test(pathname) ||
     /^\/[a-z0-9-]+$/.test(pathname)
   )
 }

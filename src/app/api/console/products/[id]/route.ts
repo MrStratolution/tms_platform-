@@ -6,14 +6,27 @@ import { getCustomDb } from '@/db/client'
 import { cmsProducts } from '@/db/schema'
 import { requireConsoleJsonAuth } from '@/lib/console/apiAuth'
 import { isMissingDbRelationError, missingRelationJsonResponse } from '@/lib/db/errors'
+import { normalizeProductContentKind } from '@/lib/productFeeds'
+import { PRODUCT_CONTENT_KIND_VALUES } from '@/types/cms'
 
 type RouteContext = { params: Promise<{ id: string }> }
+
+const productContentKindSchema = z.enum(PRODUCT_CONTENT_KIND_VALUES)
+const publishedAtSchema = z.union([
+  z.string().datetime({ offset: true }),
+  z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  z.null(),
+])
 
 const patchSchema = z
   .object({
     document: z.record(z.unknown()).optional(),
     name: z.string().min(1).max(500).optional(),
     status: z.enum(['draft', 'published']).optional(),
+    contentKind: productContentKindSchema.optional(),
+    publishedAt: publishedAtSchema.optional(),
+    listingPriority: z.number().int().nullable().optional(),
+    showInProjectFeeds: z.boolean().optional(),
     slug: z
       .string()
       .min(1)
@@ -26,9 +39,21 @@ const patchSchema = z
       d.document !== undefined ||
       d.name !== undefined ||
       d.status !== undefined ||
+      d.contentKind !== undefined ||
+      d.publishedAt !== undefined ||
+      d.listingPriority !== undefined ||
+      d.showInProjectFeeds !== undefined ||
       d.slug !== undefined,
     { message: 'At least one field is required' },
   )
+
+function parseOptionalTimestamp(value: string | null | undefined): Date | null {
+  if (!value) return null
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    return new Date(`${value}T00:00:00.000Z`)
+  }
+  return new Date(value)
+}
 
 export async function GET(request: Request, ctx: RouteContext) {
   const auth = await requireConsoleJsonAuth(request, 'content:read')
@@ -61,6 +86,10 @@ export async function GET(request: Request, ctx: RouteContext) {
       slug: row.slug,
       name: row.name,
       status: row.status,
+      contentKind: normalizeProductContentKind(row.contentKind),
+      publishedAt: row.publishedAt?.toISOString() ?? null,
+      listingPriority: row.listingPriority ?? null,
+      showInProjectFeeds: row.showInProjectFeeds,
       document: row.document,
       updatedAt: row.updatedAt.toISOString(),
     },
@@ -110,6 +139,18 @@ export async function PATCH(request: Request, ctx: RouteContext) {
   if (parsed.data.document !== undefined) update.document = parsed.data.document
   if (parsed.data.name !== undefined) update.name = parsed.data.name
   if (parsed.data.status !== undefined) update.status = parsed.data.status
+  if (parsed.data.contentKind !== undefined) update.contentKind = parsed.data.contentKind
+  if (parsed.data.publishedAt !== undefined) {
+    const publishedAt = parseOptionalTimestamp(parsed.data.publishedAt)
+    if (publishedAt && Number.isNaN(publishedAt.getTime())) {
+      return NextResponse.json({ error: 'Publishing date is invalid' }, { status: 400 })
+    }
+    update.publishedAt = publishedAt
+  }
+  if (parsed.data.listingPriority !== undefined) update.listingPriority = parsed.data.listingPriority
+  if (parsed.data.showInProjectFeeds !== undefined) {
+    update.showInProjectFeeds = parsed.data.showInProjectFeeds
+  }
   if (parsed.data.slug !== undefined) update.slug = parsed.data.slug
 
   try {
@@ -135,6 +176,10 @@ export async function PATCH(request: Request, ctx: RouteContext) {
       slug: row.slug,
       name: row.name,
       status: row.status,
+      contentKind: normalizeProductContentKind(row.contentKind),
+      publishedAt: row.publishedAt?.toISOString() ?? null,
+      listingPriority: row.listingPriority ?? null,
+      showInProjectFeeds: row.showInProjectFeeds,
       document: row.document,
       updatedAt: row.updatedAt.toISOString(),
     },

@@ -3,9 +3,9 @@ import Script from 'next/script'
 /**
  * Google Tag Manager — loads only when `gtmContainerId` is set in site settings (`GTM-…`).
  */
-export function PublicGtm(props: { gtmContainerId?: string | null }) {
+export function PublicGtm(props: { gtmContainerId?: string | null; enabled?: boolean }) {
   const id = props.gtmContainerId?.trim()
-  if (!id) return null
+  if (!id || props.enabled === false) return null
 
   return (
     <>

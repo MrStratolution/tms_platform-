@@ -1,16 +1,17 @@
-import { cookies, headers as getHeaders } from 'next/headers'
+import { cookies, headers } from 'next/headers'
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import React, { cache } from 'react'
 
 import { PageLivePreview } from '@/components/pages/PageLivePreview'
 import { tryGetCmsDb } from '@/lib/cmsData'
+import { isAnalyticsAllowed } from '@/lib/cookieConsent'
 import { resolvePageForPublicView } from '@/lib/mergePublicPage'
 import { getPublishedHomePage } from '@/lib/pages'
+import { normalizePublicLocale } from '@/lib/publicLocale'
 import { firstQueryParam } from '@/lib/queryParam'
 import { getPublicShortcodeVars } from '@/lib/publicShortcodeVars'
 import { buildPublicPageMetadata } from '@/lib/pageMetadata'
-import { getPublicSiteOrigin } from '@/lib/publicSiteUrl'
 import { loadSiteSettingsForPublic, mergeRootLayoutMetadata } from '@/lib/siteSettings'
 import { serializePageForClient } from '@/lib/serializePage'
 
@@ -39,10 +40,16 @@ export async function generateMetadata(props: HomeProps): Promise<Metadata> {
   }
   if (cmsHome) {
     const cookieStore = await cookies()
+    const headerStore = await headers()
+    const locale = normalizePublicLocale(
+      firstQueryParam(sp, 'lang') ??
+        headerStore.get('x-tma-active-lang') ??
+        cookieStore.get('tma_lang')?.value,
+    )
     const merged = await resolvePageForPublicView(ctx.db, cmsHome, {
       cookieStore,
       queryVariant: firstQueryParam(sp, 'tma_variant'),
-      queryLang: firstQueryParam(sp, 'lang'),
+      queryLang: locale,
     })
     return buildPublicPageMetadata(merged, '', site)
   }
@@ -92,10 +99,6 @@ export default async function HomePage(props: HomeProps) {
     )
   }
 
-  const headers = await getHeaders()
-  const consoleHint =
-    headers.get('x-forwarded-host') || headers.get('host') || 'localhost'
-
   let cmsHome: Awaited<ReturnType<typeof getPublishedHomePage>> = null
   try {
     cmsHome = await getPublishedHomePage(ctx.db)
@@ -104,21 +107,31 @@ export default async function HomePage(props: HomeProps) {
   }
   if (cmsHome) {
     const cookieStore = await cookies()
+    const headerStore = await headers()
+    const locale = normalizePublicLocale(
+      firstQueryParam(sp, 'lang') ??
+        headerStore.get('x-tma-active-lang') ??
+        cookieStore.get('tma_lang')?.value,
+    )
+    const site = await loadSiteSettingsForPublic()
     const merged = await resolvePageForPublicView(ctx.db, cmsHome, {
       cookieStore,
       queryVariant: firstQueryParam(sp, 'tma_variant'),
-      queryLang: firstQueryParam(sp, 'lang'),
+      queryLang: locale,
     })
     const embedShortcodeVars = await getPublicShortcodeVars()
     return (
       <PageLivePreview
         page={serializePageForClient(merged)}
         embedShortcodeVars={embedShortcodeVars}
+        locale={locale}
+        trackingConsentGranted={isAnalyticsAllowed(
+          cookieStore.get('tma_cookie_consent')?.value,
+          site,
+        )}
       />
     )
   }
-
-  const origin = getPublicSiteOrigin()
 
   return (
     <div className="home">
@@ -133,13 +146,10 @@ export default async function HomePage(props: HomeProps) {
             Open console
           </Link>
           <span className="muted">
-            Run <code>npm run seed</code> after migrations to load demo pages, or insert rows into{' '}
-            <code>tma_custom.cms_page</code>.
+            Run <code>npm run seed</code> after migrations to load demo pages, or publish a page
+            with <code>pageType: &quot;home&quot;</code> in the console.
           </span>
         </div>
-        <p className="muted" style={{ maxWidth: '28rem', margin: '1rem auto 0' }}>
-          Dev host: {consoleHint} · Public URL: {origin}
-        </p>
       </div>
     </div>
   )

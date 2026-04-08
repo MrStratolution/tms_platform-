@@ -42,6 +42,10 @@ const layoutTokensSchema = z
 
 const headerSettingsSchema = z
   .object({
+    navUtilityLabel: z.string().max(120).optional(),
+    navUtilityLabelEn: z.string().max(120).optional(),
+    navUtilityHref: z.string().max(500).optional(),
+    navUtilityStyle: z.enum(['primary', 'secondary', 'ghost']).optional(),
     navCtaLabel: z.string().max(120).optional(),
     navCtaLabelEn: z.string().max(120).optional(),
     navCtaHref: z.string().max(500).optional(),
@@ -62,6 +66,9 @@ const headerSettingsSchema = z
         textEn: z.string().max(300).optional(),
         href: z.string().max(500).optional(),
         style: z.enum(['subtle', 'highlight', 'outline']).optional(),
+        mode: z.enum(['static', 'running']).optional(),
+        speed: z.enum(['slow', 'normal', 'fast']).optional(),
+        pauseOnHover: z.boolean().optional(),
       })
       .strict()
       .optional(),
@@ -85,6 +92,23 @@ const headerSettingsSchema = z
       )
       .max(30)
       .optional(),
+  })
+  .strict()
+
+const cookieConsentSettingsSchema = z
+  .object({
+    enabled: z.boolean().optional(),
+    title: z.string().max(160).optional(),
+    titleEn: z.string().max(160).optional(),
+    body: z.string().max(700).optional(),
+    bodyEn: z.string().max(700).optional(),
+    acceptLabel: z.string().max(120).optional(),
+    acceptLabelEn: z.string().max(120).optional(),
+    rejectLabel: z.string().max(120).optional(),
+    rejectLabelEn: z.string().max(120).optional(),
+    policyHref: z.string().max(500).optional(),
+    policyLabel: z.string().max(120).optional(),
+    policyLabelEn: z.string().max(120).optional(),
   })
   .strict()
 
@@ -164,6 +188,7 @@ export const siteSettingsDocumentSchema = z
     typography: typographySchema.optional(),
     layout: layoutTokensSchema.optional(),
     header: headerSettingsSchema.optional(),
+    cookieConsent: cookieConsentSettingsSchema.optional(),
     footer: footerSettingsSchema.optional(),
     motion: motionSettingsSchema.optional(),
     colors: colorTokensSchema.optional(),
@@ -189,6 +214,7 @@ export const siteSettingsPatchDocumentSchema = z
     typography: typographySchema.partial().optional(),
     layout: layoutTokensSchema.partial().optional(),
     header: headerSettingsSchema.partial().optional(),
+    cookieConsent: cookieConsentSettingsSchema.partial().optional(),
     footer: footerSettingsSchema.partial().optional(),
     motion: motionSettingsSchema.partial().optional(),
     colors: colorTokensSchema.partial().optional(),
@@ -342,6 +368,9 @@ function mergeHeaderPatch(
   const out: Record<string, unknown> = { ...(prev ?? {}) }
 
   const stringKeys = [
+    'navUtilityLabel',
+    'navUtilityLabelEn',
+    'navUtilityHref',
     'navCtaLabel',
     'navCtaLabelEn',
     'navCtaHref',
@@ -366,7 +395,7 @@ function mergeHeaderPatch(
     else delete out[key]
   }
 
-  const enumKeys = ['navCtaStyle', 'layout', 'mobileBehavior'] as const
+  const enumKeys = ['navUtilityStyle', 'navCtaStyle', 'layout', 'mobileBehavior'] as const
   for (const key of enumKeys) {
     if (!Object.prototype.hasOwnProperty.call(patch, key)) continue
     const raw = patch[key]
@@ -381,8 +410,26 @@ function mergeHeaderPatch(
   }
 
   if (Object.prototype.hasOwnProperty.call(patch, 'announcement')) {
-    const merged = mergeOptionalNestedStrings(prev?.announcement, patch.announcement)
-    if (merged) out.announcement = merged
+    const mergedStrings = mergeOptionalNestedStrings(prev?.announcement, patch.announcement)
+    const mergedAnnouncement: Record<string, unknown> = { ...(mergedStrings ?? {}) }
+
+    if (patch.announcement && Object.prototype.hasOwnProperty.call(patch.announcement, 'mode')) {
+      const raw = patch.announcement.mode
+      if (!raw) delete mergedAnnouncement.mode
+      else mergedAnnouncement.mode = raw
+    }
+
+    if (patch.announcement && Object.prototype.hasOwnProperty.call(patch.announcement, 'speed')) {
+      const raw = patch.announcement.speed
+      if (!raw) delete mergedAnnouncement.speed
+      else mergedAnnouncement.speed = raw
+    }
+
+    if (patch.announcement && Object.prototype.hasOwnProperty.call(patch.announcement, 'pauseOnHover')) {
+      mergedAnnouncement.pauseOnHover = Boolean(patch.announcement.pauseOnHover)
+    }
+
+    if (Object.keys(mergedAnnouncement).length > 0) out.announcement = mergedAnnouncement
     else delete out.announcement
   }
 
@@ -393,6 +440,45 @@ function mergeHeaderPatch(
   }
 
   return Object.keys(out).length > 0 ? (out as z.infer<typeof headerSettingsSchema>) : undefined
+}
+
+function mergeCookieConsentPatch(
+  prev: z.infer<typeof cookieConsentSettingsSchema> | undefined,
+  patch: Partial<z.infer<typeof cookieConsentSettingsSchema>> | undefined,
+): z.infer<typeof cookieConsentSettingsSchema> | undefined {
+  if (!patch) return prev
+  const out: Record<string, unknown> = { ...(prev ?? {}) }
+
+  const stringKeys = [
+    'title',
+    'titleEn',
+    'body',
+    'bodyEn',
+    'acceptLabel',
+    'acceptLabelEn',
+    'rejectLabel',
+    'rejectLabelEn',
+    'policyHref',
+    'policyLabel',
+    'policyLabelEn',
+  ] as const
+
+  for (const key of stringKeys) {
+    if (!Object.prototype.hasOwnProperty.call(patch, key)) continue
+    const raw = patch[key]
+    if (raw === undefined) continue
+    const trimmed = String(raw).trim()
+    if (!trimmed) delete out[key]
+    else out[key] = trimmed
+  }
+
+  if (Object.prototype.hasOwnProperty.call(patch, 'enabled')) {
+    out.enabled = Boolean(patch.enabled)
+  }
+
+  return Object.keys(out).length > 0
+    ? (out as z.infer<typeof cookieConsentSettingsSchema>)
+    : undefined
 }
 
 function mergeMotionPatch(
@@ -450,6 +536,12 @@ export function mergeSiteSettingsDocumentPatch(
     const merged = mergeHeaderPatch(prev.header, patch.header)
     if (merged) next.header = merged
     else delete next.header
+  }
+
+  if (patch.cookieConsent !== undefined) {
+    const merged = mergeCookieConsentPatch(prev.cookieConsent, patch.cookieConsent)
+    if (merged) next.cookieConsent = merged
+    else delete next.cookieConsent
   }
 
   if (patch.footer !== undefined) {
@@ -515,6 +607,16 @@ export function mergeRootLayoutMetadata(site: SiteSettingsDocument | null | unde
   const meta: Metadata = {
     title: { default: titleDefault, template: titleTemplate },
     description,
+  }
+
+  const faviconUrl = site?.branding?.faviconUrl?.trim()
+  const faviconAbs = faviconUrl ? absoluteMediaUrl(faviconUrl) : undefined
+  if (faviconAbs) {
+    meta.icons = {
+      icon: faviconAbs,
+      shortcut: faviconAbs,
+      apple: faviconAbs,
+    }
   }
 
   const verify = site?.googleSiteVerification?.trim()
