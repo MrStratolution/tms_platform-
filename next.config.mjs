@@ -9,7 +9,9 @@ import {
 const projectRoot = dirname(fileURLToPath(import.meta.url))
 function resolveDistDir(phase) {
   if (phase === PHASE_DEVELOPMENT_SERVER) return '.next-dev'
-  if (phase === PHASE_PRODUCTION_BUILD || phase === PHASE_PRODUCTION_SERVER) return '.next-build'
+  // if (phase === PHASE_PRODUCTION_BUILD || phase === PHASE_PRODUCTION_SERVER) return '.next-build'
+  if (phase === PHASE_PRODUCTION_BUILD || phase === PHASE_PRODUCTION_SERVER) return '.next'
+
   return '.next'
 }
 
