@@ -1,6 +1,6 @@
 import { mkdir, unlink, writeFile } from 'fs/promises'
 import { NextResponse } from 'next/server'
-import { desc } from 'drizzle-orm'
+import { desc, eq, inArray } from 'drizzle-orm'
 import { randomUUID } from 'crypto'
 import { join } from 'path'
 
@@ -158,4 +158,59 @@ export async function POST(request: Request) {
       createdAt: row!.createdAt.toISOString(),
     },
   })
+}
+
+export async function DELETE(request: Request) {
+  const auth = await requireConsoleJsonAuth(request, 'content:write')
+  if (!auth.ok) return auth.response
+
+  const db = getCustomDb()
+  if (!db) {
+    return NextResponse.json({ error: 'Database not configured' }, { status: 503 })
+  }
+
+  let body: { ids?: number[] }
+  try {
+    body = await request.json()
+  } catch {
+    return NextResponse.json({ error: 'Expected JSON body' }, { status: 400 })
+  }
+
+  const ids = body.ids
+  if (!Array.isArray(ids) || ids.length === 0) {
+    return NextResponse.json({ error: 'Missing ids array' }, { status: 400 })
+  }
+
+  try {
+    // 1. Fetch storage keys for all files to be deleted
+    const items = await db
+      .select({ id: cmsMedia.id, storageKey: cmsMedia.storageKey })
+      .from(cmsMedia)
+      .where(inArray(cmsMedia.id, ids))
+
+    if (items.length === 0) {
+      return NextResponse.json({ ok: true, deletedCount: 0 })
+    }
+
+    // 2. Delete files from disk
+    for (const item of items) {
+      if (item.storageKey && !item.storageKey.startsWith('http')) {
+        const absFile = join(process.cwd(), 'public', item.storageKey)
+        await unlink(absFile).catch((e) => {
+          console.warn(`Failed to delete file from disk: ${absFile}`, e)
+        })
+      }
+    }
+
+    // 3. Delete records from database
+    await db.delete(cmsMedia).where(inArray(cmsMedia.id, ids))
+
+    return NextResponse.json({
+      ok: true,
+      deletedCount: items.length,
+    })
+  } catch (e) {
+    if (isMissingDbRelationError(e)) return missingRelationJsonResponse()
+    throw e
+  }
 }

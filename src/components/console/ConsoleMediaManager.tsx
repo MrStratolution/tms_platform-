@@ -25,6 +25,8 @@ export function ConsoleMediaManager({ canEdit }: { canEdit: boolean }) {
   const [uploadOk, setUploadOk] = useState<string | null>(null)
   const [copiedId, setCopiedId] = useState<number | null>(null)
   const [folderFilter, setFolderFilter] = useState<string>('')
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set())
+  const [deleting, setDeleting] = useState(false)
 
   const load = useCallback(async () => {
     setLoadError(null)
@@ -130,6 +132,65 @@ export function ConsoleMediaManager({ canEdit }: { canEdit: boolean }) {
     }
   }
 
+  const allSelected = useMemo(() => {
+    if (!filteredItems.length) return false
+    return filteredItems.every((it) => selectedIds.has(it.id))
+  }, [filteredItems, selectedIds])
+
+  function toggleSelectAll() {
+    if (allSelected) {
+      const next = new Set(selectedIds)
+      for (const it of filteredItems) next.delete(it.id)
+      setSelectedIds(next)
+    } else {
+      const next = new Set(selectedIds)
+      for (const it of filteredItems) next.add(it.id)
+      setSelectedIds(next)
+    }
+  }
+
+  function toggleSelect(id: number) {
+    const next = new Set(selectedIds)
+    if (next.has(id)) next.delete(id)
+    else next.add(id)
+    setSelectedIds(next)
+  }
+
+  async function handleDelete(ids: number[]) {
+    if (!canEdit || !ids.length) return
+    const msg =
+      ids.length === 1
+        ? 'Are you sure you want to delete this file? This cannot be undone.'
+        : `Are you sure you want to delete ${ids.length} files? This cannot be undone.`
+
+    if (!window.confirm(msg)) return
+
+    setDeleting(true)
+    try {
+      const res = await fetch('/api/console/media', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids }),
+      })
+      if (!res.ok) {
+        const data = await readResponseJson<{ error?: string }>(res)
+        alert(data?.error || 'Delete failed')
+        return
+      }
+
+      // Clear selection if those items were deleted
+      const next = new Set(selectedIds)
+      for (const id of ids) next.delete(id)
+      setSelectedIds(next)
+
+      await load()
+    } catch {
+      alert('Network error during deletion.')
+    } finally {
+      setDeleting(false)
+    }
+  }
+
   return (
     <div className="tma-console-media-manager">
       {!canEdit ? (
@@ -204,6 +265,19 @@ export function ConsoleMediaManager({ canEdit }: { canEdit: boolean }) {
             </select>
           </label>
           <span className="tma-console-muted">{filteredItems.length} file{filteredItems.length === 1 ? '' : 's'}</span>
+          {selectedIds.size > 0 && (
+            <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+              <span className="tma-console-muted">{selectedIds.size} selected</span>
+              <button
+                type="button"
+                className="tma-console-btn-danger"
+                disabled={deleting}
+                onClick={() => handleDelete(Array.from(selectedIds))}
+              >
+                {deleting ? 'Deleting...' : 'Delete Selected'}
+              </button>
+            </div>
+          )}
         </div>
       ) : null}
 
@@ -220,17 +294,38 @@ export function ConsoleMediaManager({ canEdit }: { canEdit: boolean }) {
           <table className="tma-console-table">
             <thead>
               <tr>
+                {canEdit && (
+                  <th scope="col" style={{ width: '40px' }}>
+                    <input
+                      type="checkbox"
+                      checked={allSelected}
+                      onChange={toggleSelectAll}
+                      aria-label="Select all"
+                    />
+                  </th>
+                )}
                 <th scope="col">Preview</th>
                 <th scope="col">File</th>
                 <th scope="col">Folder</th>
                 <th scope="col">URL</th>
                 <th scope="col">Size</th>
                 <th scope="col">Created</th>
+                {canEdit && <th scope="col">Actions</th>}
               </tr>
             </thead>
             <tbody>
               {filteredItems.map((row) => (
                 <tr key={row.id}>
+                  {canEdit && (
+                    <td>
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.has(row.id)}
+                        onChange={() => toggleSelect(row.id)}
+                        aria-label={`Select ${row.filename}`}
+                      />
+                    </td>
+                  )}
                   <td>
                     {row.mimeType?.startsWith('image/') ? (
                       // eslint-disable-next-line @next/next/no-img-element
@@ -282,6 +377,18 @@ export function ConsoleMediaManager({ canEdit }: { canEdit: boolean }) {
                       })}
                     </time>
                   </td>
+                  {canEdit && (
+                    <td className="tma-console-table-actions">
+                      <button
+                        type="button"
+                        className="tma-console-btn-danger--small"
+                        disabled={deleting}
+                        onClick={() => handleDelete([row.id])}
+                      >
+                        Delete
+                      </button>
+                    </td>
+                  )}
                 </tr>
               ))}
             </tbody>
