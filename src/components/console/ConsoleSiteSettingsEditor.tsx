@@ -1019,10 +1019,14 @@ export function ConsoleSiteSettingsEditor({
 
         <fieldset className="tma-console-fieldset" style={{ marginTop: '1rem' }}>
           <legend className="tma-console-subheading">Manual navigation</legend>
-          <p className="tma-console-note" style={{ marginTop: 0 }}>
-            Add menu items by intent first. Pick the target type, then choose the linked page/product/service or
-            paste an external URL. The editor will fill the destination for you.
-          </p>
+        <p className="tma-console-note" style={{ marginTop: 0 }}>
+          Add menu items by intent first. Pick the target type, then choose the linked page/product/service or
+          paste an external URL. The editor will fill the destination for you.
+        </p>
+        <p className="tma-console-hint" style={{ marginTop: '-0.35rem' }}>
+          Responsive header behavior is automatic. Keep menu labels and CTA labels concise so the shared header
+          stays clean across desktop and drawer breakpoints.
+        </p>
           <div className="tma-console-actions" style={{ marginBottom: '1rem', flexWrap: 'wrap' }}>
             <button type="button" className="tma-console-submit" onClick={() => addNavItem('page')} disabled={saving || readOnly}>
               Add page link

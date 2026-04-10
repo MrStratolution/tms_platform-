@@ -81,6 +81,8 @@ export function SiteHeaderShell({
   const [open, setOpen] = useState(false)
   const menuId = useId()
   const scroll = useScrollState({ threshold: transparentOnHero ? 18 : 10 })
+  const closeMenuLabel = locale === 'de' ? 'Menü schließen' : 'Close menu'
+  const backLabel = locale === 'de' ? 'Zurück' : 'Back'
 
   const close = useCallback(() => setOpen(false), [])
 
@@ -231,6 +233,13 @@ export function SiteHeaderShell({
             ) : null}
           </nav>
 
+          {navCta ? (
+            <MiddleLink
+              item={navCta}
+              className={`tma-header__link tma-header__nav-cta tma-header__nav-cta--${navCta.variant ?? 'primary'} tma-header__nav-cta--compact`}
+            />
+          ) : null}
+
           <div className="tma-header__lang tma-header__lang--desktop">{desktopLangSwitcher}</div>
 
           <button
@@ -240,7 +249,7 @@ export function SiteHeaderShell({
             aria-controls={menuId}
             onClick={() => setOpen((v) => !v)}
           >
-            <span className="sr-only">{open ? 'Close menu' : 'Open menu'}</span>
+            <span className="sr-only">{open ? closeMenuLabel : 'Open menu'}</span>
             <span className="tma-header__burger" data-open={open ? 'true' : 'false'} aria-hidden>
               <span className="tma-header__burger-line" />
               <span className="tma-header__burger-line" />
@@ -254,51 +263,62 @@ export function SiteHeaderShell({
             type="button"
             className="tma-header__backdrop"
             tabIndex={-1}
-            aria-label="Close menu"
+            aria-label={closeMenuLabel}
             onClick={close}
           />
         ) : null}
 
-        <div
-          id={menuId}
-          className={`tma-header__drawer tma-header__drawer--${mobileBehavior}${open ? ' tma-header__drawer--open' : ''}`}
-          role="dialog"
-          aria-modal={open ? true : undefined}
-          aria-label="Site menu"
-          aria-hidden={!open}
-          inert={!open}
-        >
-          <div className="tma-header__drawer-panel">
-            <nav className="tma-header__drawer-nav" aria-label="Primary">
-              <Link href={localizePublicHref('/', locale)} className="tma-header__drawer-link" onClick={close}>
-                <span>{navHome}</span>
-              </Link>
-              {mobileLinks.map((item) => (
-                <MiddleLink
-                  key={`${item.href}-${item.label}`}
-                  item={item}
-                  className="tma-header__drawer-link"
-                  onNavigate={close}
-                />
-              ))}
-              {navUtilityCta ? (
-                <MiddleLink
-                  item={navUtilityCta}
-                  className={`tma-header__drawer-link tma-header__drawer-link--cta tma-header__drawer-link--${navUtilityCta.variant ?? 'ghost'}`}
-                  onNavigate={close}
-                />
-              ) : null}
-              {navCta ? (
-                <MiddleLink
-                  item={navCta}
-                  className={`tma-header__drawer-link tma-header__drawer-link--cta tma-header__drawer-link--${navCta.variant ?? 'primary'}`}
-                  onNavigate={close}
-                />
-              ) : null}
-              <div className="tma-header__drawer-lang">{mobileLangSwitcher}</div>
-            </nav>
+        {open ? (
+          <div
+            id={menuId}
+            className={`tma-header__drawer tma-header__drawer--${mobileBehavior} tma-header__drawer--open`}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Site menu"
+          >
+            <div className="tma-header__drawer-panel">
+              <div className="tma-header__drawer-topbar">
+                <Link href={localizePublicHref('/', locale)} className="tma-header__drawer-brand" onClick={close}>
+                  <BrandLogo src={logoSrc} alt={brandAlt} />
+                </Link>
+                <button type="button" className="tma-header__drawer-close" aria-label={closeMenuLabel} onClick={close}>
+                  <span className="tma-header__drawer-close-icon" aria-hidden>
+                    ←
+                  </span>
+                  <span>{backLabel}</span>
+                </button>
+              </div>
+              <nav className="tma-header__drawer-nav" aria-label="Primary">
+                <Link href={localizePublicHref('/', locale)} className="tma-header__drawer-link" onClick={close}>
+                  <span>{navHome}</span>
+                </Link>
+                {mobileLinks.map((item) => (
+                  <MiddleLink
+                    key={`${item.href}-${item.label}`}
+                    item={item}
+                    className="tma-header__drawer-link"
+                    onNavigate={close}
+                  />
+                ))}
+                {navUtilityCta ? (
+                  <MiddleLink
+                    item={navUtilityCta}
+                    className={`tma-header__drawer-link tma-header__drawer-link--cta tma-header__drawer-link--${navUtilityCta.variant ?? 'ghost'}`}
+                    onNavigate={close}
+                  />
+                ) : null}
+                {navCta ? (
+                  <MiddleLink
+                    item={navCta}
+                    className={`tma-header__drawer-link tma-header__drawer-link--cta tma-header__drawer-link--${navCta.variant ?? 'primary'}`}
+                    onNavigate={close}
+                  />
+                ) : null}
+                <div className="tma-header__drawer-lang">{mobileLangSwitcher}</div>
+              </nav>
+            </div>
           </div>
-        </div>
+        ) : null}
       </header>
     </div>
   )
