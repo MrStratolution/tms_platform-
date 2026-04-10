@@ -1,7 +1,7 @@
 import '@/styles/tma-console.css'
 
 import { Inter, Syne } from 'next/font/google'
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import type { ReactNode } from 'react'
 
 const inter = Inter({
@@ -21,6 +21,12 @@ export const metadata: Metadata = {
   title: { default: 'TMA Console', template: '%s — TMA Console' },
   description: 'TMA platform — custom admin',
   robots: { index: false, follow: false },
+}
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  viewportFit: 'cover',
 }
 
 export default function AdminRootLayout(props: { children: ReactNode }) {

@@ -1,7 +1,7 @@
 import '@/styles/tma.css'
 
 import { Inter, Syne } from 'next/font/google'
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import { cookies, headers } from 'next/headers'
 import React from 'react'
 
@@ -32,6 +32,12 @@ const syne = Syne({
   weight: ['400', '500', '600', '700', '800'],
   display: 'swap',
 })
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  viewportFit: 'cover',
+}
 
 export async function generateMetadata(): Promise<Metadata> {
   const site = await loadSiteSettingsForPublic()

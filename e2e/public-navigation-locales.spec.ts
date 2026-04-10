@@ -11,6 +11,7 @@ test.describe('public navigation and locale flows', () => {
       expect(response?.ok(), `Expected ${path} to render successfully`).toBeTruthy()
     }
 
+    await page.setViewportSize({ width: 1600, height: 1100 })
     await page.goto('/de')
     await dismissCookieBanner(page)
     const switcher = page.locator('.tma-header__lang--desktop .tma-lang-switcher__select')
@@ -31,20 +32,69 @@ test.describe('public navigation and locale flows', () => {
   })
 
   test('desktop header stays within viewport and mobile uses drawer', async ({ page }) => {
-    await page.setViewportSize({ width: 1440, height: 1100 })
+    await page.setViewportSize({ width: 1600, height: 1100 })
     await page.goto('/de/services')
     await dismissCookieBanner(page)
     const langDesktop = page.locator('.tma-header__lang--desktop')
     await expect(langDesktop).toBeVisible()
     await expectWithinViewport(langDesktop, page, 4)
+    await expect(page.locator('.tma-header__nav--wide')).toBeVisible()
+    await expect(page.locator('.tma-header__menu-toggle')).toBeHidden()
+    await expect(page.locator('.tma-header__nav-cta--compact')).toBeHidden()
+
+    await page.setViewportSize({ width: 1366, height: 1100 })
+    await page.goto('/de/services')
+    await dismissCookieBanner(page)
+    await expect(page.locator('.tma-header__nav--wide')).toBeHidden()
+    await expect(page.locator('.tma-header__nav-cta--compact')).toBeVisible()
+    await expectWithinViewport(page.locator('.tma-header__nav-cta--compact'), page, 4)
+    await expect(page.locator('.tma-header__menu-toggle')).toBeVisible()
+    await page.locator('.tma-header__menu-toggle').click()
+    await expect(page.locator('.tma-header__drawer--open')).toBeVisible()
+    await expect(page.locator('.tma-header__drawer-close')).toBeVisible()
+    await expect(page.locator('.tma-header__drawer-lang .tma-lang-switcher__select')).toBeVisible()
+    await page.locator('.tma-header__drawer-close').click()
+    await expect(page.locator('.tma-header__drawer--open')).toBeHidden()
+
+    await page.setViewportSize({ width: 768, height: 1024 })
+    await page.goto('/de/services')
+    await dismissCookieBanner(page)
+    await expect(page.locator('.tma-header__nav--wide')).toBeHidden()
+    await expect(page.locator('.tma-header__nav-cta--compact')).toBeVisible()
+    await expect(page.locator('.tma-header__menu-toggle')).toBeVisible()
 
     await page.setViewportSize({ width: 1024, height: 1100 })
     await page.goto('/de/services')
     await dismissCookieBanner(page)
     await expect(page.locator('.tma-header__nav--wide')).toBeHidden()
+    await expect(page.locator('.tma-header__nav-cta--compact')).toBeVisible()
     await expect(page.locator('.tma-header__menu-toggle')).toBeVisible()
-    await page.locator('.tma-header__menu-toggle').click()
-    await expect(page.locator('.tma-header__drawer--open')).toBeVisible()
-    await expect(page.locator('.tma-header__drawer-lang .tma-lang-switcher__select')).toBeVisible()
+
+    await page.setViewportSize({ width: 390, height: 844 })
+    await page.goto('/de/services')
+    await dismissCookieBanner(page)
+    await expect(page.locator('meta[name="viewport"]')).toHaveAttribute('content', /width=device-width/)
+    await expect(page.locator('.tma-header__nav--wide')).toBeHidden()
+    await expect(page.locator('.tma-header__nav-cta--compact')).toBeHidden()
+    await expect(page.locator('.tma-header__menu-toggle')).toBeVisible()
+    const overflow = await page.evaluate(() => ({
+      innerWidth: window.innerWidth,
+      scrollWidth: document.documentElement.scrollWidth,
+      offenders: Array.from(document.querySelectorAll('body *'))
+        .map((el) => {
+          const rect = el.getBoundingClientRect()
+          return {
+            tag: el.tagName,
+            className: typeof el.className === 'string' ? el.className : '',
+            left: Math.round(rect.left),
+            right: Math.round(rect.right),
+            width: Math.round(rect.width),
+            height: Math.round(rect.height),
+          }
+        })
+        .filter((item) => item.width > 0 && item.height > 0 && (item.right > window.innerWidth + 1 || item.left < -1))
+        .slice(0, 10),
+    }))
+    expect(overflow.scrollWidth, JSON.stringify(overflow.offenders, null, 2)).toBeLessThanOrEqual(overflow.innerWidth + 1)
   })
 })

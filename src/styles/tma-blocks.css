@@ -183,6 +183,7 @@
   width: calc(100% + 2 * var(--tma-gutter));
   max-width: 100vw;
   margin-bottom: clamp(1.5rem, 4vw, 3rem);
+  overflow: clip;
 }
 
 .tma-hero--short {
@@ -200,6 +201,8 @@
 @media (max-width: 640px) {
   .tma-hero {
     min-height: min(70vh, 38rem);
+    margin-inline: 0;
+    width: 100%;
     margin-bottom: clamp(1.5rem, 4vw, var(--tma-section-y));
   }
 
@@ -1803,6 +1806,7 @@
   grid-template-columns: minmax(14rem, 18rem) minmax(0, 1fr);
   gap: var(--gap-md);
   align-items: start;
+  min-width: 0;
 }
 
 .block-services-focus__nav {
@@ -1865,12 +1869,14 @@
   background:
     radial-gradient(circle at top right, rgba(214, 233, 177, 0.12), transparent 46%),
     linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.02));
+  min-width: 0;
 }
 
 .block-services-focus__copy {
   display: grid;
   gap: var(--space-4);
   align-content: start;
+  min-width: 0;
 }
 
 .block-services-focus__eyebrow {
@@ -1937,10 +1943,12 @@
   background:
     radial-gradient(circle at 20% 20%, rgba(214, 233, 177, 0.22), transparent 30%),
     linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.02));
+  min-width: 0;
 }
 
 .block-services-focus__image {
   width: 100%;
+  max-width: 100%;
   height: 100%;
   object-fit: cover;
   display: block;
