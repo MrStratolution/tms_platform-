@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 
+import { ConsoleMediaIdField } from '@/components/console/ConsoleMediaIdField'
 import { readResponseJson } from '@/lib/safeJson'
 
 type Props = {
@@ -22,7 +23,7 @@ export function ConsoleTeamMemberEditor({ id, initial, canEdit }: Props) {
   const [name, setName] = useState(initial.name)
   const [role, setRole] = useState(initial.role)
   const [bio, setBio] = useState(initial.bio ?? '')
-  const [photoMediaId, setPhotoMediaId] = useState(initial.photoMediaId != null ? String(initial.photoMediaId) : '')
+  const [photoMediaId, setPhotoMediaId] = useState<number | null>(initial.photoMediaId)
   const [sortOrder, setSortOrder] = useState(String(initial.sortOrder))
   const [linkedinUrl, setLinkedinUrl] = useState(initial.linkedinUrl ?? '')
   const [active, setActive] = useState(initial.active)
@@ -36,7 +37,6 @@ export function ConsoleTeamMemberEditor({ id, initial, canEdit }: Props) {
     setError(null)
     setSuccess(null)
 
-    const pid = photoMediaId.trim()
     const body: Record<string, unknown> = {
       name: name.trim(),
       role: role.trim(),
@@ -45,12 +45,7 @@ export function ConsoleTeamMemberEditor({ id, initial, canEdit }: Props) {
       linkedinUrl: linkedinUrl.trim() || null,
       active,
     }
-    if (pid === '') body.photoMediaId = null
-    else {
-      const n = Number.parseInt(pid, 10)
-      if (!Number.isFinite(n) || n < 1) { setError('Photo media id must be a positive integer or empty.'); return }
-      body.photoMediaId = n
-    }
+    body.photoMediaId = photoMediaId
 
     setSaving(true)
     try {
@@ -77,7 +72,14 @@ export function ConsoleTeamMemberEditor({ id, initial, canEdit }: Props) {
       <label className="tma-console-label">Name <input type="text" className="tma-console-input" value={name} onChange={(e) => setName(e.target.value)} disabled={dis} /></label>
       <label className="tma-console-label">Role / title <input type="text" className="tma-console-input" value={role} onChange={(e) => setRole(e.target.value)} disabled={dis} /></label>
       <label className="tma-console-label">Bio (optional) <textarea className="tma-console-textarea-json" rows={4} value={bio} onChange={(e) => setBio(e.target.value)} disabled={dis} /></label>
-      <label className="tma-console-label">Photo media id (optional, <code>cms_media.id</code>) <input type="text" className="tma-console-input" value={photoMediaId} onChange={(e) => setPhotoMediaId(e.target.value)} disabled={dis} placeholder="e.g. 1" /></label>
+      <ConsoleMediaIdField
+        label="Portrait image"
+        value={photoMediaId}
+        onChange={setPhotoMediaId}
+        disabled={dis}
+        helpText="Upload a portrait or choose one from the media library. The team member keeps the real cms_media relation behind the scenes."
+        folderSuggestion="team"
+      />
       <label className="tma-console-label">Sort order <input type="number" className="tma-console-input" value={sortOrder} onChange={(e) => setSortOrder(e.target.value)} disabled={dis} /></label>
       <label className="tma-console-label">LinkedIn URL (optional) <input type="text" className="tma-console-input" value={linkedinUrl} onChange={(e) => setLinkedinUrl(e.target.value)} disabled={dis} /></label>
       <label className="tma-console-label tma-console-label--inline"><input type="checkbox" checked={active} onChange={(e) => setActive(e.target.checked)} disabled={dis} /> Active</label>

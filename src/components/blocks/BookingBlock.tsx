@@ -4,15 +4,17 @@ import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 
 import { GlassCard } from '@/components/motion/GlassCard'
+import { localizePublicHref, type PublicLocale } from '@/lib/publicLocale'
 import { readResponseJson } from '@/lib/safeJson'
 import type { BookingProfile } from '@/types/cms'
 
 type Props = {
   profile: BookingProfile
   width?: 'narrow' | 'default' | 'wide' | 'full' | null
+  locale?: PublicLocale
 }
 
-export function BookingBlock({ profile, width = 'default' }: Props) {
+export function BookingBlock({ profile, width = 'default', locale = 'de' }: Props) {
   const router = useRouter()
   const [status, setStatus] = useState<'idle' | 'loading' | 'error'>('idle')
   const [error, setError] = useState<string | null>(null)
@@ -33,10 +35,18 @@ export function BookingBlock({ profile, width = 'default' }: Props) {
     setStatus('loading')
     setError(null)
     try {
+      if (profile.provider === 'internal') {
+        const key = profile.internalSlug?.trim() || String(profile.id)
+        router.push(localizePublicHref(`/book/${key}`, locale))
+        return
+      }
       const res = await fetch('/api/bookings/start', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ bookingProfileId: profile.id }),
+        body: JSON.stringify({
+          bookingProfileId: profile.id,
+          bookingProfileKey: profile.internalSlug || String(profile.id),
+        }),
       })
       const data = await readResponseJson<{
         mode?: string
@@ -59,7 +69,7 @@ export function BookingBlock({ profile, width = 'default' }: Props) {
         return
       }
       if (target?.startsWith('/')) {
-        router.push(target)
+        router.push(localizePublicHref(target, locale))
         return
       }
       setStatus('error')

@@ -1,0 +1,19 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="mira-bg" x1="78" y1="58" x2="444" y2="458" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#10141B"/>
+      <stop offset="1" stop-color="#070A0F"/>
+    </linearGradient>
+    <radialGradient id="mira-glow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(336 132) rotate(142.8) scale(146)">
+      <stop stop-color="#DCE8BF" stop-opacity="0.28"/>
+      <stop offset="1" stop-color="#DCE8BF" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="512" height="512" rx="80" fill="url(#mira-bg)"/>
+  <circle cx="336" cy="132" r="142" fill="url(#mira-glow)"/>
+  <rect x="86" y="78" width="340" height="356" rx="44" fill="rgba(255,255,255,0.03)" stroke="rgba(255,255,255,0.08)"/>
+  <circle cx="256" cy="214" r="86" fill="#F0F4FA"/>
+  <path d="M150 416C166 334 206 296 256 296C306 296 346 334 362 416" fill="#BEC5CF"/>
+  <path d="M170 182C186 134 222 112 268 112C306 112 338 134 346 176L326 188C310 170 286 158 258 158C224 158 194 168 170 182Z" fill="#0E131A"/>
+  <path d="M168 198C186 178 220 168 258 168C298 168 330 182 344 208C338 158 306 126 258 126C212 126 180 154 168 198Z" fill="#6C7484"/>
+</svg>

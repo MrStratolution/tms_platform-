@@ -249,6 +249,7 @@ export interface Testimonial {
   role?: string | null;
   company?: string | null;
   photo?: (number | null) | Media;
+  logo?: (number | null) | Media;
   active?: boolean | null;
   updatedAt: string;
   createdAt: string;
@@ -707,6 +708,10 @@ export interface Page {
             attribution?: string | null;
             roleLine?: string | null;
             variant?: ('lime' | 'muted' | 'border') | null;
+            displayMode?: ('quote' | 'statementMarquee') | null;
+            statementText?: string | null;
+            marqueeSpeedPreset?: ('slow' | 'normal' | 'fast') | null;
+            pauseOnHover?: boolean | null;
             id?: string | null;
             blockName?: string | null;
             blockType: 'quoteBand';
@@ -721,6 +726,10 @@ export interface Page {
           }
         | {
             testimonials?: (number | Testimonial)[] | null;
+            sectionIntro?: string | null;
+            layoutPreset?: ('grid' | 'spotlight') | null;
+            showPortraits?: boolean | null;
+            showLogos?: boolean | null;
             id?: string | null;
             blockName?: string | null;
             blockType: 'testimonialSlider';
@@ -796,12 +805,40 @@ export interface Page {
         | {
             sectionTitle?: string | null;
             studies: (number | CaseStudy)[];
+            selectionMode?: ('manual' | 'automatic') | null;
             intro?: string | null;
             ctaLabel?: string | null;
             ctaHref?: string | null;
             id?: string | null;
             blockName?: string | null;
             blockType: 'caseStudyGrid';
+          }
+        | {
+            eyebrow?: string | null;
+            title?: string | null;
+            description?: string | null;
+            caseStudyId?: (number | null) | CaseStudy;
+            imageUrl?: string | null;
+            imageAlt?: string | null;
+            stats?:
+              | {
+                  value: string;
+                  suffix?: string | null;
+                  label: string;
+                  id?: string | null;
+                }[]
+              | null;
+            quote?: string | null;
+            quoteAttribution?: string | null;
+            ctaLabel?: string | null;
+            ctaHref?: string | null;
+            secondaryCtaLabel?: string | null;
+            secondaryCtaHref?: string | null;
+            layoutPreset?: ('split' | 'immersive') | null;
+            mediaMode?: ('image' | 'videoPoster') | null;
+            id?: string | null;
+            blockName?: string | null;
+            blockType: 'featuredProjectSpotlight';
           }
         | {
             sectionTitle?: string | null;
@@ -919,6 +956,7 @@ export interface Page {
                 }[]
               | null;
             variant?: ('default' | 'compact') | null;
+            layoutPreset?: ('process' | 'timeline' | 'milestones') | null;
             id?: string | null;
             blockName?: string | null;
             blockType: 'process';
@@ -945,11 +983,22 @@ export interface Page {
             blockType: 'textMedia';
           }
         | {
+            eyebrow?: string | null;
             title?: string | null;
+            description?: string | null;
+            caption?: string | null;
             url: string;
             sourceType?: ('embed' | 'upload') | null;
             uploadedVideoUrl?: string | null;
             posterUrl?: string | null;
+            ctaLabel?: string | null;
+            ctaHref?: string | null;
+            autoplay?: boolean | null;
+            muted?: boolean | null;
+            loop?: boolean | null;
+            controls?: boolean | null;
+            layoutPreset?: ('stacked' | 'split') | null;
+            headlineAlign?: ('start' | 'center') | null;
             /** full = edge-to-edge in content column; narrow = capped width, centered */
             width?: ('narrow' | 'default' | 'wide' | 'full') | null;
             height?: ('auto' | 'short' | 'medium' | 'tall') | null;
@@ -961,6 +1010,25 @@ export interface Page {
             id?: string | null;
             blockName?: string | null;
             blockType: 'video';
+          }
+        | {
+            eyebrow?: string | null;
+            title?: string | null;
+            description?: string | null;
+            layoutPreset?: ('editorial' | 'grid' | 'mosaic') | null;
+            items?:
+              | {
+                  imageUrl?: string | null;
+                  imageAlt?: string | null;
+                  caption?: string | null;
+                  linkHref?: string | null;
+                  aspectRatio?: ('square' | 'portrait' | 'landscape' | 'cinema') | null;
+                  id?: string | null;
+                }[]
+              | null;
+            id?: string | null;
+            blockName?: string | null;
+            blockType: 'mediaGallery';
           }
         | {
             title: string;
@@ -1474,6 +1542,7 @@ export interface TestimonialsSelect<T extends boolean = true> {
   role?: T;
   company?: T;
   photo?: T;
+  logo?: T;
   active?: T;
   updatedAt?: T;
   createdAt?: T;
@@ -1682,9 +1751,38 @@ export interface PagesSelect<T extends boolean = true> {
           | {
               sectionTitle?: T;
               studies?: T;
+              selectionMode?: T;
               intro?: T;
               ctaLabel?: T;
               ctaHref?: T;
+              id?: T;
+              blockName?: T;
+            };
+        featuredProjectSpotlight?:
+          | T
+          | {
+              eyebrow?: T;
+              title?: T;
+              description?: T;
+              caseStudyId?: T;
+              imageUrl?: T;
+              imageAlt?: T;
+              stats?:
+                | T
+                | {
+                    value?: T;
+                    suffix?: T;
+                    label?: T;
+                    id?: T;
+                  };
+              quote?: T;
+              quoteAttribution?: T;
+              ctaLabel?: T;
+              ctaHref?: T;
+              secondaryCtaLabel?: T;
+              secondaryCtaHref?: T;
+              layoutPreset?: T;
+              mediaMode?: T;
               id?: T;
               blockName?: T;
             };

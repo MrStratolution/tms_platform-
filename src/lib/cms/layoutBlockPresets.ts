@@ -7,6 +7,7 @@ export type LayoutBlockType =
   | 'faq'
   | 'textMedia'
   | 'video'
+  | 'mediaGallery'
   | 'download'
   | 'stickyCta'
   | 'proofBar'
@@ -22,6 +23,7 @@ export type LayoutBlockType =
   | 'comparison'
   | 'teamGrid'
   | 'caseStudyGrid'
+  | 'featuredProjectSpotlight'
   | 'resourceFeed'
   | 'productFeed'
   | 'servicesFocus'
@@ -66,22 +68,24 @@ export const LAYOUT_BLOCK_ADD_OPTIONS: { value: LayoutBlockType; label: string }
   { value: 'stats', label: 'Stats / metrics' },
   { value: 'faq', label: 'FAQ' },
   { value: 'textMedia', label: 'Text + media' },
-  { value: 'video', label: 'Video (embed)' },
+  { value: 'video', label: 'Video showcase' },
+  { value: 'mediaGallery', label: 'Media gallery' },
   { value: 'download', label: 'Download / resource' },
   { value: 'stickyCta', label: 'Sticky CTA bar' },
   { value: 'proofBar', label: 'Logo strip' },
   { value: 'promoBanner', label: 'Promo banner (visual band)' },
   { value: 'imageBanner', label: 'Image banner (photo + overlay)' },
   { value: 'iconRow', label: 'Icon row (benefits / features)' },
-  { value: 'quoteBand', label: 'Quote band (pull quote)' },
-  { value: 'process', label: 'Process / timeline' },
+  { value: 'quoteBand', label: 'Statement / quote band' },
+  { value: 'process', label: 'Timeline / milestones' },
   { value: 'form', label: 'Contact / lead form' },
   { value: 'booking', label: 'Booking widget' },
-  { value: 'testimonialSlider', label: 'Testimonial slider' },
+  { value: 'testimonialSlider', label: 'Testimonials' },
   { value: 'pricing', label: 'Pricing table' },
   { value: 'comparison', label: 'Comparison table' },
   { value: 'teamGrid', label: 'Team grid' },
   { value: 'caseStudyGrid', label: 'Case study grid' },
+  { value: 'featuredProjectSpotlight', label: 'Featured project spotlight' },
   { value: 'resourceFeed', label: 'Resource / news feed' },
   { value: 'productFeed', label: 'Product / project feed' },
   { value: 'servicesFocus', label: 'Services focus' },
@@ -152,14 +156,57 @@ export function createDefaultLayoutBlock(blockType: LayoutBlockType): Record<str
       return {
         id,
         blockType: 'video',
-        title: 'Video',
+        eyebrow: 'Studio reel',
+        title: 'Show the work in motion',
+        description: 'Pair a premium upload or external video with editorial context, poster art, and a clear CTA.',
+        caption: 'Use muted autoplay sparingly. Posters are recommended for every upload.',
         sourceType: 'embed',
         url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+        ctaLabel: 'Start a project',
+        ctaHref: '/contact',
+        autoplay: false,
+        muted: true,
+        loop: false,
+        controls: true,
+        layoutPreset: 'stacked',
+        headlineAlign: 'start',
         width: 'default',
         height: 'auto',
-        aspectRatio: 'landscape',
+        aspectRatio: 'cinema',
         mediaAlign: 'center',
         borderRadius: 'md',
+      }
+    case 'mediaGallery':
+      return {
+        id,
+        blockType: 'mediaGallery',
+        eyebrow: 'Gallery',
+        title: 'Editorial media gallery',
+        description: 'Use a curated image set for studio process, installations, interface details, or campaign visuals.',
+        layoutPreset: 'editorial',
+        items: [
+          {
+            id: newId(),
+            imageUrl: '/demo/placeholders/service-positioning.svg',
+            imageAlt: 'Editorial gallery image',
+            caption: 'Studio process and product detail',
+            aspectRatio: 'portrait',
+          },
+          {
+            id: newId(),
+            imageUrl: '/demo/placeholders/service-demand.svg',
+            imageAlt: 'Editorial gallery image',
+            caption: 'System visual and interface capture',
+            aspectRatio: 'landscape',
+          },
+          {
+            id: newId(),
+            imageUrl: '/demo/placeholders/service-revops.svg',
+            imageAlt: 'Editorial gallery image',
+            caption: 'Launch asset and campaign still',
+            aspectRatio: 'square',
+          },
+        ],
       }
     case 'download':
       return {
@@ -236,6 +283,9 @@ export function createDefaultLayoutBlock(blockType: LayoutBlockType): Record<str
         attribution: 'Name',
         roleLine: 'Role · Company',
         variant: 'lime',
+        displayMode: 'quote',
+        marqueeSpeedPreset: 'normal',
+        pauseOnHover: true,
       }
     case 'process':
       return {
@@ -243,6 +293,7 @@ export function createDefaultLayoutBlock(blockType: LayoutBlockType): Record<str
         blockType: 'process',
         sectionTitle: 'How it works',
         intro: 'Optional intro.',
+        layoutPreset: 'process',
         steps: [
           { badge: '01', title: 'Step one', body: 'Details.', id: newId() },
           { badge: '02', title: 'Step two', body: 'Details.', id: newId() },
@@ -266,6 +317,10 @@ export function createDefaultLayoutBlock(blockType: LayoutBlockType): Record<str
       return {
         id,
         blockType: 'testimonialSlider',
+        sectionIntro: '',
+        layoutPreset: 'spotlight',
+        showPortraits: true,
+        showLogos: true,
         testimonials: [],
       }
     case 'pricing':
@@ -328,7 +383,32 @@ export function createDefaultLayoutBlock(blockType: LayoutBlockType): Record<str
         id,
         blockType: 'caseStudyGrid',
         sectionTitle: 'Case studies',
+        selectionMode: 'manual',
         studies: [],
+      }
+    case 'featuredProjectSpotlight':
+      return {
+        id,
+        blockType: 'featuredProjectSpotlight',
+        eyebrow: 'Featured project',
+        title: 'Flagship project spotlight',
+        description:
+          'Use a linked case study for the main story, then refine the headline, supporting copy, stats, and CTAs for the page context.',
+        caseStudyId: null,
+        imageUrl: '/demo/placeholders/service-positioning.svg',
+        imageAlt: 'Featured project spotlight visual',
+        stats: [
+          { id: newId(), value: '12', suffix: 'w', label: 'Strategy-to-launch window' },
+          { id: newId(), value: '3', label: 'Core delivery streams' },
+        ],
+        quote: 'The strongest projects need one clear flagship frame before the supporting grid begins.',
+        quoteAttribution: 'Editorial system note',
+        ctaLabel: 'View project',
+        ctaHref: '/work',
+        secondaryCtaLabel: 'Start a conversation',
+        secondaryCtaHref: '/contact',
+        layoutPreset: 'split',
+        mediaMode: 'image',
       }
     case 'resourceFeed':
       return {

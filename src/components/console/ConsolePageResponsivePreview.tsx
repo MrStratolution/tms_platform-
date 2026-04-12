@@ -279,6 +279,7 @@ export function ConsolePageResponsivePreview({
                 const iframe = iframeRef.current
                 if (!iframe?.contentWindow) return
                 event.preventDefault()
+                event.stopPropagation()
                 iframe.contentWindow.scrollBy({
                   top: event.deltaY,
                   left: event.deltaX,

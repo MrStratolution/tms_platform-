@@ -8,6 +8,7 @@ import {
   Diamond,
   Download,
   Folder,
+  FolderOpen,
   HelpCircle,
   Image,
   Layers,
@@ -61,6 +62,7 @@ import {
   extractPageSurfaceFromDocument,
   mergePageSurfaceIntoDocument,
   mergedPageDocumentSchema,
+  normalizePageBuilderDocument,
   type PageSurfaceFields,
 } from '@/lib/cms/pageSurfaceMerge'
 import { buildTemplateLayout, type BuilderTemplateId } from '@/lib/console/pageBuilderTemplates'
@@ -93,6 +95,7 @@ const BLOCK_PICKER_ITEMS: BlockPickerItem[] = [
   { type: 'stats', Icon: BarChart3, label: 'Stats' },
   { type: 'faq', Icon: HelpCircle, label: 'FAQ' },
   { type: 'video', Icon: Play, label: 'Video' },
+  { type: 'mediaGallery', Icon: Image, label: 'Gallery' },
   { type: 'iconRow', Icon: Diamond, label: 'Icon Row' },
   { type: 'quoteBand', Icon: MessageSquareQuote, label: 'Quote' },
   { type: 'process', Icon: RefreshCw, label: 'Process' },
@@ -105,6 +108,7 @@ const BLOCK_PICKER_ITEMS: BlockPickerItem[] = [
   { type: 'testimonialSlider', Icon: MessageSquareQuote, label: 'Testimonials' },
   { type: 'teamGrid', Icon: Users, label: 'Team' },
   { type: 'caseStudyGrid', Icon: Folder, label: 'Case Studies' },
+  { type: 'featuredProjectSpotlight', Icon: FolderOpen, label: 'Featured Project' },
   { type: 'resourceFeed', Icon: Newspaper, label: 'News Feed' },
   { type: 'productFeed', Icon: Boxes, label: 'Projects Feed' },
   { type: 'download', Icon: Download, label: 'Download' },
@@ -207,9 +211,12 @@ export function ConsolePageEditorForm({
 }: Props) {
   const initialEditableState = useMemo(
     () =>
-      canonicalizeHeroDocument(getDocumentForLocaleEditor(initialDocument, editingLocale), {
-        stripLegacyFields: true,
-      }),
+      canonicalizeHeroDocument(
+        normalizePageBuilderDocument(getDocumentForLocaleEditor(initialDocument, editingLocale)),
+        {
+          stripLegacyFields: true,
+        },
+      ),
     [initialDocument, editingLocale],
   )
   const initialEditableDocument = initialEditableState.document
@@ -283,9 +290,12 @@ export function ConsolePageEditorForm({
 
   const getCanonicalEditableDocument = useCallback(
     (document: Record<string, unknown>) =>
-      canonicalizeHeroDocument(getDocumentForLocaleEditor(document, localeMode), {
-        stripLegacyFields: true,
-      }).document,
+      canonicalizeHeroDocument(
+        normalizePageBuilderDocument(getDocumentForLocaleEditor(document, localeMode)),
+        {
+          stripLegacyFields: true,
+        },
+      ).document,
     [localeMode],
   )
 
@@ -1367,7 +1377,10 @@ export function ConsolePageEditorForm({
                 </details>
 
                 <details className="tma-builder-settings__group">
-                  <summary className="tma-builder-settings__summary">Advanced: raw JSON</summary>
+                  <summary className="tma-builder-settings__summary">Developer JSON (advanced)</summary>
+                  <p className="tma-console-block-fields-hint" style={{ marginTop: '0.75rem' }}>
+                    Only use this if a developer asked you to edit the raw page document directly.
+                  </p>
                   <textarea
                     className="tma-console-textarea-json"
                     style={{ minHeight: '10rem', fontSize: '0.72rem' }}

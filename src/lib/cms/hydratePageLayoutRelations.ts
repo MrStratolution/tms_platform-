@@ -107,7 +107,7 @@ export async function hydratePageLayoutRelations(
           .where(eq(cmsBookingProfiles.id, b.bookingProfile))
           .limit(1)
         const r = rows[0]
-        if (!r) return block
+        if (!r || !r.active) return block
         const doc =
           r.document && typeof r.document === 'object' && !Array.isArray(r.document)
             ? (r.document as Record<string, unknown>)

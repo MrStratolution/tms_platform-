@@ -15,6 +15,7 @@ const patchSchema = z
     role: z.string().max(300).nullable().optional(),
     company: z.string().max(300).nullable().optional(),
     photoMediaId: z.number().int().positive().nullable().optional(),
+    logoMediaId: z.number().int().positive().nullable().optional(),
     active: z.boolean().optional(),
   })
   .refine((d) => Object.keys(d).length > 0, { message: 'At least one field required' })
@@ -27,6 +28,7 @@ function rowJson(row: typeof cmsTestimonials.$inferSelect) {
     role: row.role,
     company: row.company,
     photoMediaId: row.photoMediaId,
+    logoMediaId: row.logoMediaId,
     active: row.active,
     updatedAt: row.updatedAt.toISOString(),
     createdAt: row.createdAt.toISOString(),
@@ -93,6 +95,7 @@ export async function PATCH(request: Request, ctx: RouteContext) {
   if (parsed.data.role !== undefined) update.role = parsed.data.role
   if (parsed.data.company !== undefined) update.company = parsed.data.company
   if (parsed.data.photoMediaId !== undefined) update.photoMediaId = parsed.data.photoMediaId
+  if (parsed.data.logoMediaId !== undefined) update.logoMediaId = parsed.data.logoMediaId
   if (parsed.data.active !== undefined) update.active = parsed.data.active
 
   await db.update(cmsTestimonials).set(update).where(eq(cmsTestimonials.id, id))

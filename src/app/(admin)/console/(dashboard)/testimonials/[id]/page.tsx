@@ -52,6 +52,7 @@ export default async function ConsoleTestimonialEditPage(props: Props) {
           role: row.role,
           company: row.company,
           photoMediaId: row.photoMediaId,
+          logoMediaId: row.logoMediaId,
           active: row.active,
         }}
         canEdit={canEdit}

@@ -2,6 +2,7 @@ import { and, desc, eq, inArray } from 'drizzle-orm'
 
 import { cmsCaseStudies, cmsDownloadAssets, cmsFaqEntries, cmsIndustries, cmsMedia, cmsPages, cmsProducts, cmsTeamMembers, cmsTestimonials } from '@/db/schema'
 import { canonicalizeHeroDocument } from '@/lib/cms/canonicalHeroBlock'
+import { resolveCaseStudyGridSelectionMode, resolveCaseStudyGridStudies } from '@/lib/caseStudyGrid'
 import { rowToPage, type CmsDb } from '@/lib/cmsData'
 import { resolveLocalizedDocument } from '@/lib/documentLocalization'
 import { resolveProductFeedProducts, resolveProductFeedSelectionMode } from '@/lib/productFeeds'
@@ -27,6 +28,7 @@ function mediaRowToShape(r: typeof cmsMedia.$inferSelect): Media {
 function rowToTestimonial(
   r: typeof cmsTestimonials.$inferSelect,
   photo: Media | null,
+  logo: Media | null,
 ): Testimonial {
   return {
     id: r.id,
@@ -35,6 +37,7 @@ function rowToTestimonial(
     role: r.role,
     company: r.company,
     photo: photo ?? undefined,
+    logo: logo ?? undefined,
     active: r.active,
     updatedAt: r.updatedAt.toISOString(),
     createdAt: r.createdAt.toISOString(),
@@ -96,7 +99,10 @@ export async function hydrateLayoutContentLibraries(
       }
     }
     if (b.blockType === 'caseStudyGrid' && Array.isArray(b.studies)) {
-      if (b.studies.length === 0) {
+      const selectionMode = resolveCaseStudyGridSelectionMode(
+        b as unknown as Extract<NonNullable<Page['layout']>[number], { blockType: 'caseStudyGrid' }>,
+      )
+      if (selectionMode === 'automatic') {
         fetchAllCaseStudies = true
       } else {
         for (const x of b.studies) {
@@ -230,6 +236,7 @@ export async function hydrateLayoutContentLibraries(
   const mediaIds = new Set<number>()
   for (const r of tRows) {
     if (r.photoMediaId != null && Number.isFinite(r.photoMediaId)) mediaIds.add(r.photoMediaId)
+    if (r.logoMediaId != null && Number.isFinite(r.logoMediaId)) mediaIds.add(r.logoMediaId)
   }
   for (const r of tmRows) {
     if (r.photoMediaId != null && Number.isFinite(r.photoMediaId)) mediaIds.add(r.photoMediaId)
@@ -265,7 +272,9 @@ export async function hydrateLayoutContentLibraries(
         if (!r || !r.active) return x
         const photo =
           r.photoMediaId != null ? (mMap.get(r.photoMediaId) ?? null) : null
-        return rowToTestimonial(r, photo)
+        const logo =
+          r.logoMediaId != null ? (mMap.get(r.logoMediaId) ?? null) : null
+        return rowToTestimonial(r, photo, logo)
       })
       return { ...b, testimonials: next } as typeof block
     }
@@ -347,26 +356,7 @@ export async function hydrateLayoutContentLibraries(
 
     if (b.blockType === 'caseStudyGrid' && Array.isArray(b.studies)) {
       const arr = b.studies
-      if (arr.length === 0) {
-        const allStudies = [...csMap.values()].filter(r => r.active).map(r => {
-          const img = r.featuredImageId != null ? (mMap.get(r.featuredImageId) ?? null) : null
-          const ind = r.industryId != null ? indMap.get(r.industryId) : null
-          const industry: Industry | undefined = ind ? { id: ind.id, name: ind.name, slug: ind.slug, updatedAt: ind.createdAt.toISOString(), createdAt: ind.createdAt.toISOString() } : undefined
-          return {
-            id: r.id,
-            title: r.title,
-            slug: r.slug,
-            summary: r.summary,
-            industry,
-            featuredImage: img ?? undefined,
-            active: r.active,
-            updatedAt: r.updatedAt.toISOString(),
-            createdAt: r.createdAt.toISOString(),
-          } satisfies CaseStudy
-        })
-        return { ...b, studies: allStudies } as typeof block
-      }
-      const next = arr.map((x) => {
+      const manualStudies = arr.map((x) => {
         if (typeof x !== 'number' || !Number.isFinite(x)) return x
         const r = csMap.get(x)
         if (!r || !r.active) return x
@@ -385,7 +375,68 @@ export async function hydrateLayoutContentLibraries(
           createdAt: r.createdAt.toISOString(),
         } satisfies CaseStudy
       })
-      return { ...b, studies: next } as typeof block
+      const resolvedManual = manualStudies.filter(
+        (study): study is CaseStudy => typeof study === 'object' && study != null && 'title' in study,
+      )
+      const allStudies = [...csMap.values()].map((r) => {
+        const img = r.featuredImageId != null ? (mMap.get(r.featuredImageId) ?? null) : null
+        const ind = r.industryId != null ? indMap.get(r.industryId) : null
+        const industry: Industry | undefined = ind ? { id: ind.id, name: ind.name, slug: ind.slug, updatedAt: ind.createdAt.toISOString(), createdAt: ind.createdAt.toISOString() } : undefined
+        return {
+          id: r.id,
+          title: r.title,
+          slug: r.slug,
+          summary: r.summary,
+          industry,
+          featuredImage: img ?? undefined,
+          active: r.active,
+          updatedAt: r.updatedAt.toISOString(),
+          createdAt: r.createdAt.toISOString(),
+        } satisfies CaseStudy
+      })
+      return {
+        ...b,
+        studies: resolveCaseStudyGridStudies(
+          b as unknown as Extract<NonNullable<Page['layout']>[number], { blockType: 'caseStudyGrid' }>,
+          resolvedManual,
+          allStudies,
+        ),
+      } as typeof block
+    }
+
+    if (b.blockType === 'featuredProjectSpotlight') {
+      const linked =
+        typeof b.caseStudyId === 'number' && Number.isFinite(b.caseStudyId)
+          ? csMap.get(b.caseStudyId)
+          : null
+      if (!linked || !linked.active) {
+        return block
+      }
+      const img = linked.featuredImageId != null ? (mMap.get(linked.featuredImageId) ?? null) : null
+      const ind = linked.industryId != null ? indMap.get(linked.industryId) : null
+      const industry: Industry | undefined = ind
+        ? {
+            id: ind.id,
+            name: ind.name,
+            slug: ind.slug,
+            updatedAt: ind.createdAt.toISOString(),
+            createdAt: ind.createdAt.toISOString(),
+          }
+        : undefined
+      return {
+        ...b,
+        caseStudyId: {
+          id: linked.id,
+          title: linked.title,
+          slug: linked.slug,
+          summary: linked.summary,
+          industry,
+          featuredImage: img ?? undefined,
+          active: linked.active,
+          updatedAt: linked.updatedAt.toISOString(),
+          createdAt: linked.createdAt.toISOString(),
+        } satisfies CaseStudy,
+      } as typeof block
     }
 
     if (b.blockType === 'resourceFeed') {

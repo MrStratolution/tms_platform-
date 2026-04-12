@@ -190,6 +190,8 @@ function defaultAnimationPresetForBlock(blockType: unknown): Exclude<SectionAnim
     case 'comparison':
     case 'teamGrid':
     case 'caseStudyGrid':
+    case 'featuredProjectSpotlight':
+    case 'mediaGallery':
     case 'servicesFocus':
     case 'process':
       return 'slide-up'

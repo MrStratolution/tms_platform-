@@ -1402,6 +1402,7 @@ a.tma-cms-card:hover {
     top: 4.5rem;
     max-height: calc(100vh - 5rem);
     overflow: auto;
+    overscroll-behavior: contain;
     padding-bottom: 0.5rem;
   }
 }
@@ -1557,6 +1558,7 @@ a.tma-cms-card:hover {
 .tma-console-preview-dock__viewport-wrap {
   overflow-x: auto;
   overflow-y: hidden;
+  overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
   padding: 0.65rem;
   background: linear-gradient(135deg, rgba(30, 30, 35, 0.9), rgba(15, 15, 18, 0.95));
@@ -1567,6 +1569,7 @@ a.tma-cms-card:hover {
   margin: 0 auto;
   min-height: min(520px, 62vh);
   max-width: 100%;
+  overscroll-behavior: contain;
   box-sizing: border-box;
   border-radius: 0.35rem;
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
@@ -2406,4 +2409,65 @@ a.tma-cms-card:hover {
 .tma-builder-edit__check-row input[type="checkbox"] {
   margin: 0;
   accent-color: var(--tma-lime);
+}
+
+.tma-console-rich-editor {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.tma-console-rich-editor__toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.tma-console-rich-editor__toolbar-btn {
+  border: 1px solid var(--tma-border);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--tma-white);
+  border-radius: 999px;
+  padding: 0.38rem 0.7rem;
+  font: inherit;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.tma-console-rich-editor__toolbar-btn:hover:not(:disabled),
+.tma-console-rich-editor__toolbar-btn:focus-visible {
+  border-color: var(--tma-lime);
+  color: var(--tma-lime);
+  outline: none;
+}
+
+.tma-console-rich-editor__toolbar-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.tma-console-rich-editor__surface {
+  min-height: 16rem;
+  padding: 1rem;
+  border: 1px solid var(--tma-border);
+  border-radius: 0.9rem;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.02), rgba(255, 255, 255, 0.01)),
+    rgba(0, 0, 0, 0.28);
+  color: var(--tma-white);
+  font: inherit;
+  line-height: 1.7;
+}
+
+.tma-console-rich-editor__surface:focus {
+  outline: none;
+  border-color: var(--tma-lime);
+  box-shadow: 0 0 0 1px rgba(225, 251, 177, 0.16);
+}
+
+.tma-console-rich-editor__placeholder {
+  position: absolute;
+  pointer-events: none;
+  margin: 1rem;
+  color: var(--tma-white-subtle);
+  font-size: 0.95rem;
 }

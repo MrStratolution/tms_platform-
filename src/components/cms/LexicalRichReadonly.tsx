@@ -9,7 +9,7 @@ import { RichTextPlugin } from '@lexical/react/LexicalRichTextPlugin'
 import { HeadingNode, QuoteNode } from '@lexical/rich-text'
 import type { SerializedEditorState } from 'lexical'
 
-const theme = {
+export const lexicalTheme = {
   paragraph: 'lex-p',
   quote: 'lex-quote',
   heading: {
@@ -37,7 +37,7 @@ export function LexicalRichReadonly({ data }: Props) {
     <LexicalComposer
       initialConfig={{
         namespace: 'TmaReadonly',
-        theme,
+        theme: lexicalTheme,
         editable: false,
         onError: (e) => {
           console.error(e)

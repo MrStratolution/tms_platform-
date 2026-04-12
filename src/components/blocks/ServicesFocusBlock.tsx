@@ -25,6 +25,19 @@ type Props = {
 }
 
 export function ServicesFocusBlock(props: Props) {
+  const locale = props.locale ?? 'de'
+  const labels =
+    locale === 'en'
+      ? {
+          section: 'Services',
+          categories: 'Service categories',
+          eyebrow: 'Service focus',
+        }
+      : {
+          section: 'Leistungen',
+          categories: 'Leistungskategorien',
+          eyebrow: 'Leistungsfokus',
+        }
   const items = useMemo(
     () =>
       (props.items ?? []).filter(
@@ -48,7 +61,7 @@ export function ServicesFocusBlock(props: Props) {
       : null
 
   return (
-    <section className="block-services-focus" aria-label={props.sectionTitle?.trim() || 'Services'}>
+    <section className="block-services-focus" aria-label={props.sectionTitle?.trim() || labels.section}>
       <div className="block-services-focus__header">
         {props.sectionTitle?.trim() ? (
           <h2 className="block-section__title">{props.sectionTitle.trim()}</h2>
@@ -59,7 +72,7 @@ export function ServicesFocusBlock(props: Props) {
       </div>
 
       <div className="block-services-focus__layout">
-        <div className="block-services-focus__nav" role="tablist" aria-label="Service categories">
+        <div className="block-services-focus__nav" role="tablist" aria-label={labels.categories}>
           {items.map((item, index) => {
             const selected = index === safeIndex
             return (
@@ -86,7 +99,7 @@ export function ServicesFocusBlock(props: Props) {
           aria-label={active.title}
         >
           <div className="block-services-focus__copy">
-            <p className="block-services-focus__eyebrow">Service focus</p>
+            <p className="block-services-focus__eyebrow">{labels.eyebrow}</p>
             <h3 className="block-services-focus__headline">{active.title}</h3>
             {active.summary?.trim() ? (
               <p className="block-services-focus__summary">{active.summary.trim()}</p>
@@ -106,7 +119,7 @@ export function ServicesFocusBlock(props: Props) {
                   label={props.ctaLabel.trim()}
                   href={props.ctaHref.trim()}
                   variant="secondary"
-                  locale={props.locale ?? 'de'}
+                  locale={locale}
                 />
               </p>
             ) : null}

@@ -1,6 +1,8 @@
 import { z } from 'zod'
 
+import { resolveCaseStudyGridSelectionMode } from '@/lib/caseStudyGrid'
 import { normalizeNavHref } from '@/lib/cms/navHref'
+import type { Page } from '@/types/cms'
 
 export type PageSurfaceFields = {
   seoTitle: string
@@ -26,6 +28,42 @@ function asRecord(v: unknown): Record<string, unknown> {
     return { ...(v as Record<string, unknown>) }
   }
   return {}
+}
+
+function normalizeLayoutBlocks(value: unknown): unknown {
+  if (!Array.isArray(value)) return value
+  return value.map((block) => {
+    if (!block || typeof block !== 'object' || Array.isArray(block)) return block
+    const next = { ...(block as Record<string, unknown>) }
+    if (next.blockType === 'teamGrid') {
+      next.members = []
+    }
+    if (next.blockType === 'caseStudyGrid') {
+      const mode = resolveCaseStudyGridSelectionMode(
+        next as Partial<Extract<NonNullable<Page['layout']>[number], { blockType: 'caseStudyGrid' }>>,
+      )
+      next.selectionMode = mode
+      if (mode === 'automatic') {
+        next.studies = []
+      }
+    }
+    return next
+  })
+}
+
+/**
+ * Normalize page-builder document structure for the current console contract.
+ * `teamGrid` is library-driven and always renders all active team members.
+ * `caseStudyGrid` stores an explicit manual/automatic mode so editors do not have to infer hidden behavior.
+ */
+export function normalizePageBuilderDocument(
+  document: Record<string, unknown>,
+): Record<string, unknown> {
+  const next = { ...document }
+  if ('layout' in next) {
+    next.layout = normalizeLayoutBlocks(next.layout)
+  }
+  return next
 }
 
 /** Pull common fields from a page `document` for the structured form. */
@@ -89,7 +127,7 @@ export function mergePageSurfaceIntoDocument(
   base: Record<string, unknown>,
   surface: PageSurfaceFields,
 ): Record<string, unknown> {
-  const out: Record<string, unknown> = { ...base }
+  const out: Record<string, unknown> = normalizePageBuilderDocument(base)
   const seo = asRecord(out.seo)
 
   const setOrDelete = (
