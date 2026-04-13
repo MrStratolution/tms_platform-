@@ -10,16 +10,19 @@ import {
   useSensors,
 } from '@dnd-kit/core'
 import { SortableContext, arrayMove, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable'
+import type { SerializedEditorState } from 'lexical'
 import { useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react'
 
 import {
   CaseStudyGridPicker,
   DownloadAssetPicker,
   FaqLibraryPicker,
+  FeaturedProjectSpotlightPicker,
   ProductFeedPicker,
   ResourceFeedPicker,
   TestimonialSliderPicker,
 } from '@/components/console/ConsoleLibraryPickers'
+import { LexicalRichEditor } from '@/components/cms/LexicalRichEditor'
 import { ConsoleInlineMediaField } from '@/components/console/ConsoleInlineMediaField'
 import {
   cloneLayoutBlockJson,
@@ -302,6 +305,36 @@ function newBlockId(): string {
   return `b-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
 }
 
+const EMPTY_RICH_EDITOR_STATE = {
+  root: {
+    type: 'root',
+    children: [
+      {
+        type: 'paragraph',
+        version: 1,
+        children: [
+          {
+            type: 'text',
+            text: '',
+            version: 1,
+            format: 0,
+            mode: 'normal',
+            style: '',
+            detail: 0,
+          },
+        ],
+        direction: 'ltr',
+        format: '',
+        indent: 0,
+      },
+    ],
+    direction: 'ltr',
+    format: '',
+    indent: 0,
+    version: 1,
+  },
+} as unknown as SerializedEditorState
+
 function blockHasId(block: unknown): boolean {
   if (!block || typeof block !== 'object' || Array.isArray(block)) return false
   const id = (block as Record<string, unknown>).id
@@ -524,7 +557,10 @@ export function SectionChromeQuickFields(props: {
         </select>
       </label>
       <label className="tma-console-label">
-        Extra CSS classes
+        <span>Developer custom class (advanced)</span>
+        <span className="tma-console-block-fields-hint">
+          Leave this empty unless a developer gave you a class name for a very specific adjustment.
+        </span>
         <input
           className={fieldClass}
           value={typeof o.customClass === 'string' ? o.customClass : ''}
@@ -1021,6 +1057,8 @@ export function LayoutBlockQuickFields(props: {
           ? String(o.width)
           : 'default'
       const sourceType = o.sourceType === 'upload' ? 'upload' : 'embed'
+      const layoutPreset = o.layoutPreset === 'split' ? 'split' : 'stacked'
+      const headlineAlign = o.headlineAlign === 'center' ? 'center' : 'start'
       const videoHeight =
         o.height === 'short' || o.height === 'medium' || o.height === 'tall'
           ? String(o.height)
@@ -1040,8 +1078,24 @@ export function LayoutBlockQuickFields(props: {
         o.borderRadius === 'pill'
           ? String(o.borderRadius)
           : 'md'
+      const autoplay = o.autoplay === true
+      const muted = autoplay ? true : o.muted !== false
+      const loop = o.loop === true
+      const controls = o.controls !== false
       return (
         <div className="tma-console-block-fields">
+          <label className="tma-console-label">
+            Layout
+            <select
+              className={fieldClass}
+              value={layoutPreset}
+              onChange={(e) => set({ layoutPreset: e.target.value as 'stacked' | 'split' })}
+              disabled={disabled}
+            >
+              <option value="stacked">Stacked copy + player</option>
+              <option value="split">Split layout on desktop</option>
+            </select>
+          </label>
           <label className="tma-console-label">
             Video source
             <select
@@ -1052,6 +1106,78 @@ export function LayoutBlockQuickFields(props: {
             >
               <option value="embed">External embed URL</option>
               <option value="upload">Uploaded video</option>
+            </select>
+          </label>
+          <label className="tma-console-label">
+            Eyebrow (optional)
+            <input
+              className={fieldClass}
+              value={String(o.eyebrow ?? '')}
+              onChange={(e) => set({ eyebrow: e.target.value })}
+              disabled={disabled}
+              placeholder="e.g. Studio reel"
+            />
+          </label>
+          <label className="tma-console-label">
+            Title (optional)
+            <input
+              className={fieldClass}
+              value={String(o.title ?? '')}
+              onChange={(e) => set({ title: e.target.value })}
+              disabled={disabled}
+            />
+          </label>
+          <label className="tma-console-label">
+            Description (optional)
+            <textarea
+              className={fieldClass}
+              rows={3}
+              value={String(o.description ?? '')}
+              onChange={(e) => set({ description: e.target.value })}
+              disabled={disabled}
+            />
+          </label>
+          <label className="tma-console-label">
+            Caption (optional)
+            <textarea
+              className={fieldClass}
+              rows={2}
+              value={String(o.caption ?? '')}
+              onChange={(e) => set({ caption: e.target.value })}
+              disabled={disabled}
+              placeholder="Short caption below the player"
+            />
+          </label>
+          <div className="tma-console-field-row">
+            <label className="tma-console-label">
+              CTA label (optional)
+              <input
+                className={fieldClass}
+                value={String(o.ctaLabel ?? '')}
+                onChange={(e) => set({ ctaLabel: e.target.value })}
+                disabled={disabled}
+              />
+            </label>
+            <label className="tma-console-label">
+              CTA URL (optional)
+              <input
+                className={fieldClass}
+                value={String(o.ctaHref ?? '')}
+                onChange={(e) => set({ ctaHref: e.target.value })}
+                disabled={disabled}
+              />
+            </label>
+          </div>
+          <label className="tma-console-label">
+            Copy alignment
+            <select
+              className={fieldClass}
+              value={headlineAlign}
+              onChange={(e) => set({ headlineAlign: e.target.value as 'start' | 'center' })}
+              disabled={disabled}
+            >
+              <option value="start">Start</option>
+              <option value="center">Center</option>
             </select>
           </label>
           <div className="tma-console-field-row">
@@ -1151,15 +1277,6 @@ export function LayoutBlockQuickFields(props: {
               placeholder="e.g. 32rem"
             />
           </label>
-          <label className="tma-console-label">
-            Title (optional)
-            <input
-              className={fieldClass}
-              value={String(o.title ?? '')}
-              onChange={(e) => set({ title: e.target.value })}
-              disabled={disabled}
-            />
-          </label>
           {sourceType === 'embed' ? (
             <label className="tma-console-label">
               Video URL (YouTube or Vimeo)
@@ -1191,12 +1308,212 @@ export function LayoutBlockQuickFields(props: {
             />
           )}
           <ConsoleInlineMediaField
-            label="Poster image (optional)"
+            label="Poster image"
             value={typeof o.posterUrl === 'string' ? o.posterUrl : undefined}
             onChange={(next) => set({ posterUrl: next ?? '' })}
             disabled={disabled}
             folderSuggestion="video"
+            helpText="Use a poster for all uploads and premium embeds so the section has a clean first frame."
           />
+          <div className="tma-console-field-row">
+            <label className="tma-console-label" style={{ display: 'flex', gap: '0.55rem', alignItems: 'center' }}>
+              <input
+                type="checkbox"
+                checked={autoplay}
+                onChange={(e) => set({ autoplay: e.target.checked, muted: e.target.checked ? true : muted })}
+                disabled={disabled}
+              />
+              Autoplay
+            </label>
+            <label className="tma-console-label" style={{ display: 'flex', gap: '0.55rem', alignItems: 'center' }}>
+              <input
+                type="checkbox"
+                checked={muted}
+                onChange={(e) => set({ muted: autoplay ? true : e.target.checked })}
+                disabled={disabled || autoplay}
+              />
+              Muted {autoplay ? '(required for autoplay)' : ''}
+            </label>
+          </div>
+          <div className="tma-console-field-row">
+            <label className="tma-console-label" style={{ display: 'flex', gap: '0.55rem', alignItems: 'center' }}>
+              <input
+                type="checkbox"
+                checked={loop}
+                onChange={(e) => set({ loop: e.target.checked })}
+                disabled={disabled}
+              />
+              Loop
+            </label>
+            <label className="tma-console-label" style={{ display: 'flex', gap: '0.55rem', alignItems: 'center' }}>
+              <input
+                type="checkbox"
+                checked={controls}
+                onChange={(e) => set({ controls: e.target.checked })}
+                disabled={disabled}
+              />
+              Show playback controls
+            </label>
+          </div>
+          <p className="tma-console-block-fields-hint">
+            Autoplay is only safe when the video is muted. Lightbox mode is intentionally not exposed in this build.
+          </p>
+        </div>
+      )
+    }
+    case 'mediaGallery': {
+      const items = asRecordArray(o.items)
+      const layoutPreset =
+        o.layoutPreset === 'grid' || o.layoutPreset === 'mosaic' ? String(o.layoutPreset) : 'editorial'
+      const updateItem = (idx: number, patch: Record<string, unknown>) => {
+        const next = items.map((row, j) => {
+          if (j !== idx) return row
+          const merged = { ...row, ...patch }
+          if (typeof merged.id !== 'string' || !merged.id) merged.id = newBlockId()
+          return merged
+        })
+        set({ items: next })
+      }
+      const addItem = () => {
+        set({
+          items: [
+            ...items,
+            {
+              id: newBlockId(),
+              imageUrl: '',
+              imageAlt: '',
+              caption: '',
+              linkHref: '',
+              aspectRatio: 'portrait',
+            },
+          ],
+        })
+      }
+      const removeItem = (idx: number) => set({ items: items.filter((_, j) => j !== idx) })
+      return (
+        <div className="tma-console-block-fields">
+          <label className="tma-console-label">
+            Eyebrow (optional)
+            <input
+              className={fieldClass}
+              value={String(o.eyebrow ?? '')}
+              onChange={(e) => set({ eyebrow: e.target.value })}
+              disabled={disabled}
+            />
+          </label>
+          <label className="tma-console-label">
+            Title
+            <input
+              className={fieldClass}
+              value={String(o.title ?? '')}
+              onChange={(e) => set({ title: e.target.value })}
+              disabled={disabled}
+            />
+          </label>
+          <label className="tma-console-label">
+            Description (optional)
+            <textarea
+              className={fieldClass}
+              rows={3}
+              value={String(o.description ?? '')}
+              onChange={(e) => set({ description: e.target.value })}
+              disabled={disabled}
+            />
+          </label>
+          <label className="tma-console-label">
+            Layout
+            <select
+              className={fieldClass}
+              value={layoutPreset}
+              onChange={(e) => set({ layoutPreset: e.target.value as 'editorial' | 'grid' | 'mosaic' })}
+              disabled={disabled}
+            >
+              <option value="editorial">Editorial stagger</option>
+              <option value="grid">Clean grid</option>
+              <option value="mosaic">Mixed mosaic</option>
+            </select>
+          </label>
+          {items.map((item, idx) => {
+            const aspectRatio =
+              item.aspectRatio === 'square' ||
+              item.aspectRatio === 'landscape' ||
+              item.aspectRatio === 'cinema'
+                ? String(item.aspectRatio)
+                : 'portrait'
+            return (
+              <div key={typeof item.id === 'string' ? item.id : `gallery-${idx}`} className="tma-console-nested-block">
+                <div className="tma-console-nested-block__head">
+                  <span className="tma-console-nested-block__title">Gallery item {idx + 1}</span>
+                  <button
+                    type="button"
+                    className="tma-console-btn-danger tma-console-btn-danger--small"
+                    onClick={() => removeItem(idx)}
+                    disabled={disabled}
+                  >
+                    Remove
+                  </button>
+                </div>
+                <ConsoleInlineMediaField
+                  label="Image"
+                  value={typeof item.imageUrl === 'string' ? item.imageUrl : undefined}
+                  onChange={(next) => updateItem(idx, { imageUrl: next ?? '' })}
+                  disabled={disabled}
+                  folderSuggestion="gallery"
+                />
+                <label className="tma-console-label">
+                  Alt text
+                  <input
+                    className={fieldClass}
+                    value={String(item.imageAlt ?? '')}
+                    onChange={(e) => updateItem(idx, { imageAlt: e.target.value })}
+                    disabled={disabled}
+                  />
+                </label>
+                <label className="tma-console-label">
+                  Caption (optional)
+                  <textarea
+                    className={fieldClass}
+                    rows={2}
+                    value={String(item.caption ?? '')}
+                    onChange={(e) => updateItem(idx, { caption: e.target.value })}
+                    disabled={disabled}
+                  />
+                </label>
+                <div className="tma-console-field-row">
+                  <label className="tma-console-label">
+                    Link URL (optional)
+                    <input
+                      className={fieldClass}
+                      value={String(item.linkHref ?? '')}
+                      onChange={(e) => updateItem(idx, { linkHref: e.target.value })}
+                      disabled={disabled}
+                    />
+                  </label>
+                  <label className="tma-console-label">
+                    Aspect ratio
+                    <select
+                      className={fieldClass}
+                      value={aspectRatio}
+                      onChange={(e) =>
+                        updateItem(idx, {
+                          aspectRatio: e.target.value as 'square' | 'portrait' | 'landscape' | 'cinema',
+                        })
+                      }
+                      disabled={disabled}
+                    >
+                      <option value="portrait">Portrait</option>
+                      <option value="square">Square</option>
+                      <option value="landscape">Landscape</option>
+                      <option value="cinema">Cinema</option>
+                    </select>
+                  </label>
+                </div>
+              </div>
+            )
+          })}
+          <button type="button" className="tma-console-btn-secondary" onClick={addItem} disabled={disabled}>
+            Add image
+          </button>
         </div>
       )
     }
@@ -1410,6 +1727,10 @@ export function LayoutBlockQuickFields(props: {
     }
     case 'process': {
       const steps = asRecordArray(o.steps)
+      const layoutPreset =
+        o.layoutPreset === 'timeline' || o.layoutPreset === 'milestones'
+          ? String(o.layoutPreset)
+          : 'process'
       const updateStep = (idx: number, patch: Record<string, unknown>) => {
         const next = steps.map((row, j) => {
           if (j !== idx) return row
@@ -1437,6 +1758,21 @@ export function LayoutBlockQuickFields(props: {
       }
       return (
         <div className="tma-console-block-fields">
+          <label className="tma-console-label">
+            Presentation
+            <select
+              className={fieldClass}
+              value={layoutPreset}
+              onChange={(e) =>
+                set({ layoutPreset: e.target.value as 'process' | 'timeline' | 'milestones' })
+              }
+              disabled={disabled}
+            >
+              <option value="process">Process list</option>
+              <option value="timeline">Editorial timeline</option>
+              <option value="milestones">Milestone cards</option>
+            </select>
+          </label>
           <label className="tma-console-label">
             Layout
             <select
@@ -2013,38 +2349,98 @@ export function LayoutBlockQuickFields(props: {
       )
     }
     case 'quoteBand':
+      const displayMode = o.displayMode === 'statementMarquee' ? 'statementMarquee' : 'quote'
       return (
         <div className="tma-console-block-fields">
           <label className="tma-console-label">
-            Quote
-            <textarea
+            Mode
+            <select
               className={fieldClass}
-              rows={3}
-              value={String(o.quote ?? '')}
-              onChange={(e) => set({ quote: e.target.value })}
+              value={displayMode}
+              onChange={(e) => set({ displayMode: e.target.value as 'quote' | 'statementMarquee' })}
               disabled={disabled}
-            />
+            >
+              <option value="quote">Quote</option>
+              <option value="statementMarquee">Statement marquee</option>
+            </select>
           </label>
-          <label className="tma-console-label">
-            Attribution (optional)
-            <input
-              className={fieldClass}
-              value={String(o.attribution ?? '')}
-              onChange={(e) => set({ attribution: e.target.value })}
-              disabled={disabled}
-              placeholder="Name"
-            />
-          </label>
-          <label className="tma-console-label">
-            Role / company (optional)
-            <input
-              className={fieldClass}
-              value={String(o.roleLine ?? '')}
-              onChange={(e) => set({ roleLine: e.target.value })}
-              disabled={disabled}
-              placeholder="CEO · Acme"
-            />
-          </label>
+          {displayMode === 'statementMarquee' ? (
+            <>
+              <label className="tma-console-label">
+                Statement text
+                <textarea
+                  className={fieldClass}
+                  rows={3}
+                  value={String(o.statementText ?? '')}
+                  onChange={(e) => set({ statementText: e.target.value })}
+                  disabled={disabled}
+                />
+              </label>
+              <div className="tma-console-field-row">
+                <label className="tma-console-label">
+                  Marquee speed
+                  <select
+                    className={fieldClass}
+                    value={
+                      o.marqueeSpeedPreset === 'slow' || o.marqueeSpeedPreset === 'fast'
+                        ? String(o.marqueeSpeedPreset)
+                        : 'normal'
+                    }
+                    onChange={(e) =>
+                      set({ marqueeSpeedPreset: e.target.value as 'slow' | 'normal' | 'fast' })
+                    }
+                    disabled={disabled}
+                  >
+                    <option value="slow">Slow</option>
+                    <option value="normal">Normal</option>
+                    <option value="fast">Fast</option>
+                  </select>
+                </label>
+                <label className="tma-console-label" style={{ display: 'flex', gap: '0.55rem', alignItems: 'center' }}>
+                  <input
+                    type="checkbox"
+                    checked={o.pauseOnHover !== false}
+                    onChange={(e) => set({ pauseOnHover: e.target.checked })}
+                    disabled={disabled}
+                  />
+                  Pause on hover
+                </label>
+              </div>
+            </>
+          ) : (
+            <>
+              <label className="tma-console-label">
+                Quote
+                <textarea
+                  className={fieldClass}
+                  rows={3}
+                  value={String(o.quote ?? '')}
+                  onChange={(e) => set({ quote: e.target.value })}
+                  disabled={disabled}
+                />
+              </label>
+              <label className="tma-console-label">
+                Attribution (optional)
+                <input
+                  className={fieldClass}
+                  value={String(o.attribution ?? '')}
+                  onChange={(e) => set({ attribution: e.target.value })}
+                  disabled={disabled}
+                  placeholder="Name"
+                />
+              </label>
+              <label className="tma-console-label">
+                Role / company (optional)
+                <input
+                  className={fieldClass}
+                  value={String(o.roleLine ?? '')}
+                  onChange={(e) => set({ roleLine: e.target.value })}
+                  disabled={disabled}
+                  placeholder="CEO · Acme"
+                />
+              </label>
+            </>
+          )}
           <label className="tma-console-label">
             Look
             <select
@@ -2388,6 +2784,210 @@ export function LayoutBlockQuickFields(props: {
           </div>
         </div>
       )
+    case 'featuredProjectSpotlight': {
+      const stats = asRecordArray(o.stats)
+      const updateStat = (idx: number, patch: Record<string, unknown>) => {
+        const next = stats.map((row, j) => {
+          if (j !== idx) return row
+          const merged = { ...row, ...patch }
+          if (typeof merged.id !== 'string' || !merged.id) merged.id = newBlockId()
+          return merged
+        })
+        set({ stats: next })
+      }
+      const addStat = () =>
+        set({
+          stats: [...stats, { id: newBlockId(), value: '', suffix: '', label: '' }],
+        })
+      const removeStat = (idx: number) => set({ stats: stats.filter((_, j) => j !== idx) })
+      const layoutPreset = o.layoutPreset === 'immersive' ? 'immersive' : 'split'
+      const mediaMode = o.mediaMode === 'videoPoster' ? 'videoPoster' : 'image'
+      return (
+        <div className="tma-console-block-fields">
+          <label className="tma-console-label">
+            Eyebrow (optional)
+            <input
+              className={fieldClass}
+              value={String(o.eyebrow ?? '')}
+              onChange={(e) => set({ eyebrow: e.target.value })}
+              disabled={disabled}
+            />
+          </label>
+          <FeaturedProjectSpotlightPicker o={o} set={set} disabled={disabled} />
+          <label className="tma-console-label">
+            Title
+            <input
+              className={fieldClass}
+              value={String(o.title ?? '')}
+              onChange={(e) => set({ title: e.target.value })}
+              disabled={disabled}
+            />
+          </label>
+          <label className="tma-console-label">
+            Description
+            <textarea
+              className={fieldClass}
+              rows={3}
+              value={String(o.description ?? '')}
+              onChange={(e) => set({ description: e.target.value })}
+              disabled={disabled}
+            />
+          </label>
+          <ConsoleInlineMediaField
+            label="Fallback image"
+            value={typeof o.imageUrl === 'string' ? o.imageUrl : undefined}
+            onChange={(next) => set({ imageUrl: next ?? '' })}
+            disabled={disabled}
+            folderSuggestion="projects"
+            helpText="Used when no linked case study image is available."
+          />
+          <label className="tma-console-label">
+            Fallback image alt text
+            <input
+              className={fieldClass}
+              value={String(o.imageAlt ?? '')}
+              onChange={(e) => set({ imageAlt: e.target.value })}
+              disabled={disabled}
+            />
+          </label>
+          <div className="tma-console-field-row">
+            <label className="tma-console-label">
+              Layout
+              <select
+                className={fieldClass}
+                value={layoutPreset}
+                onChange={(e) => set({ layoutPreset: e.target.value as 'split' | 'immersive' })}
+                disabled={disabled}
+              >
+                <option value="split">Split editorial</option>
+                <option value="immersive">Immersive feature</option>
+              </select>
+            </label>
+            <label className="tma-console-label">
+              Media treatment
+              <select
+                className={fieldClass}
+                value={mediaMode}
+                onChange={(e) => set({ mediaMode: e.target.value as 'image' | 'videoPoster' })}
+                disabled={disabled}
+              >
+                <option value="image">Image</option>
+                <option value="videoPoster">Video poster look</option>
+              </select>
+            </label>
+          </div>
+          <label className="tma-console-label">
+            Pull quote (optional)
+            <textarea
+              className={fieldClass}
+              rows={2}
+              value={String(o.quote ?? '')}
+              onChange={(e) => set({ quote: e.target.value })}
+              disabled={disabled}
+            />
+          </label>
+          <label className="tma-console-label">
+            Quote attribution (optional)
+            <input
+              className={fieldClass}
+              value={String(o.quoteAttribution ?? '')}
+              onChange={(e) => set({ quoteAttribution: e.target.value })}
+              disabled={disabled}
+            />
+          </label>
+          <p className="tma-console-block-fields-hint">
+            Optional project stats help the spotlight feel more editorial without exposing technical configuration.
+          </p>
+          {stats.map((stat, idx) => (
+            <div key={typeof stat.id === 'string' ? stat.id : `spotlight-stat-${idx}`} className="tma-console-nested-block">
+              <div className="tma-console-nested-block__head">
+                <span className="tma-console-nested-block__title">Stat {idx + 1}</span>
+                <button
+                  type="button"
+                  className="tma-console-btn-danger tma-console-btn-danger--small"
+                  onClick={() => removeStat(idx)}
+                  disabled={disabled}
+                >
+                  Remove
+                </button>
+              </div>
+              <div className="tma-console-field-row">
+                <label className="tma-console-label">
+                  Value
+                  <input
+                    className={fieldClass}
+                    value={String(stat.value ?? '')}
+                    onChange={(e) => updateStat(idx, { value: e.target.value })}
+                    disabled={disabled}
+                  />
+                </label>
+                <label className="tma-console-label">
+                  Suffix (optional)
+                  <input
+                    className={fieldClass}
+                    value={String(stat.suffix ?? '')}
+                    onChange={(e) => updateStat(idx, { suffix: e.target.value })}
+                    disabled={disabled}
+                  />
+                </label>
+              </div>
+              <label className="tma-console-label">
+                Label
+                <input
+                  className={fieldClass}
+                  value={String(stat.label ?? '')}
+                  onChange={(e) => updateStat(idx, { label: e.target.value })}
+                  disabled={disabled}
+                />
+              </label>
+            </div>
+          ))}
+          <button type="button" className="tma-console-btn-secondary" onClick={addStat} disabled={disabled}>
+            Add stat
+          </button>
+          <div className="tma-console-field-row">
+            <label className="tma-console-label">
+              Primary CTA label (optional)
+              <input
+                className={fieldClass}
+                value={String(o.ctaLabel ?? '')}
+                onChange={(e) => set({ ctaLabel: e.target.value })}
+                disabled={disabled}
+              />
+            </label>
+            <label className="tma-console-label">
+              Primary CTA URL (optional)
+              <input
+                className={fieldClass}
+                value={String(o.ctaHref ?? '')}
+                onChange={(e) => set({ ctaHref: e.target.value })}
+                disabled={disabled}
+              />
+            </label>
+          </div>
+          <div className="tma-console-field-row">
+            <label className="tma-console-label">
+              Secondary CTA label (optional)
+              <input
+                className={fieldClass}
+                value={String(o.secondaryCtaLabel ?? '')}
+                onChange={(e) => set({ secondaryCtaLabel: e.target.value })}
+                disabled={disabled}
+              />
+            </label>
+            <label className="tma-console-label">
+              Secondary CTA URL (optional)
+              <input
+                className={fieldClass}
+                value={String(o.secondaryCtaHref ?? '')}
+                onChange={(e) => set({ secondaryCtaHref: e.target.value })}
+                disabled={disabled}
+              />
+            </label>
+          </div>
+        </div>
+      )
+    }
     case 'resourceFeed':
       return (
         <div className="tma-console-block-fields">
@@ -2608,10 +3208,19 @@ export function LayoutBlockQuickFields(props: {
       return (
         <div className="tma-console-block-fields">
           <p className="tma-console-block-fields-hint">
-            This is a Lexical rich text block. The content is stored in the page document as JSON. For fine
-            control, use <strong>Advanced: raw page data</strong> or edit the Lexical JSON directly.
-            Shortcodes like <code>{'{{site_name}}'}</code> are replaced on the public site.
+            Rich text is stored as Lexical JSON and rendered on the public site. Use this editor for normal
+            content changes. Shortcodes like <code>{'{{site_name}}'}</code> are replaced on the public site.
+            Use <strong>Advanced: raw page data</strong> only for exceptional low-level edits.
           </p>
+          <LexicalRichEditor
+            data={
+              o.content && typeof o.content === 'object' && !Array.isArray(o.content)
+                ? (o.content as SerializedEditorState)
+                : EMPTY_RICH_EDITOR_STATE
+            }
+            onChange={(next) => set({ content: next })}
+            disabled={disabled}
+          />
         </div>
       )
     case 'spacer': {

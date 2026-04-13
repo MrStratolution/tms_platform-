@@ -35,9 +35,11 @@ import type {
 import { toVideoEmbedUrl, isLikelyEmbeddableVideoUrl } from '@/lib/videoEmbed'
 
 import { BookingBlock } from './BookingBlock'
+import { CardRail } from './CardRail'
 import { FormBlock } from './FormBlock'
 import { ServicesFocusBlock } from './ServicesFocusBlock'
 import { StickyCtaBar } from './StickyCtaBar'
+import { TestimonialCard } from './TestimonialCard'
 
 type LayoutBlock = NonNullable<Page['layout']>[number]
 
@@ -134,6 +136,37 @@ function pageImage(page: Page): { src: string; alt: string } | null {
     }
   }
   return null
+}
+
+function caseStudyTitle(caseStudy: CaseStudy | null): string {
+  return caseStudy?.title?.trim() || ''
+}
+
+function caseStudySummary(caseStudy: CaseStudy | null): string {
+  return caseStudy?.summary?.trim() || ''
+}
+
+function caseStudyImage(caseStudy: CaseStudy | null): { src: string; alt: string } | null {
+  const image =
+    caseStudy?.featuredImage && isPopulatedMedia(caseStudy.featuredImage) ? caseStudy.featuredImage : null
+  const src = image ? absoluteMediaUrl(image.url) : null
+  if (!src) return null
+  return {
+    src,
+    alt: image?.alt || caseStudyTitle(caseStudy),
+  }
+}
+
+function caseStudyIndustryLabel(caseStudy: CaseStudy | null): string {
+  const industry =
+    caseStudy?.industry && isPopulatedIndustry(caseStudy.industry) ? caseStudy.industry : null
+  return industry?.name?.trim() || ''
+}
+
+function caseStudyHref(caseStudy: CaseStudy | null, locale: PublicLocale): string | null {
+  const slug = caseStudy?.slug?.trim()
+  if (!slug) return null
+  return localizePublicHref(`/work/${slug}`, locale)
 }
 
 function formatPageDate(page: Page, locale: PublicLocale): string {
@@ -588,14 +621,51 @@ function renderBlock(
       )
     }
     case 'quoteBand': {
-      const quote = block.quote?.trim()
-      if (!quote) {
-        return <p className="tma-muted">Add quote text for this band in the CMS.</p>
-      }
       const v =
         block.variant === 'muted' || block.variant === 'border' || block.variant === 'lime'
           ? block.variant
           : 'lime'
+      const displayMode = block.displayMode === 'statementMarquee' ? 'statementMarquee' : 'quote'
+      if (displayMode === 'statementMarquee') {
+        const statement = block.statementText?.trim() || block.quote?.trim()
+        if (!statement) {
+          return <p className="tma-muted">Add statement text for this band in the CMS.</p>
+        }
+        const duration =
+          block.marqueeSpeedPreset === 'slow'
+            ? '32s'
+            : block.marqueeSpeedPreset === 'fast'
+              ? '18s'
+              : '24s'
+        const segments = Array.from({ length: 6 }, () => statement)
+        return (
+          <div
+            className={`block-quote-band block-quote-band--${v} block-quote-band--marquee${block.pauseOnHover !== false ? ' block-quote-band--pause-on-hover' : ''}`}
+            style={{ ['--quote-band-duration' as string]: duration }}
+          >
+            <div className="block-quote-band__marquee" aria-label={statement}>
+              <div className="block-quote-band__track">
+                {segments.map((segment, idx) => (
+                  <span key={`a-${idx}`} className="block-quote-band__segment">
+                    {segment}
+                  </span>
+                ))}
+              </div>
+              <div className="block-quote-band__track" aria-hidden="true">
+                {segments.map((segment, idx) => (
+                  <span key={`b-${idx}`} className="block-quote-band__segment">
+                    {segment}
+                  </span>
+                ))}
+              </div>
+            </div>
+          </div>
+        )
+      }
+      const quote = block.quote?.trim()
+      if (!quote) {
+        return <p className="tma-muted">Add quote text for this band in the CMS.</p>
+      }
       const attr = block.attribution?.trim()
       const roleLine = block.roleLine?.trim()
       return (
@@ -642,18 +712,79 @@ function renderBlock(
       if (items.length === 0) {
         return <p className="tma-muted">Add testimonials in the CMS.</p>
       }
+      const layoutPreset = block.layoutPreset === 'grid' ? 'grid' : 'spotlight'
+      const showPortraits = block.showPortraits !== false
+      const showLogos = block.showLogos !== false
+      const testimonialCards = items.map((t) => {
+        const photo = showPortraits && t.photo && isPopulatedMedia(t.photo) ? t.photo : null
+        const photoSrc = photo ? absoluteMediaUrl(photo.url) : null
+        const logo = t.logo && isPopulatedMedia(t.logo) ? t.logo : null
+        const logoSrc = logo ? absoluteMediaUrl(logo.url) : null
+        return (
+          <li key={t.id} className="block-testimonials__entry tma-surface-lift">
+            {(photoSrc || (showLogos && (logoSrc || t.company?.trim()))) ? (
+              <div className="block-testimonials__entry-meta">
+                {photoSrc ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    className="block-testimonials__entry-photo"
+                    src={photoSrc}
+                    alt={photo?.alt || t.author}
+                    width={96}
+                    height={96}
+                    loading="lazy"
+                  />
+                ) : null}
+                {showLogos && (logoSrc || t.company?.trim()) ? (
+                  logoSrc ? (
+                    <div className="block-testimonials__logo-wrap">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        className="block-testimonials__logo"
+                        src={logoSrc}
+                        alt={logo?.alt || t.company?.trim() || t.author}
+                        width={120}
+                        height={48}
+                        loading="lazy"
+                      />
+                    </div>
+                  ) : (
+                    <p className="block-testimonials__badge">
+                      {(t.company ?? t.author).trim()}
+                    </p>
+                  )
+                ) : null}
+              </div>
+            ) : null}
+            <TestimonialCard quote={t.quote} locale={locale} />
+            <footer className="block-testimonials__entry-footer">
+              <strong>{t.author}</strong>
+              {t.role ? <span>{t.role}</span> : null}
+              {t.company ? <span>{t.company}</span> : null}
+            </footer>
+          </li>
+        )
+      })
       return (
-        <div className="block-testimonials">
-          {items.map((t) => (
-            <blockquote key={t.id} className="block-testimonials__card tma-surface-lift">
-              <p>{t.quote}</p>
-              <footer>
-                — {t.author}
-                {t.role ? `, ${t.role}` : ''}
-                {t.company ? ` · ${t.company}` : ''}
-              </footer>
-            </blockquote>
-          ))}
+        <div className={`block-testimonials block-testimonials--${layoutPreset}`}>
+          {block.sectionIntro?.trim() ? (
+            <p className="block-section__intro">{block.sectionIntro.trim()}</p>
+          ) : null}
+          {layoutPreset === 'spotlight' ? (
+            <CardRail
+              itemCount={items.length}
+              variant="content"
+              listClassName="block-testimonials__list"
+              ariaLabel="Testimonials"
+              forceRail
+            >
+              {testimonialCards}
+            </CardRail>
+          ) : (
+            <ul className="block-testimonials__grid" aria-label="Testimonials">
+              {testimonialCards}
+            </ul>
+          )}
         </div>
       )
     }
@@ -678,7 +809,7 @@ function renderBlock(
         return <p className="tma-muted">Booking profile could not be loaded.</p>
       }
       const bp = block.bookingProfile as BookingProfile
-      return <BookingBlock profile={bp} width={block.width ?? 'default'} />
+      return <BookingBlock profile={bp} width={block.width ?? 'default'} locale={locale} />
     }
     case 'faq': {
       const items = block.items ?? []
@@ -731,7 +862,12 @@ function renderBlock(
             <h2 className="block-section__title">{block.sectionTitle}</h2>
           ) : null}
           {block.intro ? <p className="block-section__intro">{block.intro}</p> : null}
-          <ul className="block-team__grid">
+          <CardRail
+            itemCount={members.length}
+            variant="team"
+            listClassName="block-team__grid"
+            ariaLabel={block.sectionTitle?.trim() || 'Team members'}
+          >
             {members.map((m) => {
               const ph = m.photo && isPopulatedMedia(m.photo) ? m.photo : null
               const src = ph ? absoluteMediaUrl(ph.url) : null
@@ -766,7 +902,7 @@ function renderBlock(
                 </li>
               )
             })}
-          </ul>
+          </CardRail>
         </div>
       )
     }
@@ -783,7 +919,12 @@ function renderBlock(
             <h2 className="block-section__title">{block.sectionTitle}</h2>
           ) : null}
           {block.intro ? <p className="block-section__intro">{block.intro}</p> : null}
-          <ul className="block-case-studies__grid">
+          <CardRail
+            itemCount={studies.length}
+            variant="content"
+            listClassName="block-case-studies__grid"
+            ariaLabel={block.sectionTitle?.trim() || 'Case studies'}
+          >
             {studies.map((cs) => {
               const img =
                 cs.featuredImage && isPopulatedMedia(cs.featuredImage)
@@ -813,12 +954,129 @@ function renderBlock(
                 </li>
               )
             })}
-          </ul>
+          </CardRail>
           {ctaLabel && ctaHref ? (
             <p className="block-case-studies__cta">
               <CtaButton label={ctaLabel} href={ctaHref} variant="ghost" locale={locale} />
             </p>
           ) : null}
+        </div>
+      )
+    }
+    case 'featuredProjectSpotlight': {
+      const linkedCaseStudy =
+        block.caseStudyId && isPopulatedCaseStudy(block.caseStudyId) ? block.caseStudyId : null
+      const linkedHref = caseStudyHref(linkedCaseStudy, locale)
+      const linkedImage = caseStudyImage(linkedCaseStudy)
+      const linkedIndustry = caseStudyIndustryLabel(linkedCaseStudy)
+      const title = caseStudyTitle(linkedCaseStudy) || block.title?.trim() || ''
+      const description = caseStudySummary(linkedCaseStudy) || block.description?.trim() || ''
+      const imageSrc = linkedImage?.src || (typeof block.imageUrl === 'string' ? absoluteMediaUrl(block.imageUrl) ?? block.imageUrl : null)
+      const imageAlt = linkedImage?.alt || block.imageAlt?.trim() || title || 'Featured project visual'
+      const ctaHref = block.ctaHref?.trim() || linkedHref || ''
+      const ctaLabel =
+        block.ctaLabel?.trim() ||
+        (linkedHref ? (locale === 'de' ? 'Projekt ansehen' : 'View project') : '')
+      const secondaryCtaHref =
+        block.secondaryCtaHref?.trim() || (linkedHref ? localizePublicHref('/contact', locale) : '')
+      const secondaryCtaLabel =
+        block.secondaryCtaLabel?.trim() ||
+        (secondaryCtaHref ? (locale === 'de' ? 'Projekt besprechen' : 'Discuss the project') : '')
+      const stats = Array.isArray(block.stats)
+        ? block.stats.filter((row) => typeof row?.value === 'string' && typeof row?.label === 'string' && row.value.trim() && row.label.trim())
+        : []
+      const quote = block.quote?.trim()
+      const quoteAttribution = block.quoteAttribution?.trim()
+      const layoutPreset = block.layoutPreset === 'immersive' ? 'immersive' : 'split'
+      const mediaMode = block.mediaMode === 'videoPoster' ? 'videoPoster' : 'image'
+      const missingContent = !title && !description && !imageSrc
+      const mediaHrefRaw = ctaHref || linkedHref || ''
+      const mediaHref = mediaHrefRaw ? localizePublicHref(mediaHrefRaw, locale) : ''
+
+      if (missingContent) {
+        return <p className="tma-muted">Link a case study or add manual project content in the CMS.</p>
+      }
+
+      return (
+        <div className={`block-featured-project block-featured-project--${layoutPreset}`}>
+          <article className="block-featured-project__surface tma-surface-lift">
+            <div className="block-featured-project__copy">
+              {block.eyebrow?.trim() ? <p className="block-featured-project__eyebrow">{block.eyebrow.trim()}</p> : null}
+              {linkedIndustry ? <p className="block-featured-project__meta">{linkedIndustry}</p> : null}
+              {title ? <h2 className="block-featured-project__title">{title}</h2> : null}
+              {description ? <p className="block-featured-project__description">{description}</p> : null}
+              {stats.length > 0 ? (
+                <ul className="block-featured-project__stats">
+                  {stats.map((stat) => (
+                    <li key={stat.id ?? `${stat.value}-${stat.label}`} className="block-featured-project__stat">
+                      <strong>
+                        {stat.value}
+                        {stat.suffix ?? ''}
+                      </strong>
+                      <span>{stat.label}</span>
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+              {quote ? (
+                <blockquote className="block-featured-project__quote">
+                  <p>{quote}</p>
+                  {quoteAttribution ? <footer>{quoteAttribution}</footer> : null}
+                </blockquote>
+              ) : null}
+              {((ctaLabel && ctaHref) || (secondaryCtaLabel && secondaryCtaHref)) ? (
+                <div className="block-featured-project__actions">
+                  {ctaLabel && ctaHref ? (
+                    <CtaButton label={ctaLabel} href={ctaHref} variant="primary" locale={locale} />
+                  ) : null}
+                  {secondaryCtaLabel && secondaryCtaHref ? (
+                    <CtaButton label={secondaryCtaLabel} href={secondaryCtaHref} variant="ghost" locale={locale} />
+                  ) : null}
+                </div>
+              ) : null}
+            </div>
+            <div className={`block-featured-project__media block-featured-project__media--${mediaMode}`}>
+              {imageSrc ? (
+                mediaHref ? (
+                  <Link href={mediaHref} className="block-featured-project__media-link">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      className="block-featured-project__image"
+                      src={imageSrc}
+                      alt={imageAlt}
+                      width={1280}
+                      height={900}
+                      loading="lazy"
+                    />
+                    {mediaMode === 'videoPoster' ? (
+                      <span className="block-featured-project__play" aria-hidden="true">
+                        ▶
+                      </span>
+                    ) : null}
+                  </Link>
+                ) : (
+                  <>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      className="block-featured-project__image"
+                      src={imageSrc}
+                      alt={imageAlt}
+                      width={1280}
+                      height={900}
+                      loading="lazy"
+                    />
+                    {mediaMode === 'videoPoster' ? (
+                      <span className="block-featured-project__play" aria-hidden="true">
+                        ▶
+                      </span>
+                    ) : null}
+                  </>
+                )
+              ) : (
+                <div className="block-featured-project__placeholder" aria-hidden="true" />
+              )}
+            </div>
+          </article>
         </div>
       )
     }
@@ -880,7 +1138,12 @@ function renderBlock(
           ) : null}
 
           {cards.length > 0 ? (
-            <ul className="block-resource-feed__grid">
+            <CardRail
+              itemCount={cards.length}
+              variant="content"
+              listClassName="block-resource-feed__grid"
+              ariaLabel={block.sectionTitle?.trim() || 'News articles'}
+            >
               {cards.map((entry) => {
                 const image = pageImage(entry)
                 const href = localizePublicHref(`/${entry.slug}`, locale)
@@ -909,7 +1172,7 @@ function renderBlock(
                   </li>
                 )
               })}
-            </ul>
+            </CardRail>
           ) : null}
 
           {ctaLabel && ctaHref ? (
@@ -979,7 +1242,12 @@ function renderBlock(
           ) : null}
 
           {cards.length > 0 ? (
-            <ul className="block-product-feed__grid">
+            <CardRail
+              itemCount={cards.length}
+              variant="content"
+              listClassName="block-product-feed__grid"
+              ariaLabel={block.sectionTitle?.trim() || 'Projects'}
+            >
               {cards.map((product) => {
                 const image = productImage(product)
                 return (
@@ -1010,7 +1278,7 @@ function renderBlock(
                   </li>
                 )
               })}
-            </ul>
+            </CardRail>
           ) : null}
 
           {ctaLabel && ctaHref ? (
@@ -1132,9 +1400,36 @@ function renderBlock(
       if (steps.length === 0) {
         return <p className="tma-muted">Add process steps in the CMS.</p>
       }
+      const layoutPreset =
+        block.layoutPreset === 'timeline' || block.layoutPreset === 'milestones'
+          ? block.layoutPreset
+          : 'process'
       const processDense = block.variant === 'compact'
+      if (layoutPreset === 'milestones') {
+        return (
+          <div className="block-process block-process--milestones">
+            {block.sectionTitle ? (
+              <h2 className="block-section__title">{block.sectionTitle}</h2>
+            ) : null}
+            {block.intro ? <p className="block-section__intro">{block.intro}</p> : null}
+            <ol className="block-process__milestones">
+              {steps.map((step, i) => (
+                <li key={step.id ?? i} className="block-process__milestone tma-surface-lift">
+                  <span className="block-process__badge">
+                    {step.badge || String(i + 1).padStart(2, '0')}
+                  </span>
+                  <h3 className="block-process__step-title">{step.title}</h3>
+                  {step.body ? <p>{step.body}</p> : null}
+                </li>
+              ))}
+            </ol>
+          </div>
+        )
+      }
       return (
-        <div className={`block-process${processDense ? ' block-process--compact' : ''}`}>
+        <div
+          className={`block-process${processDense ? ' block-process--compact' : ''}${layoutPreset === 'timeline' ? ' block-process--timeline' : ''}`}
+        >
           {block.sectionTitle ? (
             <h2 className="block-section__title">{block.sectionTitle}</h2>
           ) : null}
@@ -1211,12 +1506,20 @@ function renderBlock(
         block.sourceType === 'upload'
           ? block.uploadedVideoUrl?.trim() || block.url?.trim()
           : block.url?.trim()
-      if (!videoSource) {
-        return <p className="tma-muted">Add a video URL to this block in the CMS.</p>
-      }
-      const src = toVideoEmbedUrl(videoSource)
-      const useIframe = block.sourceType === 'upload' ? false : isLikelyEmbeddableVideoUrl(videoSource)
+      const useIframe =
+        block.sourceType === 'upload' || !videoSource ? false : isLikelyEmbeddableVideoUrl(videoSource)
+      const autoplay = block.autoplay === true
+      const muted = autoplay ? true : block.muted !== false
+      const loop = block.loop === true
+      const controls = block.controls !== false
+      const src = videoSource
+        ? useIframe
+          ? toVideoEmbedUrl(videoSource, { autoplay, muted, loop, controls })
+          : absoluteMediaUrl(videoSource) ?? videoSource
+        : ''
       const videoWidth = normalizeMediaWidth(block.width)
+      const layoutPreset = block.layoutPreset === 'split' ? 'split' : 'stacked'
+      const headlineCenter = block.headlineAlign === 'center'
       const videoStyle: CSSProperties = {
         ...mediaWidthStyle(videoWidth),
         ...mediaAlignStyle(block.mediaAlign),
@@ -1235,33 +1538,149 @@ function renderBlock(
       if (radius) nativeStyle.borderRadius = radius
       if (maxHeight) nativeStyle.maxHeight = maxHeight
       if (aspectRatio) nativeStyle.aspectRatio = aspectRatio
+      const poster = block.posterUrl ? (absoluteMediaUrl(block.posterUrl) ?? undefined) : undefined
+      const eyebrow = block.eyebrow?.trim()
+      const title = block.title?.trim()
+      const description = block.description?.trim()
+      const caption = block.caption?.trim()
+      const ctaLabel = block.ctaLabel?.trim()
+      const ctaHref = block.ctaHref?.trim()
+      if (!videoSource) {
+        return (
+          <div className={`block-video block-video--${layoutPreset} block-video--empty`} style={videoStyle}>
+            <div className={`block-video__copy${headlineCenter ? ' block-video__copy--center' : ''}`}>
+              {eyebrow ? <p className="block-video__eyebrow">{eyebrow}</p> : null}
+              {title ? <h2 className="block-section__title">{title}</h2> : null}
+              {description ? <p className="block-section__intro">{description}</p> : null}
+              <p className="tma-muted">Add a video URL or upload in the CMS to populate this showcase.</p>
+            </div>
+          </div>
+        )
+      }
       return (
         <div
-          className={`block-video${videoWidth === 'narrow' ? ' block-video--narrow' : ''}`}
+          className={`block-video block-video--${layoutPreset}${videoWidth === 'narrow' ? ' block-video--narrow' : ''}`}
           style={videoStyle}
         >
-          {block.title ? <h2 className="block-section__title">{block.title}</h2> : null}
-          {useIframe ? (
-            <div className="block-video__frame" style={frameStyle}>
-              <iframe
-                title={block.title || 'Video'}
-                src={src}
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                allowFullScreen
-                loading="lazy"
-              />
-            </div>
-          ) : (
-            <video
-              className="block-video__native"
-              controls
-              preload="metadata"
-              poster={block.posterUrl ? (absoluteMediaUrl(block.posterUrl) ?? undefined) : undefined}
-              style={nativeStyle}
-            >
-              <source src={src} />
-            </video>
-          )}
+          <div className={`block-video__copy${headlineCenter ? ' block-video__copy--center' : ''}`}>
+            {eyebrow ? <p className="block-video__eyebrow">{eyebrow}</p> : null}
+            {title ? <h2 className="block-section__title">{title}</h2> : null}
+            {description ? <p className="block-section__intro">{description}</p> : null}
+            {ctaLabel && ctaHref ? (
+              <p className="block-video__cta">
+                <CtaButton label={ctaLabel} href={ctaHref} variant="secondary" locale={locale} />
+              </p>
+            ) : null}
+          </div>
+          <div className="block-video__media">
+            {useIframe ? (
+              <div className="block-video__frame" style={frameStyle}>
+                <iframe
+                  title={title || eyebrow || 'Video showcase'}
+                  src={src}
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                  allowFullScreen
+                  loading="lazy"
+                />
+              </div>
+            ) : (
+              <video
+                className="block-video__native"
+                controls={controls}
+                muted={muted}
+                autoPlay={autoplay}
+                loop={loop}
+                playsInline
+                preload="metadata"
+                poster={poster}
+                style={nativeStyle}
+              >
+                <source src={src} />
+              </video>
+            )}
+            {caption ? <p className="block-video__caption">{caption}</p> : null}
+          </div>
+        </div>
+      )
+    }
+    case 'mediaGallery': {
+      const items =
+        block.items?.filter((item) => typeof item.imageUrl === 'string' && item.imageUrl.trim()) ?? []
+      if (items.length === 0) {
+        return <p className="tma-muted">Add gallery images in the CMS.</p>
+      }
+      const layoutPreset =
+        block.layoutPreset === 'grid' || block.layoutPreset === 'mosaic' ? block.layoutPreset : 'editorial'
+      return (
+        <div className={`block-media-gallery block-media-gallery--${layoutPreset}`}>
+          {block.eyebrow?.trim() ? <p className="block-media-gallery__eyebrow">{block.eyebrow.trim()}</p> : null}
+          {block.title?.trim() ? <h2 className="block-section__title">{block.title.trim()}</h2> : null}
+          {block.description?.trim() ? <p className="block-section__intro">{block.description.trim()}</p> : null}
+          <div className="block-media-gallery__grid">
+            {items.map((item, idx) => {
+              const src = absoluteMediaUrl(item.imageUrl!.trim()) ?? item.imageUrl!.trim()
+              const aspectRatio = normalizeAspectRatio(item.aspectRatio) ?? '4 / 5'
+              const href = item.linkHref?.trim()
+              if (!href) {
+                return (
+                  <figure
+                    key={item.id ?? idx}
+                    className="block-media-gallery__item tma-surface-lift"
+                    style={{ ['--gallery-aspect-ratio' as string]: aspectRatio } as CSSProperties}
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      className="block-media-gallery__image"
+                      src={src}
+                      alt={item.imageAlt?.trim() || item.caption?.trim() || 'Gallery image'}
+                      width={960}
+                      height={1200}
+                      loading="lazy"
+                    />
+                    {item.caption?.trim() ? <figcaption className="block-media-gallery__caption">{item.caption.trim()}</figcaption> : null}
+                  </figure>
+                )
+              }
+              const localizedHref = /^https?:\/\//i.test(href) ? href : localizePublicHref(href, locale)
+              return /^https?:\/\//i.test(localizedHref) ? (
+                <a key={item.id ?? idx} href={localizedHref} target="_blank" rel="noreferrer noopener" className="block-media-gallery__link">
+                  <figure
+                    className="block-media-gallery__item tma-surface-lift"
+                    style={{ ['--gallery-aspect-ratio' as string]: aspectRatio } as CSSProperties}
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      className="block-media-gallery__image"
+                      src={src}
+                      alt={item.imageAlt?.trim() || item.caption?.trim() || 'Gallery image'}
+                      width={960}
+                      height={1200}
+                      loading="lazy"
+                    />
+                    {item.caption?.trim() ? <figcaption className="block-media-gallery__caption">{item.caption.trim()}</figcaption> : null}
+                  </figure>
+                </a>
+              ) : (
+                <Link key={item.id ?? idx} href={localizedHref} className="block-media-gallery__link">
+                  <figure
+                    className="block-media-gallery__item tma-surface-lift"
+                    style={{ ['--gallery-aspect-ratio' as string]: aspectRatio } as CSSProperties}
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      className="block-media-gallery__image"
+                      src={src}
+                      alt={item.imageAlt?.trim() || item.caption?.trim() || 'Gallery image'}
+                      width={960}
+                      height={1200}
+                      loading="lazy"
+                    />
+                    {item.caption?.trim() ? <figcaption className="block-media-gallery__caption">{item.caption.trim()}</figcaption> : null}
+                  </figure>
+                </Link>
+              )
+            })}
+          </div>
         </div>
       )
     }

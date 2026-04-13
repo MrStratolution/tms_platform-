@@ -97,4 +97,35 @@ test.describe('public navigation and locale flows', () => {
     }))
     expect(overflow.scrollWidth, JSON.stringify(overflow.offenders, null, 2)).toBeLessThanOrEqual(overflow.innerWidth + 1)
   })
+
+  test('team and card sections switch to a rail when item counts overflow', async ({ page }) => {
+    await page.setViewportSize({ width: 1600, height: 1100 })
+    await page.goto('/de/about')
+    await dismissCookieBanner(page)
+
+    const teamSection = page.locator('.block-team')
+    await teamSection.scrollIntoViewIfNeeded()
+    await expect(teamSection.locator('.tma-card-rail__controls')).toBeVisible()
+    const teamViewport = teamSection.locator('.tma-card-rail__viewport--rail')
+    await expect(teamViewport).toBeVisible()
+    const next = teamSection.locator('.tma-card-rail__control').nth(1)
+    await expect(next).toBeEnabled()
+    const before = await teamViewport.evaluate((node) => node.scrollLeft)
+    await next.click()
+    await expect
+      .poll(() => teamViewport.evaluate((node) => node.scrollLeft))
+      .toBeGreaterThan(before)
+
+    await page.setViewportSize({ width: 390, height: 844 })
+    await page.goto('/de/about')
+    await dismissCookieBanner(page)
+    const mobileTeamViewport = page.locator('.block-team .tma-card-rail__viewport--rail')
+    await mobileTeamViewport.scrollIntoViewIfNeeded()
+    await expect(mobileTeamViewport).toBeVisible()
+    const mobileOverflow = await page.evaluate(() => ({
+      innerWidth: window.innerWidth,
+      scrollWidth: document.documentElement.scrollWidth,
+    }))
+    expect(mobileOverflow.scrollWidth).toBeLessThanOrEqual(mobileOverflow.innerWidth + 1)
+  })
 })

@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import {
   extractPageSurfaceFromDocument,
   mergePageSurfaceIntoDocument,
+  normalizePageBuilderDocument,
   type PageSurfaceFields,
 } from './pageSurfaceMerge'
 
@@ -96,5 +97,34 @@ describe('pageSurfaceMerge appearance', () => {
       emptySurface(),
     )
     expect(out.trackingOverrides).toBeUndefined()
+  })
+})
+
+describe('pageSurfaceMerge layout normalization', () => {
+  it('normalizes legacy manual case-study grids to explicit manual mode', () => {
+    const out = normalizePageBuilderDocument({
+      layout: [{ blockType: 'caseStudyGrid', studies: [62, 63, 64] }],
+    })
+    expect(out.layout).toEqual([
+      { blockType: 'caseStudyGrid', selectionMode: 'manual', studies: [62, 63, 64] },
+    ])
+  })
+
+  it('normalizes legacy automatic case-study grids and clears hidden study ids', () => {
+    const out = normalizePageBuilderDocument({
+      layout: [{ blockType: 'caseStudyGrid', studies: [] }],
+    })
+    expect(out.layout).toEqual([
+      { blockType: 'caseStudyGrid', selectionMode: 'automatic', studies: [] },
+    ])
+  })
+
+  it('clears stale selected ids when explicit automatic mode is chosen', () => {
+    const out = normalizePageBuilderDocument({
+      layout: [{ blockType: 'caseStudyGrid', selectionMode: 'automatic', studies: [1, 2, 3] }],
+    })
+    expect(out.layout).toEqual([
+      { blockType: 'caseStudyGrid', selectionMode: 'automatic', studies: [] },
+    ])
   })
 })

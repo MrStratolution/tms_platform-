@@ -8,6 +8,7 @@ import { requireConsoleJsonAuth } from '@/lib/console/apiAuth'
 import { createAuditLog, createPageRevision } from '@/lib/console/pageAudit'
 import { consoleUserCanEditCustomCss, userHasConsolePermission } from '@/lib/console/rbac'
 import { validatePageSlug } from '@/lib/cms/pageSlug'
+import { normalizePageBuilderDocument } from '@/lib/cms/pageSurfaceMerge'
 import { queueLocalesForPage } from '@/lib/queuePageLocalizations'
 import type { Page } from '@/types/cms'
 
@@ -149,6 +150,9 @@ export async function PATCH(request: Request, ctx: RouteContext) {
     const d = { ...document } as Record<string, unknown>
     delete d.customCss
     document = d
+  }
+  if (document !== undefined) {
+    document = normalizePageBuilderDocument(document as Record<string, unknown>)
   }
   if (document !== undefined) update.document = document
   if (title !== undefined) update.title = title

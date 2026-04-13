@@ -193,6 +193,10 @@ async function maybeDeleteDemoRows(db: CustomDb): Promise<void> {
   await db.delete(cmsCaseStudies).where(
     inArray(cmsCaseStudies.slug, ['demo-atlas-reset', 'demo-helix-demand', 'demo-northgate-trust']),
   )
+  await db
+    .update(cmsCaseStudies)
+    .set({ active: false })
+    .where(inArray(cmsCaseStudies.slug, ['testnkcndk']))
 
   const downloadRows = await db
     .select({ id: cmsDownloadAssets.id })
@@ -282,6 +286,7 @@ async function ensureMedia(db: CustomDb): Promise<Record<string, MediaRow>> {
     ['demo/placeholders/avatar-alina.svg', 'avatar-alina.svg', 'Portrait of Alina', 'demo/people'],
     ['demo/placeholders/avatar-daniel.svg', 'avatar-daniel.svg', 'Portrait of Daniel', 'demo/people'],
     ['demo/placeholders/avatar-leonie.svg', 'avatar-leonie.svg', 'Portrait of Leonie', 'demo/people'],
+    ['demo/placeholders/avatar-mira.svg', 'avatar-mira.svg', 'Portrait of Mira', 'demo/people'],
     ['demo/placeholders/video-poster.svg', 'video-poster.svg', 'Editorial video poster', 'demo/video'],
   ] as const
 
@@ -499,6 +504,10 @@ async function ensureServices(db: CustomDb) {
       .returning({ id: cmsServices.id })
     out[def.slug] = row!.id
   }
+  await db
+    .update(cmsCaseStudies)
+    .set({ active: false, updatedAt: new Date() })
+    .where(inArray(cmsCaseStudies.slug, ['testnkcndk']))
   return out
 }
 
@@ -715,6 +724,15 @@ async function ensureTeam(db: CustomDb, media: Record<string, MediaRow>) {
       bio: null,
       photoMediaId: media['demo/placeholders/avatar-leonie.svg']!.id,
       sortOrder: 30,
+      linkedinUrl: 'https://www.linkedin.com/company/openai',
+    },
+    {
+      key: 'mira-sen',
+      name: 'Mira Sen',
+      role: 'Brand Strategy',
+      bio: null,
+      photoMediaId: media['demo/placeholders/avatar-mira.svg']!.id,
+      sortOrder: 40,
       linkedinUrl: 'https://www.linkedin.com/company/openai',
     },
   ] as const
@@ -1788,10 +1806,58 @@ function buildPageDocuments(ctx: {
             blockType: 'quoteBand',
             id: 'home-strip',
             quote: 'Where Creativity Meets Technology',
-            attribution: 'The Modesty Argument',
-            roleLine: 'Creative-Tech Studio',
             variant: 'border',
+            displayMode: 'statementMarquee',
+            statementText: 'Where Creativity Meets Technology',
+            marqueeSpeedPreset: 'normal',
+            pauseOnHover: true,
             revealMode: 'subtle',
+          },
+          {
+            blockType: 'video',
+            id: 'home-video-showcase',
+            eyebrow: 'Studio reel',
+            title: 'A clearer view of brand systems, launches and digital storytelling in motion',
+            description:
+              'Use the upgraded video showcase to frame how strategy, design and technical execution come together before the supporting grids begin.',
+            caption: 'Poster-first playback keeps the section calm and premium until the user chooses to engage.',
+            sourceType: 'embed',
+            url: 'https://www.youtube.com/watch?v=aqz-KE-bpKQ',
+            posterUrl: videoPosterUrl,
+            ctaLabel: 'Projekt besprechen',
+            ctaHref: '/contact',
+            autoplay: false,
+            muted: true,
+            loop: false,
+            controls: true,
+            layoutPreset: 'split',
+            headlineAlign: 'start',
+            width: 'full',
+            aspectRatio: 'cinema',
+            mediaAlign: 'center',
+            borderRadius: 'md',
+          },
+          {
+            blockType: 'featuredProjectSpotlight',
+            id: 'home-featured-project',
+            eyebrow: 'Featured project',
+            title: 'AURELIA',
+            description:
+              'Ein flagship Projekt-Frame fur die Homepage, bevor die kuratierten Karten folgen. So bekommt ein zentrales Projekt mehr editoriale Gewichtung als in einer reinen Grid-Darstellung.',
+            caseStudyId: ctx.caseStudyIds['demo-atlas-reset'],
+            stats: [
+              { id: 'home-spotlight-stat-1', value: '12', suffix: 'w', label: 'Strategie bis Launch' },
+              { id: 'home-spotlight-stat-2', value: '3', label: 'Kern-Disziplinen' },
+              { id: 'home-spotlight-stat-3', value: '1', label: 'Klare digitale Argumentation' },
+            ],
+            quote: 'Ein klares Flagship-Projekt hilft der Seite, Haltung und Qualitat fruher sichtbar zu machen.',
+            quoteAttribution: 'The Modesty Argument',
+            ctaLabel: 'Projekt ansehen',
+            ctaHref: '/work/demo-atlas-reset',
+            secondaryCtaLabel: 'Kontakt aufnehmen',
+            secondaryCtaHref: '/contact',
+            layoutPreset: 'split',
+            mediaMode: 'videoPoster',
           },
           {
             blockType: 'iconRow',
@@ -1892,6 +1958,7 @@ function buildPageDocuments(ctx: {
           {
             blockType: 'caseStudyGrid',
             id: 'selected-work',
+            selectionMode: 'manual',
             sectionTitle: 'Selected Work',
             intro:
               'Ein Blick auf ausgewahlte Arbeiten, in denen Strategie, Gestaltung und technische Umsetzung zusammenfinden.',
@@ -1902,6 +1969,16 @@ function buildPageDocuments(ctx: {
             ],
             ctaLabel: 'Mehr entdecken',
             ctaHref: '/work',
+          },
+          {
+            blockType: 'testimonialSlider',
+            id: 'home-testimonials',
+            sectionIntro:
+              'Ausgewahlte Stimmen aus Projekten, in denen Strategie, Design und technische Umsetzung gemeinsam gedacht wurden.',
+            layoutPreset: 'spotlight',
+            showPortraits: true,
+            showLogos: true,
+            testimonials: ctx.testimonials,
           },
           {
             blockType: 'textMedia',
@@ -1978,10 +2055,58 @@ function buildPageDocuments(ctx: {
             blockType: 'quoteBand',
             id: 'home-strip',
             quote: 'Where Creativity Meets Technology',
-            attribution: 'The Modesty Argument',
-            roleLine: 'Creative-tech studio',
             variant: 'border',
+            displayMode: 'statementMarquee',
+            statementText: 'Where Creativity Meets Technology',
+            marqueeSpeedPreset: 'normal',
+            pauseOnHover: true,
             revealMode: 'subtle',
+          },
+          {
+            blockType: 'video',
+            id: 'home-video-showcase',
+            eyebrow: 'Studio reel',
+            title: 'A clearer view of brand systems, launches and digital storytelling in motion',
+            description:
+              'Use the upgraded video showcase to frame how strategy, design and technical execution come together before the supporting grids begin.',
+            caption: 'Poster-first playback keeps the section calm and premium until the user chooses to engage.',
+            sourceType: 'embed',
+            url: 'https://www.youtube.com/watch?v=aqz-KE-bpKQ',
+            posterUrl: videoPosterUrl,
+            ctaLabel: 'Discuss a project',
+            ctaHref: '/contact',
+            autoplay: false,
+            muted: true,
+            loop: false,
+            controls: true,
+            layoutPreset: 'split',
+            headlineAlign: 'start',
+            width: 'full',
+            aspectRatio: 'cinema',
+            mediaAlign: 'center',
+            borderRadius: 'md',
+          },
+          {
+            blockType: 'featuredProjectSpotlight',
+            id: 'home-featured-project',
+            eyebrow: 'Featured project',
+            title: 'AURELIA',
+            description:
+              'A flagship project frame for the homepage before the curated cards begin. This gives one central project more editorial weight than a pure grid alone can offer.',
+            caseStudyId: ctx.caseStudyIds['demo-atlas-reset'],
+            stats: [
+              { id: 'home-spotlight-stat-1', value: '12', suffix: 'w', label: 'Strategy to launch' },
+              { id: 'home-spotlight-stat-2', value: '3', label: 'Core delivery streams' },
+              { id: 'home-spotlight-stat-3', value: '1', label: 'Clear digital argument' },
+            ],
+            quote: 'One clear flagship project helps the page signal quality and intent earlier.',
+            quoteAttribution: 'The Modesty Argument',
+            ctaLabel: 'View project',
+            ctaHref: '/work/demo-atlas-reset',
+            secondaryCtaLabel: 'Get in touch',
+            secondaryCtaHref: '/contact',
+            layoutPreset: 'split',
+            mediaMode: 'videoPoster',
           },
           {
             blockType: 'iconRow',
@@ -2082,6 +2207,7 @@ function buildPageDocuments(ctx: {
           {
             blockType: 'caseStudyGrid',
             id: 'selected-work',
+            selectionMode: 'manual',
             sectionTitle: 'Selected Work',
             intro:
               'A preview of selected work where strategy, design and technical execution meet.',
@@ -2092,6 +2218,16 @@ function buildPageDocuments(ctx: {
             ],
             ctaLabel: 'Explore more',
             ctaHref: '/work',
+          },
+          {
+            blockType: 'testimonialSlider',
+            id: 'home-testimonials',
+            sectionIntro:
+              'Selected voices from projects where strategy, design and technical execution had to work as one system.',
+            layoutPreset: 'spotlight',
+            showPortraits: true,
+            showLogos: true,
+            testimonials: ctx.testimonials,
           },
           {
             blockType: 'textMedia',
@@ -2175,9 +2311,12 @@ function buildPageDocuments(ctx: {
             id: 'about-mission',
             quote:
               'Wir glauben an digitale Arbeit, die nicht nur funktioniert, sondern kulturell und strategisch Resonanz erzeugt.',
-            attribution: 'The Modesty Argument',
-            roleLine: 'Inspiring Generations',
             variant: 'border',
+            displayMode: 'statementMarquee',
+            statementText:
+              'Digitale Arbeit sollte kulturell und strategisch Resonanz erzeugen, nicht nur funktionieren.',
+            marqueeSpeedPreset: 'slow',
+            pauseOnHover: true,
           },
           {
             blockType: 'iconRow',
@@ -2199,10 +2338,34 @@ function buildPageDocuments(ctx: {
             sectionTitle: 'Studio Team',
             intro:
               'Ein kleines, multidisziplinres Team mit kreativer und technischer Perspektive zwischen Munchen und Indien.',
-            members: [
-              ctx.teamIds['alina-brandt'],
-              ctx.teamIds['daniel-noor'],
-              ctx.teamIds['leonie-kraft'],
+            members: [],
+          },
+          {
+            blockType: 'mediaGallery',
+            id: 'about-gallery',
+            eyebrow: 'Studio process',
+            title: 'Ein Blick auf Material, Systeme und kreative Arbeitsweisen',
+            description:
+              'Die Galerie gibt der About-Seite mehr editoriale Dichte und zeigt, wie Studioarbeit zwischen Strategie, Oberflachen, Assets und Systemdenken aussieht.',
+            layoutPreset: 'editorial',
+            items: [
+              { id: 'about-gallery-1', imageUrl: positioningUrl, imageAlt: 'Studio visual', caption: 'Strategische Richtung und Markenlogik', aspectRatio: 'portrait' },
+              { id: 'about-gallery-2', imageUrl: demandUrl, imageAlt: 'Campaign visual', caption: 'Kampagnen- und Nachfrage-Systeme', aspectRatio: 'landscape' },
+              { id: 'about-gallery-3', imageUrl: revopsUrl, imageAlt: 'System visual', caption: 'Technische und operative Klarheit', aspectRatio: 'square' },
+            ],
+          },
+          {
+            blockType: 'process',
+            id: 'about-timeline',
+            sectionTitle: 'Wie wir zusammenarbeiten',
+            intro:
+              'Ein kleiner Ablaufrahmen fur Projekte, die Strategie, Gestaltung und Umsetzung gemeinsam denken mussen.',
+            layoutPreset: 'timeline',
+            steps: [
+              { id: 'about-timeline-1', badge: 'Listen', title: 'Listen', body: 'Kontext, Ambition, Marke und reale Restriktionen zuerst verstehen.' },
+              { id: 'about-timeline-2', badge: 'Frame', title: 'Frame', body: 'Richtung, Systeme und narrative Prioritaten mit Klarheit formen.' },
+              { id: 'about-timeline-3', badge: 'Build', title: 'Build', body: 'Gestaltung und technische Umsetzung in einem sauberen System verbinden.' },
+              { id: 'about-timeline-4', badge: 'Evolve', title: 'Evolve', body: 'Mit echten Signalen iterieren statt nur auf Launch-Momente zu optimieren.' },
             ],
           },
           {
@@ -2260,9 +2423,12 @@ function buildPageDocuments(ctx: {
             id: 'about-mission',
             quote:
               'We believe in digital work that does more than function. It should resonate culturally and strategically.',
-            attribution: 'The Modesty Argument',
-            roleLine: 'Inspiring Generations',
             variant: 'border',
+            displayMode: 'statementMarquee',
+            statementText:
+              'Digital work should resonate culturally and strategically, not merely function.',
+            marqueeSpeedPreset: 'slow',
+            pauseOnHover: true,
           },
           {
             blockType: 'iconRow',
@@ -2284,10 +2450,34 @@ function buildPageDocuments(ctx: {
             sectionTitle: 'Studio Team',
             intro:
               'A small multidisciplinary studio team bringing creative and technical perspectives together between Munich and India.',
-            members: [
-              ctx.teamIds['alina-brandt'],
-              ctx.teamIds['daniel-noor'],
-              ctx.teamIds['leonie-kraft'],
+            members: [],
+          },
+          {
+            blockType: 'mediaGallery',
+            id: 'about-gallery',
+            eyebrow: 'Studio process',
+            title: 'A closer look at material, systems and creative working methods',
+            description:
+              'The gallery gives the About page more editorial density and shows how the studio works across strategy, interfaces, assets and system thinking.',
+            layoutPreset: 'editorial',
+            items: [
+              { id: 'about-gallery-1', imageUrl: positioningUrl, imageAlt: 'Studio visual', caption: 'Strategic direction and brand logic', aspectRatio: 'portrait' },
+              { id: 'about-gallery-2', imageUrl: demandUrl, imageAlt: 'Campaign visual', caption: 'Campaign and demand systems', aspectRatio: 'landscape' },
+              { id: 'about-gallery-3', imageUrl: revopsUrl, imageAlt: 'System visual', caption: 'Technical and operational clarity', aspectRatio: 'square' },
+            ],
+          },
+          {
+            blockType: 'process',
+            id: 'about-timeline',
+            sectionTitle: 'How we collaborate',
+            intro:
+              'A lightweight delivery frame for projects where strategy, design and implementation must work together.',
+            layoutPreset: 'timeline',
+            steps: [
+              { id: 'about-timeline-1', badge: 'Listen', title: 'Listen', body: 'Understand context, ambition, brand and real-world constraints first.' },
+              { id: 'about-timeline-2', badge: 'Frame', title: 'Frame', body: 'Shape direction, systems and narrative priorities with clarity.' },
+              { id: 'about-timeline-3', badge: 'Build', title: 'Build', body: 'Connect design and technical execution inside one clean system.' },
+              { id: 'about-timeline-4', badge: 'Evolve', title: 'Evolve', body: 'Iterate from real signals instead of optimizing only for launch moments.' },
             ],
           },
           {
@@ -2349,16 +2539,56 @@ function buildPageDocuments(ctx: {
             backgroundEffect: 'glass',
           },
           {
+            blockType: 'featuredProjectSpotlight',
+            id: 'work-spotlight',
+            eyebrow: 'Flagship case study',
+            title: 'AURELIA',
+            description:
+              'Ein einzelnes Flagship-Projekt gibt der Work-Seite mehr editoriale Richtung, bevor die automatische Projektbibliothek folgt.',
+            caseStudyId: ctx.caseStudyIds['demo-atlas-reset'],
+            stats: [
+              { id: 'work-spotlight-stat-1', value: '3', label: 'Disziplinen im Kernsystem' },
+              { id: 'work-spotlight-stat-2', value: '1', label: 'Editoriale Markenerzahlung' },
+            ],
+            ctaLabel: 'Projekt ansehen',
+            ctaHref: '/work/demo-atlas-reset',
+            secondaryCtaLabel: 'Kontakt aufnehmen',
+            secondaryCtaHref: '/contact',
+            layoutPreset: 'immersive',
+            mediaMode: 'videoPoster',
+          },
+          {
             blockType: 'caseStudyGrid',
             id: 'work-grid',
+            selectionMode: 'automatic',
             sectionTitle: 'Featured Work',
             intro:
               'Kuratiert aus unserer aktuellen Bibliothek: Arbeiten mit Fokus auf Identitat, digitale Produkte, Kampagnen und immersive Markenerlebnisse.',
-            studies: [
-              ctx.caseStudyIds['demo-atlas-reset'],
-              ctx.caseStudyIds['demo-helix-demand'],
-              ctx.caseStudyIds['demo-northgate-trust'],
+            studies: [],
+          },
+          {
+            blockType: 'mediaGallery',
+            id: 'work-gallery',
+            eyebrow: 'Project details',
+            title: 'Systeme, Assets und digitale Oberflachen im Detail',
+            description:
+              'Diese Galerie schafft mehr Tiefe zwischen Flagship-Projekt und Work-Grid, ohne eine zweite Projektstruktur einzufuhren.',
+            layoutPreset: 'mosaic',
+            items: [
+              { id: 'work-gallery-1', imageUrl: auditUrl, imageAlt: 'Campaign system detail', caption: 'Editorial system layer', aspectRatio: 'portrait' },
+              { id: 'work-gallery-2', imageUrl: conversionUrl, imageAlt: 'Interface detail', caption: 'Interface and experience framing', aspectRatio: 'landscape' },
+              { id: 'work-gallery-3', imageUrl: demandUrl, imageAlt: 'Launch asset detail', caption: 'Campaign and launch rhythm', aspectRatio: 'square' },
             ],
+          },
+          {
+            blockType: 'testimonialSlider',
+            id: 'work-testimonials',
+            sectionIntro:
+              'Ausgewahlte Stimmen aus Arbeiten, in denen Richtung, Qualitat und technische Umsetzung gleichzeitig sichtbar sein mussten.',
+            layoutPreset: 'spotlight',
+            showPortraits: true,
+            showLogos: true,
+            testimonials: ctx.testimonials,
           },
           {
             blockType: 'promoBanner',
@@ -2410,16 +2640,56 @@ function buildPageDocuments(ctx: {
             backgroundEffect: 'glass',
           },
           {
+            blockType: 'featuredProjectSpotlight',
+            id: 'work-spotlight',
+            eyebrow: 'Flagship case study',
+            title: 'AURELIA',
+            description:
+              'A single flagship project gives the Work page stronger editorial direction before the automatic case-study library begins.',
+            caseStudyId: ctx.caseStudyIds['demo-atlas-reset'],
+            stats: [
+              { id: 'work-spotlight-stat-1', value: '3', label: 'Core disciplines' },
+              { id: 'work-spotlight-stat-2', value: '1', label: 'Editorial brand narrative' },
+            ],
+            ctaLabel: 'View project',
+            ctaHref: '/work/demo-atlas-reset',
+            secondaryCtaLabel: 'Get in touch',
+            secondaryCtaHref: '/contact',
+            layoutPreset: 'immersive',
+            mediaMode: 'videoPoster',
+          },
+          {
             blockType: 'caseStudyGrid',
             id: 'work-grid',
+            selectionMode: 'automatic',
             sectionTitle: 'Featured Work',
             intro:
               'Curated from the current library: work focused on identity, digital products, campaigns and immersive brand experiences.',
-            studies: [
-              ctx.caseStudyIds['demo-atlas-reset'],
-              ctx.caseStudyIds['demo-helix-demand'],
-              ctx.caseStudyIds['demo-northgate-trust'],
+            studies: [],
+          },
+          {
+            blockType: 'mediaGallery',
+            id: 'work-gallery',
+            eyebrow: 'Project details',
+            title: 'Systems, assets and digital surfaces in closer view',
+            description:
+              'This gallery adds depth between the flagship feature and the wider work grid without introducing a second project system.',
+            layoutPreset: 'mosaic',
+            items: [
+              { id: 'work-gallery-1', imageUrl: auditUrl, imageAlt: 'Campaign system detail', caption: 'Editorial system layer', aspectRatio: 'portrait' },
+              { id: 'work-gallery-2', imageUrl: conversionUrl, imageAlt: 'Interface detail', caption: 'Interface and experience framing', aspectRatio: 'landscape' },
+              { id: 'work-gallery-3', imageUrl: demandUrl, imageAlt: 'Launch asset detail', caption: 'Campaign and launch rhythm', aspectRatio: 'square' },
             ],
+          },
+          {
+            blockType: 'testimonialSlider',
+            id: 'work-testimonials',
+            sectionIntro:
+              'Selected voices from work where direction, quality and technical execution had to be visible at the same time.',
+            layoutPreset: 'spotlight',
+            showPortraits: true,
+            showLogos: true,
+            testimonials: ctx.testimonials,
           },
           {
             blockType: 'promoBanner',
@@ -3200,6 +3470,7 @@ function buildPageDocuments(ctx: {
             sectionTitle: 'How We Work',
             intro:
               'Unser Ablauf ist klar, kollaborativ und auf hochwertige digitale Ergebnisse ausgerichtet.',
+            layoutPreset: 'timeline',
             steps: [
               {
                 id: 'services-step-1',
@@ -3230,6 +3501,30 @@ function buildPageDocuments(ctx: {
                   'Wir bringen die Arbeit in reale Nutzung und schaffen eine Grundlage fur Wachstum und Weiterentwicklung.',
               },
             ],
+          },
+          {
+            blockType: 'video',
+            id: 'services-video',
+            eyebrow: 'Studio showcase',
+            title: 'Zeigen, wie Strategie, Systeme und digitale Umsetzung zusammen wirken',
+            description:
+              'Die Services-Seite profitiert von einem Video-Frame zwischen Methodik und CTA, um Richtung, Stimmung und Delivery-Qualitat sichtbarer zu machen.',
+            caption: 'Poster, Kontext und CTA bleiben vollstandig CMS-editierbar.',
+            sourceType: 'embed',
+            url: 'https://www.youtube.com/watch?v=aqz-KE-bpKQ',
+            posterUrl: videoPosterUrl,
+            ctaLabel: 'Projekt starten',
+            ctaHref: '/contact',
+            autoplay: false,
+            muted: true,
+            loop: false,
+            controls: true,
+            layoutPreset: 'split',
+            headlineAlign: 'start',
+            width: 'full',
+            aspectRatio: 'cinema',
+            mediaAlign: 'center',
+            borderRadius: 'md',
           },
           {
             blockType: 'promoBanner',
@@ -3383,6 +3678,7 @@ function buildPageDocuments(ctx: {
             sectionTitle: 'How We Work',
             intro:
               'Our workflow is clear, collaborative and designed for high-quality digital outcomes.',
+            layoutPreset: 'timeline',
             steps: [
               {
                 id: 'services-step-1',
@@ -3413,6 +3709,30 @@ function buildPageDocuments(ctx: {
                   'We bring the work into real use and create a foundation for growth and iteration.',
               },
             ],
+          },
+          {
+            blockType: 'video',
+            id: 'services-video',
+            eyebrow: 'Studio showcase',
+            title: 'Show how strategy, systems and digital execution move together',
+            description:
+              'The services page benefits from a video frame between methodology and the CTA so direction, atmosphere and delivery quality become more tangible.',
+            caption: 'Poster, context and CTA remain fully editable in the CMS.',
+            sourceType: 'embed',
+            url: 'https://www.youtube.com/watch?v=aqz-KE-bpKQ',
+            posterUrl: videoPosterUrl,
+            ctaLabel: 'Start project',
+            ctaHref: '/contact',
+            autoplay: false,
+            muted: true,
+            loop: false,
+            controls: true,
+            layoutPreset: 'split',
+            headlineAlign: 'start',
+            width: 'full',
+            aspectRatio: 'cinema',
+            mediaAlign: 'center',
+            borderRadius: 'md',
           },
           {
             blockType: 'promoBanner',
@@ -3640,6 +3960,7 @@ function buildPageDocuments(ctx: {
           },
           {
             blockType: 'caseStudyGrid',
+            selectionMode: 'automatic',
             sectionTitle: 'Attribution snapshots',
             studies: [],
           },
@@ -3677,6 +3998,7 @@ function buildPageDocuments(ctx: {
           },
           {
             blockType: 'caseStudyGrid',
+            selectionMode: 'automatic',
             sectionTitle: 'Attribution snapshots',
             studies: [],
           },
@@ -3908,9 +4230,17 @@ function buildPageDocuments(ctx: {
         layout: [
           {
             blockType: 'video',
+            eyebrow: 'Founder reel',
             title: 'Video placeholder',
+            description: 'Seeded example for the upgraded video showcase block with poster, caption, and CTA support.',
+            caption: 'Replace with a founder narrative, campaign reel, or launch walkthrough.',
             url: 'https://www.youtube.com/watch?v=aqz-KE-bpKQ',
             posterUrl: videoPosterUrl,
+            ctaLabel: 'Discovery starten',
+            ctaHref: '#founder-form',
+            muted: true,
+            controls: true,
+            layoutPreset: 'stacked',
             width: 'wide',
             mediaAlign: 'center',
             aspectRatio: 'cinema',
@@ -3946,9 +4276,17 @@ function buildPageDocuments(ctx: {
         layout: [
           {
             blockType: 'video',
+            eyebrow: 'Founder reel',
             title: 'Video placeholder',
+            description: 'Seeded example for the upgraded video showcase block with poster, caption, and CTA support.',
+            caption: 'Replace with a founder narrative, campaign reel, or launch walkthrough.',
             url: 'https://www.youtube.com/watch?v=aqz-KE-bpKQ',
             posterUrl: videoPosterUrl,
+            ctaLabel: 'Start discovery',
+            ctaHref: '#founder-form',
+            muted: true,
+            controls: true,
+            layoutPreset: 'stacked',
             width: 'wide',
             mediaAlign: 'center',
             aspectRatio: 'cinema',
@@ -4017,9 +4355,25 @@ function buildPageDocuments(ctx: {
             backgroundEffect: 'glass',
           },
           {
+            blockType: 'testimonialSlider',
+            id: 'contact-trust',
+            sectionIntro:
+              'Vertrauen entsteht fruh im Kontakt. Deshalb sollte die Kontaktseite nicht nur ein Formular, sondern auch soziale Evidenz zeigen.',
+            layoutPreset: 'spotlight',
+            showPortraits: true,
+            showLogos: true,
+            testimonials: ctx.testimonials,
+          },
+          {
             id: 'contact-form',
             blockType: 'form',
             formConfig: ctx.formIds['demo-contact'],
+            width: 'full',
+          },
+          {
+            blockType: 'booking',
+            id: 'contact-booking',
+            bookingProfile: ctx.bookingIds['demo-strategy-call'],
             width: 'full',
           },
           {
@@ -4136,9 +4490,25 @@ function buildPageDocuments(ctx: {
             backgroundEffect: 'glass',
           },
           {
+            blockType: 'testimonialSlider',
+            id: 'contact-trust',
+            sectionIntro:
+              'Trust should show up early on the contact page, not only through a form but through real social proof.',
+            layoutPreset: 'spotlight',
+            showPortraits: true,
+            showLogos: true,
+            testimonials: ctx.testimonials,
+          },
+          {
             id: 'contact-form',
             blockType: 'form',
             formConfig: ctx.formIds['demo-contact'],
+            width: 'full',
+          },
+          {
+            blockType: 'booking',
+            id: 'contact-booking',
+            bookingProfile: ctx.bookingIds['demo-strategy-call'],
             width: 'full',
           },
           {

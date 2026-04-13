@@ -16,10 +16,19 @@ export function TestimonialSliderPicker(props: {
   const raw = Array.isArray(o.testimonials) ? o.testimonials : []
   const ids = raw.filter((x): x is number => typeof x === 'number' && Number.isFinite(x))
 
-  const [rows, setRows] = useState<{ id: number; author: string; quote: string; active: boolean }[]>(
-    [],
-  )
+  const [rows, setRows] = useState<{
+    id: number
+    author: string
+    company?: string | null
+    quote: string
+    active: boolean
+    hasPhoto?: boolean
+    hasLogo?: boolean
+  }[]>([])
   const [err, setErr] = useState<string | null>(null)
+  const layoutPreset = o.layoutPreset === 'grid' ? 'grid' : 'spotlight'
+  const showPortraits = o.showPortraits !== false
+  const showLogos = o.showLogos !== false
 
   useEffect(() => {
     let cancelled = false
@@ -28,7 +37,15 @@ export function TestimonialSliderPicker(props: {
         const res = await fetch('/api/console/testimonials', { credentials: 'same-origin' })
         const data = await readResponseJson<{
           ok?: boolean
-          testimonials?: { id: number; author: string; quote: string; active: boolean }[]
+          testimonials?: {
+            id: number
+            author: string
+            company?: string | null
+            quote: string
+            active: boolean
+            hasPhoto?: boolean
+            hasLogo?: boolean
+          }[]
           error?: string
         }>(res)
         if (cancelled) return
@@ -58,22 +75,72 @@ export function TestimonialSliderPicker(props: {
 
   return (
     <div className="tma-console-block-fields">
+      <label className="tma-console-label">
+        Layout
+        <select
+          className={selectClass}
+          value={layoutPreset}
+          onChange={(e) => set({ layoutPreset: e.target.value })}
+          disabled={disabled}
+        >
+          <option value="spotlight">Scrolling cards</option>
+          <option value="grid">Simple grid</option>
+        </select>
+      </label>
+      <label className="tma-console-label">
+        Section intro (optional)
+        <textarea
+          className={selectClass}
+          rows={2}
+          value={String(o.sectionIntro ?? '')}
+          onChange={(e) => set({ sectionIntro: e.target.value })}
+          disabled={disabled}
+        />
+      </label>
+      <label className="tma-console-label" style={{ display: 'flex', gap: '0.55rem', alignItems: 'center' }}>
+        <input
+          type="checkbox"
+          checked={showPortraits}
+          onChange={(e) => set({ showPortraits: e.target.checked })}
+          disabled={disabled}
+        />
+        Show testimonial portraits when available
+      </label>
+      <label className="tma-console-label" style={{ display: 'flex', gap: '0.55rem', alignItems: 'center' }}>
+        <input
+          type="checkbox"
+          checked={showLogos}
+          onChange={(e) => set({ showLogos: e.target.checked })}
+          disabled={disabled}
+        />
+        Show company logos or names when available
+      </label>
       <p className="tma-console-block-fields-hint">
-        Reference rows from <strong>Testimonials</strong> in the console. Order matches the public
-        slider. Inline testimonial objects in JSON still work; numeric ids load from the library.
+        Choose saved rows from <strong>Libraries → Testimonials</strong>. Order matches the public
+        layout. Use <strong>Scrolling cards</strong> for the cleaner horizontal section style.
       </p>
       {err ? <p className="tma-console-error">{err}</p> : null}
       {ids.length === 0 ? (
-        <p className="tma-console-lead">No library ids yet — add below or keep inline objects in raw JSON.</p>
+        <p className="tma-console-lead">No testimonials selected yet.</p>
       ) : (
         <ol className="tma-console-lead" style={{ paddingLeft: '1.25rem' }}>
           {ids.map((id, idx) => {
             const meta = rows.find((r) => r.id === id)
             return (
               <li key={`${id}-${idx}`} style={{ marginBottom: '0.35rem' }}>
-                <strong>#{id}</strong>
-                {meta ? ` — ${meta.author}` : ''}
+                <strong>{meta?.author ?? `Testimonial #${id}`}</strong>
+                {meta?.company?.trim() ? ` — ${meta.company.trim()}` : ''}
+                {meta?.hasLogo ? ' · logo' : ''}
+                {meta?.hasPhoto ? ' · portrait' : ''}
                 {!meta?.active ? ' (inactive)' : ''}
+                {meta ? (
+                  <a
+                    href={`/console/testimonials/${id}`}
+                    style={{ marginLeft: '0.5rem', color: 'var(--tma-lime)' }}
+                  >
+                    Edit
+                  </a>
+                ) : null}
                 <button
                   type="button"
                   className="tma-console-btn-danger tma-console-btn-danger--small"
@@ -89,7 +156,7 @@ export function TestimonialSliderPicker(props: {
         </ol>
       )}
       <label className="tma-console-label">
-        Add testimonial by id
+        Add testimonial
         <select
           className={selectClass}
           value=""
@@ -103,7 +170,10 @@ export function TestimonialSliderPicker(props: {
           <option value="">Choose…</option>
           {rows.map((r) => (
             <option key={r.id} value={String(r.id)}>
-              #{r.id} — {r.author.slice(0, 48)}
+              {r.author.slice(0, 48)}
+              {r.company?.trim() ? ` — ${r.company.trim().slice(0, 36)}` : ''}
+              {r.hasLogo ? ' · logo' : ''}
+              {r.hasPhoto ? ' · portrait' : ''}
               {!r.active ? ' (inactive)' : ''}
             </option>
           ))}
@@ -166,8 +236,8 @@ export function FaqLibraryPicker(props: {
   return (
     <div className="tma-console-block-fields">
       <p className="tma-console-block-fields-hint">
-        When you add at least one library id below, the public page uses <strong>FAQ entries</strong>{' '}
-        in this order and ignores inline items for that block. Clear all ids to use inline Q&amp;A only.
+        When you choose FAQ entries below, the public page uses those saved rows in this order.
+        Clear the list to manage questions directly inside this section.
       </p>
       {useLibrary ? (
         <p className="tma-console-env-warning" role="status">
@@ -227,7 +297,7 @@ export function FaqLibraryPicker(props: {
           onClick={() => set({ faqEntryIds: [] })}
           disabled={disabled}
         >
-          Clear library ids (use inline items only)
+          Clear selected FAQ entries
         </button>
       ) : null}
     </div>
@@ -317,6 +387,12 @@ export function CaseStudyGridPicker(props: {
   const { o, set, disabled } = props
   const raw = Array.isArray(o.studies) ? o.studies : []
   const ids = raw.filter((x): x is number => typeof x === 'number' && Number.isFinite(x))
+  const selectionMode =
+    o.selectionMode === 'manual' || o.selectionMode === 'automatic'
+      ? o.selectionMode
+      : ids.length > 0
+        ? 'manual'
+        : 'automatic'
 
   const [rows, setRows] = useState<
     { id: number; title: string; slug: string; active: boolean }[]
@@ -358,59 +434,231 @@ export function CaseStudyGridPicker(props: {
     set({ studies: ids.filter((_, i) => i !== idx) })
   }
 
+  const inactiveSelectedIds = ids.filter((id) => {
+    const meta = rows.find((row) => row.id === id)
+    return meta != null && meta.active === false
+  })
+  const missingSelectedIds = ids.filter((id) => !rows.some((row) => row.id === id))
+  const staleSelectedIds = [...inactiveSelectedIds, ...missingSelectedIds]
+
   return (
     <div className="tma-console-block-fields">
       <p className="tma-console-block-fields-hint">
-        Reference rows from <strong>Libraries → Case Studies</strong>. The public section shows
-        them in this order.
+        Choose whether this section is manually curated or automatically filled from
+        <strong> Libraries → Case Studies</strong>.
       </p>
-      {err ? <p className="tma-console-error">{err}</p> : null}
-      {ids.length === 0 ? (
-        <p className="tma-console-lead">No case studies selected yet.</p>
-      ) : (
-        <ol className="tma-console-lead" style={{ paddingLeft: '1.25rem' }}>
-          {ids.map((id, idx) => {
-            const meta = rows.find((r) => r.id === id)
-            return (
-              <li key={`${id}-${idx}`} style={{ marginBottom: '0.35rem' }}>
-                <strong>#{id}</strong>
-                {meta ? ` — ${meta.title}` : ''}
-                {!meta?.active ? ' (inactive)' : ''}
-                <button
-                  type="button"
-                  className="tma-console-btn-danger tma-console-btn-danger--small"
-                  style={{ marginLeft: '0.5rem' }}
-                  onClick={() => removeAt(idx)}
-                  disabled={disabled}
-                >
-                  Remove
-                </button>
-              </li>
-            )
-          })}
-        </ol>
-      )}
       <label className="tma-console-label">
-        Add case study
+        Selection mode
         <select
           className={selectClass}
-          value=""
-          onChange={(e) => {
-            const v = Number.parseInt(e.target.value, 10)
-            e.target.value = ''
-            if (Number.isFinite(v) && v > 0) addId(v)
-          }}
-          disabled={disabled || rows.length === 0}
+          value={selectionMode}
+          onChange={(e) =>
+            set(
+              e.target.value === 'automatic'
+                ? { selectionMode: 'automatic', studies: [] }
+                : { selectionMode: 'manual' },
+            )
+          }
+          disabled={disabled}
         >
-          <option value="">Choose…</option>
-          {rows.map((r) => (
-            <option key={r.id} value={String(r.id)}>
-              #{r.id} — {r.title}
-              {!r.active ? ' (inactive)' : ''}
+          <option value="manual">Manual selection</option>
+          <option value="automatic">All active case studies</option>
+        </select>
+      </label>
+      {err ? <p className="tma-console-error">{err}</p> : null}
+      {selectionMode === 'manual' ? (
+        <>
+          <p className="tma-console-block-fields-hint">
+            This section is <strong>curated manually</strong>. Only the selected case studies below
+            will show live, in this exact order. Changes in the case-study library will not show
+            here until you update the selection or switch this block to automatic mode.
+          </p>
+          {staleSelectedIds.length > 0 ? (
+            <>
+              <p className="tma-console-error" style={{ marginBottom: '0.5rem' }}>
+                {inactiveSelectedIds.length > 0
+                  ? `${inactiveSelectedIds.length} selected case stud${inactiveSelectedIds.length === 1 ? 'y is' : 'ies are'} inactive`
+                  : null}
+                {inactiveSelectedIds.length > 0 && missingSelectedIds.length > 0 ? '; ' : null}
+                {missingSelectedIds.length > 0
+                  ? `${missingSelectedIds.length} selected item${missingSelectedIds.length === 1 ? ' no longer exists' : 's no longer exist'}`
+                  : null}
+                . Clean these up so the live section matches the editor.
+              </p>
+              <p className="tma-console-actions" style={{ marginTop: '-0.25rem', marginBottom: '0.5rem' }}>
+                <button
+                  type="button"
+                  className="tma-console-btn-secondary"
+                  onClick={() =>
+                    set({
+                      studies: ids.filter((id) => !staleSelectedIds.includes(id)),
+                    })
+                  }
+                  disabled={disabled}
+                >
+                  Remove inactive / missing selections
+                </button>
+              </p>
+            </>
+          ) : null}
+          <p className="tma-console-actions" style={{ marginTop: '-0.25rem', marginBottom: '0.5rem' }}>
+            <button
+              type="button"
+              className="tma-console-btn-secondary"
+              onClick={() => set({ selectionMode: 'automatic', studies: [] })}
+              disabled={disabled}
+            >
+              Use all active case studies instead
+            </button>
+          </p>
+          {ids.length === 0 ? (
+            <p className="tma-console-lead">No case studies selected yet.</p>
+          ) : (
+            <ol className="tma-console-lead" style={{ paddingLeft: '1.25rem' }}>
+              {ids.map((id, idx) => {
+                const meta = rows.find((r) => r.id === id)
+                return (
+                  <li key={`${id}-${idx}`} style={{ marginBottom: '0.35rem' }}>
+                    <strong>#{id}</strong>
+                    {meta ? ` — ${meta.title}` : ''}
+                    {!meta?.active ? ' (inactive)' : ''}
+                    <button
+                      type="button"
+                      className="tma-console-btn-danger tma-console-btn-danger--small"
+                      style={{ marginLeft: '0.5rem' }}
+                      onClick={() => removeAt(idx)}
+                      disabled={disabled}
+                    >
+                      Remove
+                    </button>
+                  </li>
+                )
+              })}
+            </ol>
+          )}
+          <label className="tma-console-label">
+            Add case study
+            <select
+              className={selectClass}
+              value=""
+              onChange={(e) => {
+                const v = Number.parseInt(e.target.value, 10)
+                e.target.value = ''
+                if (Number.isFinite(v) && v > 0) addId(v)
+              }}
+              disabled={disabled || rows.length === 0}
+            >
+              <option value="">Choose…</option>
+              {rows.map((r) => (
+                <option key={r.id} value={String(r.id)}>
+                  #{r.id} — {r.title}
+                  {!r.active ? ' (inactive)' : ''}
+                </option>
+              ))}
+            </select>
+          </label>
+        </>
+      ) : (
+        <>
+          <p className="tma-console-block-fields-hint">
+            This section is <strong>automatic</strong> and will show all <strong>active</strong>
+            case studies from <strong>Libraries → Case Studies</strong>, newest first.
+            Deactivate any row there to remove it from live automatic sections.
+          </p>
+          <p className="tma-console-block-fields-hint">
+            The manual list is cleared automatically in this mode so the live result matches the
+            library cleanly.
+          </p>
+        </>
+      )}
+    </div>
+  )
+}
+
+export function FeaturedProjectSpotlightPicker(props: {
+  o: Record<string, unknown>
+  set: (patch: Record<string, unknown>) => void
+  disabled: boolean
+}) {
+  const { o, set, disabled } = props
+  const currentId =
+    typeof o.caseStudyId === 'number'
+      ? o.caseStudyId
+      : o.caseStudyId && typeof o.caseStudyId === 'object' && 'id' in o.caseStudyId && typeof o.caseStudyId.id === 'number'
+        ? o.caseStudyId.id
+        : ''
+
+  const [rows, setRows] = useState<
+    { id: number; title: string; slug: string; active: boolean }[]
+  >([])
+  const [err, setErr] = useState<string | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    void (async () => {
+      try {
+        const res = await fetch('/api/console/case-studies', { credentials: 'same-origin' })
+        const data = await readResponseJson<{
+          ok?: boolean
+          caseStudies?: { id: number; title: string; slug: string; active: boolean }[]
+          error?: string
+        }>(res)
+        if (cancelled) return
+        if (!res.ok) {
+          setErr(data?.error ?? 'Could not load case studies')
+          return
+        }
+        setRows(data?.caseStudies ?? [])
+        setErr(null)
+      } catch {
+        if (!cancelled) setErr('Network error')
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  const selected =
+    currentId !== '' ? rows.find((row) => row.id === currentId) ?? null : null
+
+  return (
+    <div className="tma-console-block-fields">
+      <p className="tma-console-block-fields-hint">
+        Optionally link one saved row from <strong>Libraries → Case Studies</strong>. When linked,
+        the spotlight reuses that project’s title, summary, slug, and featured image first. Manual
+        fields below only fill missing gaps.
+      </p>
+      {err ? <p className="tma-console-error">{err}</p> : null}
+      <label className="tma-console-label">
+        Linked case study
+        <select
+          className={selectClass}
+          value={currentId === '' ? '' : String(currentId)}
+          onChange={(e) => {
+            const value = e.target.value
+            set({ caseStudyId: value ? Number.parseInt(value, 10) : null })
+          }}
+          disabled={disabled}
+        >
+          <option value="">None — use manual spotlight content</option>
+          {rows.map((row) => (
+            <option key={row.id} value={String(row.id)}>
+              {row.title}
+              {!row.active ? ' (inactive)' : ''}
             </option>
           ))}
         </select>
       </label>
+      {selected ? (
+        <p className="tma-console-block-fields-hint">
+          Linked project: <strong>{selected.title}</strong>
+          {!selected.active ? ' (inactive)' : ''}.{' '}
+          <a href={`/console/case-studies/${selected.id}`} style={{ color: 'var(--tma-lime)' }}>
+            Edit case study
+          </a>
+        </p>
+      ) : null}
     </div>
   )
 }

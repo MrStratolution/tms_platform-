@@ -308,6 +308,7 @@ export const cmsTestimonials = tmaCustom.table('cms_testimonial', {
   role: text('role'),
   company: text('company'),
   photoMediaId: integer('photo_media_id'),
+  logoMediaId: integer('logo_media_id'),
   active: boolean('active').notNull().default(true),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),

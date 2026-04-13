@@ -18,6 +18,7 @@ export default async function ConsoleTestimonialsListPage() {
           .select({
             id: cmsTestimonials.id,
             author: cmsTestimonials.author,
+            company: cmsTestimonials.company,
             quote: cmsTestimonials.quote,
             active: cmsTestimonials.active,
             updatedAt: cmsTestimonials.updatedAt,
@@ -30,7 +31,11 @@ export default async function ConsoleTestimonialsListPage() {
     <main className="tma-console-main wide">
       <h1 className="tma-console-page-title">Testimonials</h1>
       <p className="tma-console-lead">
-        Reusable quotes for <code>testimonialSlider</code> blocks (<code>tma_custom.cms_testimonial</code>).
+        Reusable quotes for testimonial spotlight and quote sections.
+      </p>
+      <p className="tma-console-block-fields-hint">
+        Active rows can appear in public testimonial sections. Add a portrait or logo in the editor
+        when brand context should be visible.
       </p>
       <p className="tma-console-actions" style={{ marginBottom: '1.5rem' }}>
         <Link href="/console/testimonials/new" className="tma-console-submit">
@@ -50,6 +55,7 @@ export default async function ConsoleTestimonialsListPage() {
               <tr>
                 <th scope="col">ID</th>
                 <th scope="col">Author</th>
+                <th scope="col">Company</th>
                 <th scope="col">Quote</th>
                 <th scope="col">Active</th>
                 <th scope="col">Updated</th>
@@ -70,6 +76,7 @@ export default async function ConsoleTestimonialsListPage() {
                       {row.author}
                     </Link>
                   </td>
+                  <td>{row.company ?? '—'}</td>
                   <td>{row.quote.length > 80 ? `${row.quote.slice(0, 80)}…` : row.quote}</td>
                   <td>{row.active ? 'yes' : 'no'}</td>
                   <td>

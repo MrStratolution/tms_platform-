@@ -32,6 +32,10 @@ export default async function ConsoleCaseStudiesListPage() {
       <p className="tma-console-lead">
         Case study entries for <code>caseStudyGrid</code> layout blocks.
       </p>
+      <p className="tma-console-block-fields-hint">
+        Active rows appear in automatic case-study sections. Deactivate any junk or draft-quality
+        row that should not show publicly.
+      </p>
       <p className="tma-console-actions" style={{ marginBottom: '1.5rem' }}>
         <Link href="/console/case-studies/new" className="tma-console-submit">
           New case study

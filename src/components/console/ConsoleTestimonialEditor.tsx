@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 
+import { ConsoleMediaIdField } from '@/components/console/ConsoleMediaIdField'
 import { readResponseJson } from '@/lib/safeJson'
 
 type Props = {
@@ -12,6 +13,7 @@ type Props = {
     role: string | null
     company: string | null
     photoMediaId: number | null
+    logoMediaId: number | null
     active: boolean
   }
   canEdit: boolean
@@ -22,9 +24,8 @@ export function ConsoleTestimonialEditor({ id, initial, canEdit }: Props) {
   const [author, setAuthor] = useState(initial.author)
   const [role, setRole] = useState(initial.role ?? '')
   const [company, setCompany] = useState(initial.company ?? '')
-  const [photoMediaId, setPhotoMediaId] = useState(
-    initial.photoMediaId != null ? String(initial.photoMediaId) : '',
-  )
+  const [photoMediaId, setPhotoMediaId] = useState<number | null>(initial.photoMediaId)
+  const [logoMediaId, setLogoMediaId] = useState<number | null>(initial.logoMediaId)
   const [active, setActive] = useState(initial.active)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -35,22 +36,14 @@ export function ConsoleTestimonialEditor({ id, initial, canEdit }: Props) {
     if (!canEdit) return
     setError(null)
     setSuccess(null)
-    const pid = photoMediaId.trim()
     const body: Record<string, unknown> = {
       quote: quote.trim(),
       author: author.trim(),
       role: role.trim() || null,
       company: company.trim() || null,
+      photoMediaId,
+      logoMediaId,
       active,
-    }
-    if (pid === '') body.photoMediaId = null
-    else {
-      const n = Number.parseInt(pid, 10)
-      if (!Number.isFinite(n) || n < 1) {
-        setError('Photo media id must be a positive integer or empty.')
-        return
-      }
-      body.photoMediaId = n
     }
 
     setSaving(true)
@@ -124,17 +117,24 @@ export function ConsoleTestimonialEditor({ id, initial, canEdit }: Props) {
           disabled={saving || readOnly}
         />
       </label>
-      <label className="tma-console-label">
-        Photo media id (optional, <code>cms_media.id</code>)
-        <input
-          type="text"
-          className="tma-console-input"
-          value={photoMediaId}
-          onChange={(e) => setPhotoMediaId(e.target.value)}
-          disabled={saving || readOnly}
-          placeholder="e.g. 1"
-        />
-      </label>
+      <ConsoleMediaIdField
+        label="Portrait image"
+        value={photoMediaId}
+        onChange={setPhotoMediaId}
+        disabled={saving || readOnly}
+        helpText="Optional portrait for spotlight and grid testimonial layouts."
+        folderSuggestion="testimonials"
+      />
+      <ConsoleMediaIdField
+        label="Company logo (optional)"
+        value={logoMediaId}
+        onChange={setLogoMediaId}
+        disabled={saving || readOnly}
+        helpText="Used in spotlight testimonial cards when company branding should appear visually."
+        folderSuggestion="logos"
+        uploadLabel="Upload logo"
+        chooseLabel="Choose logo"
+      />
       <label className="tma-console-label tma-console-label--inline">
         <input
           type="checkbox"
@@ -144,6 +144,10 @@ export function ConsoleTestimonialEditor({ id, initial, canEdit }: Props) {
         />{' '}
         Active
       </label>
+      <p className="tma-console-block-fields-hint">
+        Active testimonials can appear in testimonial spotlight and quote sections. Keep a company
+        logo optional; if none is set, the public section falls back to the company name.
+      </p>
       {error ? <p className="tma-console-error">{error}</p> : null}
       {success ? <p className="tma-console-success">{success}</p> : null}
       {canEdit ? (

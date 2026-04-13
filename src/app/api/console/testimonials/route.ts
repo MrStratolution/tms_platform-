@@ -12,6 +12,7 @@ const createSchema = z.object({
   role: z.string().max(300).optional(),
   company: z.string().max(300).optional(),
   photoMediaId: z.number().int().positive().nullable().optional(),
+  logoMediaId: z.number().int().positive().nullable().optional(),
   active: z.boolean().optional(),
 })
 
@@ -29,6 +30,9 @@ export async function GET(request: Request) {
       id: cmsTestimonials.id,
       quote: cmsTestimonials.quote,
       author: cmsTestimonials.author,
+      company: cmsTestimonials.company,
+      photoMediaId: cmsTestimonials.photoMediaId,
+      logoMediaId: cmsTestimonials.logoMediaId,
       active: cmsTestimonials.active,
       updatedAt: cmsTestimonials.updatedAt,
     })
@@ -39,6 +43,8 @@ export async function GET(request: Request) {
     ok: true,
     testimonials: rows.map((r) => ({
       ...r,
+      hasPhoto: r.photoMediaId != null,
+      hasLogo: r.logoMediaId != null,
       updatedAt: r.updatedAt.toISOString(),
     })),
   })
@@ -77,6 +83,7 @@ export async function POST(request: Request) {
       role: parsed.data.role ?? null,
       company: parsed.data.company ?? null,
       photoMediaId: parsed.data.photoMediaId ?? null,
+      logoMediaId: parsed.data.logoMediaId ?? null,
       active: parsed.data.active ?? true,
       updatedAt: now,
       createdAt: now,
@@ -92,6 +99,7 @@ export async function POST(request: Request) {
       role: row!.role,
       company: row!.company,
       photoMediaId: row!.photoMediaId,
+      logoMediaId: row!.logoMediaId,
       active: row!.active,
       updatedAt: row!.updatedAt.toISOString(),
       createdAt: row!.createdAt.toISOString(),

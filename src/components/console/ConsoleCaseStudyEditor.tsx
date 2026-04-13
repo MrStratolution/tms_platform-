@@ -2,6 +2,8 @@
 
 import { useState } from 'react'
 
+import { ConsoleIndustrySelectField } from '@/components/console/ConsoleIndustrySelectField'
+import { ConsoleMediaIdField } from '@/components/console/ConsoleMediaIdField'
 import { readResponseJson } from '@/lib/safeJson'
 
 type Props = {
@@ -21,8 +23,8 @@ export function ConsoleCaseStudyEditor({ id, initial, canEdit }: Props) {
   const [title, setTitle] = useState(initial.title)
   const [slug, setSlug] = useState(initial.slug)
   const [summary, setSummary] = useState(initial.summary ?? '')
-  const [industryId, setIndustryId] = useState(initial.industryId != null ? String(initial.industryId) : '')
-  const [featuredImageId, setFeaturedImageId] = useState(initial.featuredImageId != null ? String(initial.featuredImageId) : '')
+  const [industryId, setIndustryId] = useState<number | null>(initial.industryId ?? null)
+  const [featuredImageId, setFeaturedImageId] = useState<number | null>(initial.featuredImageId ?? null)
   const [active, setActive] = useState(initial.active)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -40,10 +42,8 @@ export function ConsoleCaseStudyEditor({ id, initial, canEdit }: Props) {
       summary: summary.trim() || null,
       active,
     }
-    const iid = industryId.trim()
-    body.industryId = iid ? (Number.parseInt(iid, 10) || null) : null
-    const fid = featuredImageId.trim()
-    body.featuredImageId = fid ? (Number.parseInt(fid, 10) || null) : null
+    body.industryId = industryId
+    body.featuredImageId = featuredImageId
 
     setSaving(true)
     try {
@@ -70,9 +70,28 @@ export function ConsoleCaseStudyEditor({ id, initial, canEdit }: Props) {
       <label className="tma-console-label">Title <input type="text" className="tma-console-input" value={title} onChange={(e) => setTitle(e.target.value)} disabled={dis} /></label>
       <label className="tma-console-label">Slug <input type="text" className="tma-console-input" value={slug} onChange={(e) => setSlug(e.target.value)} disabled={dis} /></label>
       <label className="tma-console-label">Summary (optional) <textarea className="tma-console-textarea-json" rows={4} value={summary} onChange={(e) => setSummary(e.target.value)} disabled={dis} /></label>
-      <label className="tma-console-label">Industry id (optional, <code>cms_industry.id</code>) <input type="text" className="tma-console-input" value={industryId} onChange={(e) => setIndustryId(e.target.value)} disabled={dis} placeholder="e.g. 1" /></label>
-      <label className="tma-console-label">Featured image id (optional, <code>cms_media.id</code>) <input type="text" className="tma-console-input" value={featuredImageId} onChange={(e) => setFeaturedImageId(e.target.value)} disabled={dis} placeholder="e.g. 1" /></label>
+      <ConsoleIndustrySelectField
+        label="Industry (optional)"
+        value={industryId}
+        onChange={setIndustryId}
+        disabled={dis}
+        helpText="Choose the market this case study belongs to. Leave empty if it should stay general."
+      />
+      <ConsoleMediaIdField
+        label="Featured image"
+        value={featuredImageId}
+        onChange={setFeaturedImageId}
+        disabled={dis}
+        helpText="Used on case study cards and detail previews."
+        folderSuggestion="case-studies"
+        uploadLabel="Upload featured image"
+        chooseLabel="Choose featured image"
+      />
       <label className="tma-console-label tma-console-label--inline"><input type="checkbox" checked={active} onChange={(e) => setActive(e.target.checked)} disabled={dis} /> Active</label>
+      <p className="tma-console-block-fields-hint">
+        Active case studies are visible in automatic case-study sections. Deactivate a row if it
+        should stay in the library but not appear on live automatic grids.
+      </p>
       {error ? <p className="tma-console-error">{error}</p> : null}
       {success ? <p className="tma-console-success">{success}</p> : null}
       {canEdit ? <div className="tma-console-actions"><button type="submit" className="tma-console-submit" disabled={saving}>{saving ? 'Saving…' : 'Save'}</button></div> : null}

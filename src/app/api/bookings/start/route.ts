@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server'
 import { z } from 'zod'
 
 import { cmsBookingEvents, cmsLeads } from '@/db/schema'
-import { internalBookPath } from '@/lib/bookingProfile'
+import { getBookingProfileByPublicKey, internalBookPath } from '@/lib/bookingProfile'
 import {
   findLatestLeadIdByEmailInsensitive,
   getActiveBookingProfileById,
@@ -14,9 +14,13 @@ import { logEvent } from '@/lib/logger'
 import { getPublicSiteOrigin } from '@/lib/publicSiteUrl'
 
 const bodySchema = z.object({
-  bookingProfileId: z.union([z.string().min(1), z.number().int().positive()]),
+  bookingProfileId: z.union([z.string().min(1), z.number().int().positive()]).optional(),
+  bookingProfileKey: z.string().min(1).optional(),
   leadId: z.number().int().positive().optional(),
   leadEmail: z.string().email().optional(),
+}).refine((value) => value.bookingProfileId != null || value.bookingProfileKey != null, {
+  message: 'bookingProfileId or bookingProfileKey is required',
+  path: ['bookingProfileId'],
 })
 
 function coerceProfileId(raw: string | number): number | null {
@@ -47,12 +51,17 @@ export async function POST(request: Request) {
     )
   }
 
-  const id = coerceProfileId(parsed.data.bookingProfileId)
-  if (id == null) {
+  const id =
+    parsed.data.bookingProfileId != null ? coerceProfileId(parsed.data.bookingProfileId) : null
+  if (parsed.data.bookingProfileId != null && id == null) {
     return NextResponse.json({ error: 'Invalid booking profile id' }, { status: 400 })
   }
 
-  const profile = await getActiveBookingProfileById(db, id)
+  const profile =
+    (id != null ? await getActiveBookingProfileById(db, id) : null) ??
+    (parsed.data.bookingProfileKey
+      ? await getBookingProfileByPublicKey(db, parsed.data.bookingProfileKey)
+      : null)
 
   if (!profile || !profile.active) {
     return NextResponse.json({ error: 'Booking profile not found' }, { status: 404 })
