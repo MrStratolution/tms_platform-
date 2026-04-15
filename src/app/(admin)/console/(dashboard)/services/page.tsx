@@ -25,7 +25,9 @@ export default async function ConsoleServicesPage() {
   return (
     <main className="tma-console-main wide">
       <h1 className="tma-console-page-title">Services</h1>
-      <p className="tma-console-lead">Service directory used by leads, products, and future service landing pages.</p>
+      <p className="tma-console-lead">
+        Reusable service directory for library-backed services sections, leads, and product attribution.
+      </p>
       <p className="tma-console-actions" style={{ marginBottom: '1.5rem' }}>
         <Link href="/console/services/new" className="tma-console-submit">New service</Link>
       </p>

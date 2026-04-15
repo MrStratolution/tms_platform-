@@ -37,6 +37,7 @@ import { toVideoEmbedUrl, isLikelyEmbeddableVideoUrl } from '@/lib/videoEmbed'
 import { BookingBlock } from './BookingBlock'
 import { CardRail } from './CardRail'
 import { FormBlock } from './FormBlock'
+import { IndustryGridBlock } from './IndustryGridBlock'
 import { ServicesFocusBlock } from './ServicesFocusBlock'
 import { StickyCtaBar } from './StickyCtaBar'
 import { TestimonialCard } from './TestimonialCard'
@@ -1295,6 +1296,19 @@ function renderBlock(
           sectionTitle={block.sectionTitle}
           intro={block.intro}
           items={block.items ?? []}
+          ctaLabel={block.ctaLabel}
+          ctaHref={block.ctaHref}
+          locale={locale}
+        />
+      )
+    case 'industryGrid':
+      return (
+        <IndustryGridBlock
+          sectionTitle={block.sectionTitle}
+          intro={block.intro}
+          industries={block.industries ?? []}
+          ctaLabel={block.ctaLabel}
+          ctaHref={block.ctaHref}
           locale={locale}
         />
       )

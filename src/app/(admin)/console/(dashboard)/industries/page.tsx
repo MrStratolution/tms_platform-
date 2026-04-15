@@ -25,7 +25,9 @@ export default async function ConsoleIndustriesPage() {
   return (
     <main className="tma-console-main wide">
       <h1 className="tma-console-page-title">Industries</h1>
-      <p className="tma-console-lead">Industry directory used for attribution, routing, and product positioning.</p>
+      <p className="tma-console-lead">
+        Reusable industry directory for positioning, routing, and library-backed industry sections.
+      </p>
       <p className="tma-console-actions" style={{ marginBottom: '1.5rem' }}>
         <Link href="/console/industries/new" className="tma-console-submit">New industry</Link>
       </p>

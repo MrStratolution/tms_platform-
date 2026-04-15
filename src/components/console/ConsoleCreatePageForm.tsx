@@ -15,7 +15,7 @@ const PAGE_TYPES = [
   { value: 'product', label: 'Product' },
   { value: 'industry', label: 'Industry' },
   { value: 'home', label: 'Home' },
-  { value: 'resource', label: 'Resource' },
+  { value: 'resource', label: 'News / Blog article' },
   { value: 'other', label: 'Other' },
 ] as const
 
@@ -23,18 +23,40 @@ const TEMPLATES = [
   { value: 'blank', label: 'Blank document' },
   { value: 'landing', label: 'Landing starter' },
   { value: 'service', label: 'Service starter' },
+  { value: 'services_directory', label: 'Services directory' },
+  { value: 'industries_directory', label: 'Industries directory' },
+  { value: 'work_showcase', label: 'Work / case studies' },
+  { value: 'projects_directory', label: 'Projects / products' },
+  { value: 'news_index', label: 'News / blog index' },
+  { value: 'news_article', label: 'News article starter' },
   { value: 'contact', label: 'Contact starter' },
   { value: 'thank_you', label: 'Thank-you starter' },
 ] as const
 
-export function ConsoleCreatePageForm(props: { canPublishLive?: boolean; uiLocale?: string }) {
-  const { canPublishLive = false, uiLocale = 'de' } = props
+export function ConsoleCreatePageForm(props: {
+  canPublishLive?: boolean
+  uiLocale?: string
+  initialPageType?: string
+  initialTemplate?: string
+  initialTitle?: string
+  initialSlug?: string
+  lockPageType?: boolean
+}) {
+  const {
+    canPublishLive = false,
+    uiLocale = 'de',
+    initialPageType = 'landing',
+    initialTemplate = 'blank',
+    initialTitle = '',
+    initialSlug = '',
+    lockPageType = false,
+  } = props
   const t = (key: Parameters<typeof adminCopy>[1]) => adminCopy(normalizeAdminUiLocale(uiLocale), key)
   const router = useRouter()
-  const [slug, setSlug] = useState('')
-  const [title, setTitle] = useState('')
-  const [pageType, setPageType] = useState<string>('landing')
-  const [template, setTemplate] = useState<string>('blank')
+  const [slug, setSlug] = useState(initialSlug)
+  const [title, setTitle] = useState(initialTitle)
+  const [pageType, setPageType] = useState<string>(initialPageType)
+  const [template, setTemplate] = useState<string>(initialTemplate)
   const [status, setStatus] = useState<'draft' | 'review' | 'published'>('draft')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -107,7 +129,7 @@ export function ConsoleCreatePageForm(props: { canPublishLive?: boolean; uiLocal
           className="tma-console-input"
           value={pageType}
           onChange={(e) => setPageType(e.target.value)}
-          disabled={busy}
+          disabled={busy || lockPageType}
         >
           {PAGE_TYPES.map((o) => (
             <option key={o.value} value={o.value}>

@@ -4,7 +4,7 @@ import { dismissCookieBanner, expectWithinViewport } from './utils'
 
 test.describe('public navigation and locale flows', () => {
   test('major localized pages render and locale switcher works', async ({ page }) => {
-    const pages = ['/de', '/de/services', '/de/work', '/de/projects', '/de/news', '/de/about', '/de/contact']
+    const pages = ['/de', '/de/services', '/de/industries', '/de/work', '/de/projects', '/de/news', '/de/about', '/de/contact']
 
     for (const path of pages) {
       const response = await page.goto(path)

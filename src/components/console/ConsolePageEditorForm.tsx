@@ -9,6 +9,7 @@ import {
   Download,
   Folder,
   FolderOpen,
+  Grid2X2,
   HelpCircle,
   Image,
   Layers,
@@ -78,7 +79,7 @@ const PAGE_TYPES = [
   { value: 'product', label: 'Product' },
   { value: 'industry', label: 'Industry' },
   { value: 'home', label: 'Home' },
-  { value: 'resource', label: 'Resource' },
+  { value: 'resource', label: 'News / Blog' },
   { value: 'other', label: 'Other' },
 ] as const
 
@@ -109,8 +110,9 @@ const BLOCK_PICKER_ITEMS: BlockPickerItem[] = [
   { type: 'teamGrid', Icon: Users, label: 'Team' },
   { type: 'caseStudyGrid', Icon: Folder, label: 'Case Studies' },
   { type: 'featuredProjectSpotlight', Icon: FolderOpen, label: 'Featured Project' },
-  { type: 'resourceFeed', Icon: Newspaper, label: 'News Feed' },
-  { type: 'productFeed', Icon: Boxes, label: 'Projects Feed' },
+  { type: 'resourceFeed', Icon: Newspaper, label: 'News / Blog Feed' },
+  { type: 'productFeed', Icon: Boxes, label: 'Projects / Products Feed' },
+  { type: 'industryGrid', Icon: Grid2X2, label: 'Industries' },
   { type: 'download', Icon: Download, label: 'Download' },
   { type: 'rich', Icon: Type, label: 'Rich Text' },
   { type: 'spacer', Icon: MoveVertical, label: 'Spacer' },
@@ -1345,6 +1347,12 @@ export function ConsolePageEditorForm({
                         <option value="service-authority">Service authority</option>
                         <option value="contact-convert">Contact conversion</option>
                         <option value="product-sales">Product sales</option>
+                        <option value="services-directory">Services directory</option>
+                        <option value="industries-directory">Industries directory</option>
+                        <option value="work-showcase">Work / case studies</option>
+                        <option value="projects-directory">Projects / products</option>
+                        <option value="news-index">News / blog index</option>
+                        <option value="news-article">News article</option>
                       </select>
                     </label>
                     <button type="button" className="tma-console-btn-secondary" style={{ fontSize: '0.78rem', padding: '0.4rem 0.75rem' }} onClick={applyTemplate} disabled={saving || readOnly || !templateId}>Apply template</button>

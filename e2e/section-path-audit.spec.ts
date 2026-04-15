@@ -22,6 +22,13 @@ test.describe('section expansion and path audit', () => {
     await page.locator('.block-video').getByRole('link', { name: 'Projekt starten' }).click()
     await page.waitForURL(/\/de\/contact$/)
 
+    await page.goto('/de/industries')
+    await dismissCookieBanner(page)
+    await expect(page.locator('.block-industry-grid')).toBeVisible()
+    await expect(page.locator('#demo-ai-platforms')).toBeVisible()
+    await page.locator('.block-industry-grid .block-industry-grid__cta a').first().click()
+    await page.waitForURL(/\/de\/contact$/)
+
     await page.goto('/de/work')
     await dismissCookieBanner(page)
     await expect(page.locator('.block-featured-project')).toBeVisible()
@@ -59,6 +66,11 @@ test.describe('section expansion and path audit', () => {
     await dismissCookieBanner(page)
     await expect(page.locator('.block-media-gallery')).toBeVisible()
     await expect(page.locator('.block-testimonials--spotlight')).toBeVisible()
+
+    await page.goto('/en/industries')
+    await dismissCookieBanner(page)
+    await expect(page.locator('.block-industry-grid')).toBeVisible()
+    await expect(page.locator('#demo-ai-platforms')).toBeVisible()
 
     await page.goto('/en/contact')
     await dismissCookieBanner(page)

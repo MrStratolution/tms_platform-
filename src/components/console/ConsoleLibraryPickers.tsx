@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { useEffect, useState } from 'react'
 
 import { readResponseJson } from '@/lib/safeJson'
@@ -510,6 +511,9 @@ export function CaseStudyGridPicker(props: {
             >
               Use all active case studies instead
             </button>
+            <Link href="/console/case-studies/new" className="tma-console-inline-link" style={{ marginLeft: '0.75rem' }}>
+              Create new case study
+            </Link>
           </p>
           {ids.length === 0 ? (
             <p className="tma-console-lead">No case studies selected yet.</p>
@@ -519,9 +523,17 @@ export function CaseStudyGridPicker(props: {
                 const meta = rows.find((r) => r.id === id)
                 return (
                   <li key={`${id}-${idx}`} style={{ marginBottom: '0.35rem' }}>
-                    <strong>#{id}</strong>
-                    {meta ? ` — ${meta.title}` : ''}
+                    <strong>{meta?.title ?? `Case study #${id}`}</strong>
+                    {meta ? ` · ${meta.slug}` : ''}
                     {!meta?.active ? ' (inactive)' : ''}
+                    {meta ? (
+                      <a
+                        href={`/console/case-studies/${id}`}
+                        style={{ marginLeft: '0.5rem', color: 'var(--tma-lime)' }}
+                      >
+                        Edit
+                      </a>
+                    ) : null}
                     <button
                       type="button"
                       className="tma-console-btn-danger tma-console-btn-danger--small"
@@ -551,7 +563,8 @@ export function CaseStudyGridPicker(props: {
               <option value="">Choose…</option>
               {rows.map((r) => (
                 <option key={r.id} value={String(r.id)}>
-                  #{r.id} — {r.title}
+                  {r.title}
+                  {` · ${r.slug}`}
                   {!r.active ? ' (inactive)' : ''}
                 </option>
               ))}
@@ -721,9 +734,14 @@ export function ResourceFeedPicker(props: {
   return (
     <div className="tma-console-block-fields">
       <p className="tma-console-block-fields-hint">
-        Reference published <strong>Resource</strong> pages from the page library. Use one featured
-        article and an ordered list below, or enable automatic listing when the block should show all
-        published resource pages.
+        Pull published <strong>News / Blog</strong> entries from pages with
+        <code> pageType = resource</code>. Use one featured article and an ordered list below, or
+        enable automatic listing when this section should show all published articles.
+      </p>
+      <p className="tma-console-actions" style={{ marginTop: '-0.25rem', marginBottom: '0.5rem' }}>
+        <Link href="/console/news/new" className="tma-console-inline-link">
+          Create news article
+        </Link>
       </p>
       {err ? <p className="tma-console-error">{err}</p> : null}
       <label className="tma-console-label">
@@ -740,7 +758,8 @@ export function ResourceFeedPicker(props: {
           <option value="">None</option>
           {rows.map((row) => (
             <option key={row.id} value={String(row.id)}>
-              #{row.id} — {row.title}
+              {row.title}
+              {` · ${row.slug}`}
               {row.status !== 'published' ? ` (${row.status})` : ''}
             </option>
           ))}
@@ -763,9 +782,17 @@ export function ResourceFeedPicker(props: {
             const meta = rows.find((row) => row.id === id)
             return (
               <li key={`${id}-${idx}`} style={{ marginBottom: '0.35rem' }}>
-                <strong>#{id}</strong>
-                {meta ? ` — ${meta.title}` : ''}
+                <strong>{meta?.title ?? `Article #${id}`}</strong>
+                {meta ? ` · ${meta.slug}` : ''}
                 {meta && meta.status !== 'published' ? ` (${meta.status})` : ''}
+                {meta ? (
+                  <a
+                    href={`/console/pages/${id}`}
+                    style={{ marginLeft: '0.5rem', color: 'var(--tma-lime)' }}
+                  >
+                    Edit
+                  </a>
+                ) : null}
                 <button
                   type="button"
                   className="tma-console-btn-danger tma-console-btn-danger--small"
@@ -795,7 +822,8 @@ export function ResourceFeedPicker(props: {
           <option value="">Choose…</option>
           {rows.map((row) => (
             <option key={row.id} value={String(row.id)}>
-              #{row.id} — {row.title}
+              {row.title}
+              {` · ${row.slug}`}
               {row.status !== 'published' ? ` (${row.status})` : ''}
             </option>
           ))}
@@ -910,6 +938,15 @@ export function ProductFeedPicker(props: {
         Reuse rows from <strong>Projects / Products</strong> for showcase cards. Manual, automatic,
         and hybrid feeds all stay backed by the same <code>cms_product</code> rows.
       </p>
+      <p className="tma-console-actions" style={{ marginTop: '-0.25rem', marginBottom: '0.5rem' }}>
+        <Link href="/console/products/new?kind=project" className="tma-console-inline-link">
+          Create project
+        </Link>
+        <span style={{ margin: '0 0.5rem' }}>·</span>
+        <Link href="/console/products/new?kind=product" className="tma-console-inline-link">
+          Create product
+        </Link>
+      </p>
       {err ? <p className="tma-console-error">{err}</p> : null}
       <div className="tma-console-field-row">
         <label className="tma-console-label">
@@ -927,9 +964,9 @@ export function ProductFeedPicker(props: {
             }
             disabled={disabled}
           >
-            <option value="manual">manual</option>
-            <option value="automatic">automatic</option>
-            <option value="hybrid">hybrid</option>
+            <option value="manual">Manual selection</option>
+            <option value="automatic">All matching published entries</option>
+            <option value="hybrid">Featured manual picks + automatic list</option>
           </select>
         </label>
         <label className="tma-console-label">
@@ -947,9 +984,9 @@ export function ProductFeedPicker(props: {
             }
             disabled={disabled || selectionMode === 'manual'}
           >
-            <option value="listingPriority">listingPriority</option>
-            <option value="publishedAt">publishedAt</option>
-            <option value="manual">manual</option>
+            <option value="listingPriority">Listing priority</option>
+            <option value="publishedAt">Publishing date</option>
+            <option value="manual">Manual order</option>
           </select>
         </label>
         <label className="tma-console-label">
@@ -960,8 +997,8 @@ export function ProductFeedPicker(props: {
             onChange={(e) => set({ sortDirection: e.target.value === 'desc' ? 'desc' : 'asc' })}
             disabled={disabled || selectionMode === 'manual' || sortBy === 'manual'}
           >
-            <option value="asc">asc</option>
-            <option value="desc">desc</option>
+            <option value="asc">Ascending</option>
+            <option value="desc">Descending</option>
           </select>
         </label>
       </div>
@@ -972,7 +1009,7 @@ export function ProductFeedPicker(props: {
           onChange={(e) => set({ showOnlyProjectFeedEligible: e.target.checked })}
           disabled={disabled}
         />
-        Only show project-feed eligible entries
+        Only show entries marked for project feeds
       </label>
       <div className="tma-console-block-fields">
         <span className="tma-console-label">Allowed content types</span>
@@ -1013,7 +1050,8 @@ export function ProductFeedPicker(props: {
           <option value="">None</option>
           {rows.map((row) => (
             <option key={row.id} value={String(row.id)}>
-              #{row.id} — {row.name}
+              {row.name}
+              {` · ${row.slug}`}
               {row.status !== 'published' ? ` (${row.status})` : ''}
               {` · ${row.contentKind}`}
               {row.showInProjectFeeds ? ' · projects' : ''}
@@ -1029,12 +1067,20 @@ export function ProductFeedPicker(props: {
             const meta = rows.find((row) => row.id === id)
             return (
               <li key={`${id}-${idx}`} style={{ marginBottom: '0.35rem' }}>
-                <strong>#{id}</strong>
-                {meta ? ` — ${meta.name}` : ''}
+                <strong>{meta?.name ?? `Entry #${id}`}</strong>
+                {meta ? ` · ${meta.slug}` : ''}
                 {meta && meta.status !== 'published' ? ` (${meta.status})` : ''}
                 {meta ? ` · ${meta.contentKind}` : ''}
                 {meta ? ` · ${meta.showInProjectFeeds ? 'projects on' : 'projects off'}` : ''}
                 {meta?.localeAvailability ? ` · ${meta.localeAvailability.de ? 'DE' : ''}${meta.localeAvailability.en ? '/EN' : ''}` : ''}
+                {meta ? (
+                  <a
+                    href={`/console/products/${id}`}
+                    style={{ marginLeft: '0.5rem', color: 'var(--tma-lime)' }}
+                  >
+                    Edit
+                  </a>
+                ) : null}
                 <button
                   type="button"
                   className="tma-console-btn-danger tma-console-btn-danger--small"
@@ -1050,7 +1096,7 @@ export function ProductFeedPicker(props: {
         </ol>
       )}
       <label className="tma-console-label">
-        Add product
+        Add project / product
         <select
           className={selectClass}
           value=""
@@ -1064,7 +1110,8 @@ export function ProductFeedPicker(props: {
           <option value="">Choose…</option>
           {rows.map((row) => (
             <option key={row.id} value={String(row.id)}>
-              #{row.id} — {row.name}
+              {row.name}
+              {` · ${row.slug}`}
               {row.status !== 'published' ? ` (${row.status})` : ''}
               {` · ${row.contentKind}`}
               {row.showInProjectFeeds ? ' · projects' : ''}
@@ -1084,6 +1131,331 @@ export function ProductFeedPicker(props: {
           disabled={disabled}
         />
       </label>
+    </div>
+  )
+}
+
+export function ServicesFocusPicker(props: {
+  o: Record<string, unknown>
+  set: (patch: Record<string, unknown>) => void
+  disabled: boolean
+}) {
+  const { o, set, disabled } = props
+  const sourceMode = o.sourceMode === 'library' ? 'library' : 'manual'
+  const selectionMode = o.selectionMode === 'manual' ? 'manual' : 'automatic'
+  const raw = Array.isArray(o.serviceIds) ? o.serviceIds : []
+  const ids = raw.filter((x): x is number => typeof x === 'number' && Number.isFinite(x))
+
+  const [rows, setRows] = useState<
+    { id: number; name: string; slug: string; active: boolean }[]
+  >([])
+  const [err, setErr] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (sourceMode !== 'library') return
+    let cancelled = false
+    void (async () => {
+      try {
+        const res = await fetch('/api/console/services', { credentials: 'same-origin' })
+        const data = await readResponseJson<{
+          ok?: boolean
+          services?: { id: number; name: string; slug: string; active: boolean }[]
+          error?: string
+        }>(res)
+        if (cancelled) return
+        if (!res.ok) {
+          setErr(data?.error ?? 'Could not load services')
+          return
+        }
+        setRows(data?.services ?? [])
+        setErr(null)
+      } catch {
+        if (!cancelled) setErr('Network error')
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [sourceMode])
+
+  const addId = (id: number) => {
+    if (ids.includes(id)) return
+    set({ serviceIds: [...ids, id] })
+  }
+
+  const removeAt = (idx: number) => {
+    set({ serviceIds: ids.filter((_, i) => i !== idx) })
+  }
+
+  return (
+    <div className="tma-console-block-fields">
+      <label className="tma-console-label">
+        Content source
+        <select
+          className={selectClass}
+          value={sourceMode}
+          onChange={(e) =>
+            set(
+              e.target.value === 'library'
+                ? { sourceMode: 'library', selectionMode, serviceIds: ids }
+                : { sourceMode: 'manual' },
+            )
+          }
+          disabled={disabled}
+        >
+          <option value="manual">Manual service cards</option>
+          <option value="library">Reuse saved services</option>
+        </select>
+      </label>
+      {sourceMode === 'library' ? (
+        <>
+          <p className="tma-console-block-fields-hint">
+            Reuse rows from <strong>Content → Services</strong>. This keeps the public services page
+            and other mapped sections aligned with the service library.
+          </p>
+          <p className="tma-console-actions" style={{ marginTop: '-0.25rem', marginBottom: '0.5rem' }}>
+            <Link href="/console/services/new" className="tma-console-inline-link">
+              Create new service
+            </Link>
+          </p>
+          <label className="tma-console-label">
+            Library mode
+            <select
+              className={selectClass}
+              value={selectionMode}
+              onChange={(e) =>
+                set(
+                  e.target.value === 'manual'
+                    ? { selectionMode: 'manual' }
+                    : { selectionMode: 'automatic', serviceIds: [] },
+                )
+              }
+              disabled={disabled}
+            >
+              <option value="automatic">All active services</option>
+              <option value="manual">Only selected services</option>
+            </select>
+          </label>
+          {err ? <p className="tma-console-error">{err}</p> : null}
+          {selectionMode === 'manual' ? (
+            <>
+              {ids.length === 0 ? (
+                <p className="tma-console-lead">No services selected yet.</p>
+              ) : (
+                <ol className="tma-console-lead" style={{ paddingLeft: '1.25rem' }}>
+                  {ids.map((id, idx) => {
+                    const meta = rows.find((row) => row.id === id)
+                    return (
+                      <li key={`${id}-${idx}`} style={{ marginBottom: '0.35rem' }}>
+                        <strong>{meta?.name ?? `Service #${id}`}</strong>
+                        {meta ? ` · ${meta.slug}` : ''}
+                        {!meta?.active ? ' (inactive)' : ''}
+                        {meta ? (
+                          <a
+                            href={`/console/services/${id}`}
+                            style={{ marginLeft: '0.5rem', color: 'var(--tma-lime)' }}
+                          >
+                            Edit
+                          </a>
+                        ) : null}
+                        <button
+                          type="button"
+                          className="tma-console-btn-danger tma-console-btn-danger--small"
+                          style={{ marginLeft: '0.5rem' }}
+                          onClick={() => removeAt(idx)}
+                          disabled={disabled}
+                        >
+                          Remove
+                        </button>
+                      </li>
+                    )
+                  })}
+                </ol>
+              )}
+              <label className="tma-console-label">
+                Add service
+                <select
+                  className={selectClass}
+                  value=""
+                  onChange={(e) => {
+                    const value = Number.parseInt(e.target.value, 10)
+                    e.target.value = ''
+                    if (Number.isFinite(value) && value > 0) addId(value)
+                  }}
+                  disabled={disabled || rows.length === 0}
+                >
+                  <option value="">Choose…</option>
+                  {rows.map((row) => (
+                    <option key={row.id} value={String(row.id)}>
+                      {row.name}
+                      {` · ${row.slug}`}
+                      {!row.active ? ' (inactive)' : ''}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </>
+          ) : (
+            <p className="tma-console-block-fields-hint">
+              This section will render every active service from the library. Service anchors use
+              each row’s slug so existing <code>/services#slug</code> links keep working.
+            </p>
+          )}
+        </>
+      ) : (
+        <p className="tma-console-block-fields-hint">
+          Manual mode keeps the current inline cards for one-off service storytelling. Switch to
+          library mode when this section should stay synced with the reusable service directory.
+        </p>
+      )}
+    </div>
+  )
+}
+
+export function IndustryGridPicker(props: {
+  o: Record<string, unknown>
+  set: (patch: Record<string, unknown>) => void
+  disabled: boolean
+}) {
+  const { o, set, disabled } = props
+  const selectionMode = o.selectionMode === 'manual' ? 'manual' : 'automatic'
+  const raw = Array.isArray(o.industries) ? o.industries : []
+  const ids = raw.filter((x): x is number => typeof x === 'number' && Number.isFinite(x))
+
+  const [rows, setRows] = useState<
+    { id: number; name: string; slug: string; active: boolean }[]
+  >([])
+  const [err, setErr] = useState<string | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    void (async () => {
+      try {
+        const res = await fetch('/api/console/industries', { credentials: 'same-origin' })
+        const data = await readResponseJson<{
+          ok?: boolean
+          industries?: { id: number; name: string; slug: string; active: boolean }[]
+          error?: string
+        }>(res)
+        if (cancelled) return
+        if (!res.ok) {
+          setErr(data?.error ?? 'Could not load industries')
+          return
+        }
+        setRows(data?.industries ?? [])
+        setErr(null)
+      } catch {
+        if (!cancelled) setErr('Network error')
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  const addId = (id: number) => {
+    if (ids.includes(id)) return
+    set({ industries: [...ids, id] })
+  }
+
+  const removeAt = (idx: number) => {
+    set({ industries: ids.filter((_, i) => i !== idx) })
+  }
+
+  return (
+    <div className="tma-console-block-fields">
+      <p className="tma-console-block-fields-hint">
+        Use reusable rows from <strong>Content → Industries</strong> so industry positioning stays
+        consistent everywhere it appears.
+      </p>
+      <p className="tma-console-actions" style={{ marginTop: '-0.25rem', marginBottom: '0.5rem' }}>
+        <Link href="/console/industries/new" className="tma-console-inline-link">
+          Create new industry
+        </Link>
+      </p>
+      <label className="tma-console-label">
+        Selection mode
+        <select
+          className={selectClass}
+          value={selectionMode}
+          onChange={(e) =>
+            set(
+              e.target.value === 'manual'
+                ? { selectionMode: 'manual' }
+                : { selectionMode: 'automatic', industries: [] },
+            )
+          }
+          disabled={disabled}
+        >
+          <option value="automatic">All active industries</option>
+          <option value="manual">Only selected industries</option>
+        </select>
+      </label>
+      {err ? <p className="tma-console-error">{err}</p> : null}
+      {selectionMode === 'manual' ? (
+        <>
+          {ids.length === 0 ? (
+            <p className="tma-console-lead">No industries selected yet.</p>
+          ) : (
+            <ol className="tma-console-lead" style={{ paddingLeft: '1.25rem' }}>
+              {ids.map((id, idx) => {
+                const meta = rows.find((row) => row.id === id)
+                return (
+                  <li key={`${id}-${idx}`} style={{ marginBottom: '0.35rem' }}>
+                    <strong>{meta?.name ?? `Industry #${id}`}</strong>
+                    {meta ? ` · ${meta.slug}` : ''}
+                    {!meta?.active ? ' (inactive)' : ''}
+                    {meta ? (
+                      <a
+                        href={`/console/industries/${id}`}
+                        style={{ marginLeft: '0.5rem', color: 'var(--tma-lime)' }}
+                      >
+                        Edit
+                      </a>
+                    ) : null}
+                    <button
+                      type="button"
+                      className="tma-console-btn-danger tma-console-btn-danger--small"
+                      style={{ marginLeft: '0.5rem' }}
+                      onClick={() => removeAt(idx)}
+                      disabled={disabled}
+                    >
+                      Remove
+                    </button>
+                  </li>
+                )
+              })}
+            </ol>
+          )}
+          <label className="tma-console-label">
+            Add industry
+            <select
+              className={selectClass}
+              value=""
+              onChange={(e) => {
+                const value = Number.parseInt(e.target.value, 10)
+                e.target.value = ''
+                if (Number.isFinite(value) && value > 0) addId(value)
+              }}
+              disabled={disabled || rows.length === 0}
+            >
+              <option value="">Choose…</option>
+              {rows.map((row) => (
+                <option key={row.id} value={String(row.id)}>
+                  {row.name}
+                  {` · ${row.slug}`}
+                  {!row.active ? ' (inactive)' : ''}
+                </option>
+              ))}
+            </select>
+          </label>
+        </>
+      ) : (
+        <p className="tma-console-block-fields-hint">
+          This section will render every active industry from the library and expose anchor targets
+          from each industry slug for <code>/industries#slug</code> links.
+        </p>
+      )}
     </div>
   )
 }

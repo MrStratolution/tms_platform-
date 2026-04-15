@@ -9,6 +9,11 @@ test.describe('console smoke routes', () => {
     const checks = [
       ['/console', 'Dashboard'],
       ['/console/pages', 'Pages'],
+      ['/console/news', 'News / Blog'],
+      ['/console/products', 'Projects / Products'],
+      ['/console/services', 'Services'],
+      ['/console/industries', 'Industries'],
+      ['/console/case-studies', 'Case Studies'],
       ['/console/forms', 'Form configs'],
       ['/console/booking-profiles', 'Booking profiles'],
       ['/console/leads', 'Leads'],

@@ -2,6 +2,8 @@
 
 import { useCallback, useState } from 'react'
 
+import { ConsoleInlineMediaField } from '@/components/console/ConsoleInlineMediaField'
+import { isLikelyEmbeddableVideoUrl } from '@/lib/videoEmbed'
 import { readResponseJson } from '@/lib/safeJson'
 import { PRODUCT_CONTENT_KIND_VALUES, type ProductContentKind } from '@/types/cms'
 
@@ -23,6 +25,10 @@ function asStr(v: unknown, fallback = ''): string {
 
 function asBool(v: unknown): boolean {
   return v === true
+}
+
+function asObj(v: unknown): Record<string, unknown> {
+  return v && typeof v === 'object' && !Array.isArray(v) ? (v as Record<string, unknown>) : {}
 }
 
 type Props = {
@@ -204,9 +210,12 @@ export function ConsoleProductEditor({
   const faqs = asArr(doc.faqs)
   const pricing = (doc.pricing && typeof doc.pricing === 'object' && !Array.isArray(doc.pricing)) ? doc.pricing as Record<string, unknown> : null
   const plans = pricing ? asArr(pricing.plans) : []
-  const primaryCta = (doc.primaryCta && typeof doc.primaryCta === 'object' && !Array.isArray(doc.primaryCta)) ? doc.primaryCta as Record<string, unknown> : {}
-  const seo = (doc.seo && typeof doc.seo === 'object' && !Array.isArray(doc.seo)) ? doc.seo as Record<string, unknown> : {}
-  const toggles = (doc.toggles && typeof doc.toggles === 'object' && !Array.isArray(doc.toggles)) ? doc.toggles as Record<string, unknown> : {}
+  const primaryCta = asObj(doc.primaryCta)
+  const seo = asObj(doc.seo)
+  const toggles = asObj(doc.toggles)
+  const galleryItems = asArr(doc.galleryItems)
+  const videoShowcase = asObj(doc.videoShowcase)
+  const heroMediaMode = asStr(doc.heroMediaMode, 'image') === 'video' ? 'video' : 'image'
 
   return (
     <form className="tma-console-form" onSubmit={onSave}>
@@ -330,6 +339,76 @@ export function ConsoleProductEditor({
               Tagline
               <input className={fieldClass} value={asStr(doc.tagline)} onChange={(e) => patch({ tagline: e.target.value })} disabled={dis} placeholder="Short value proposition" />
             </label>
+            <ConsoleInlineMediaField
+              label="Cover image"
+              value={asStr(doc.coverImageUrl) || undefined}
+              onChange={(next) => patch({ coverImageUrl: next ?? '' })}
+              altValue={asStr(doc.coverImageAlt)}
+              onAltChange={(next) => patch({ coverImageAlt: next })}
+              disabled={dis}
+              folderSuggestion="products"
+              helpText="Main visual shown on the public product page when hero media is set to image."
+            />
+            <label className="tma-console-label">
+              Hero media type
+              <select
+                className={fieldClass}
+                value={heroMediaMode}
+                onChange={(e) => patch({ heroMediaMode: e.target.value === 'video' ? 'video' : 'image' })}
+                disabled={dis}
+              >
+                <option value="image">Image</option>
+                <option value="video">Video</option>
+              </select>
+            </label>
+            {heroMediaMode === 'video' ? (
+              <>
+                <ConsoleInlineMediaField
+                  label="Hero video"
+                  value={asStr(doc.heroVideoUrl) || undefined}
+                  onChange={(next) => patch({ heroVideoUrl: next ?? '' })}
+                  disabled={dis}
+                  folderSuggestion="products"
+                  mediaKind="video"
+                  accept="video/mp4,video/webm,video/quicktime,.mp4,.webm,.mov"
+                  uploadLabel="Upload hero video"
+                  chooseLabel="Choose hero video"
+                  helpText="Upload a product video or paste an embeddable URL below if you prefer an external player."
+                />
+                <label className="tma-console-label">
+                  External hero video URL (optional)
+                  <input
+                    className={fieldClass}
+                    value={asStr(doc.heroVideoUrl)}
+                    onChange={(e) => patch({ heroVideoUrl: e.target.value })}
+                    disabled={dis}
+                    placeholder="https://www.youtube.com/watch?v=..."
+                  />
+                </label>
+                <ConsoleInlineMediaField
+                  label="Hero video poster"
+                  value={asStr(doc.heroVideoPosterUrl) || undefined}
+                  onChange={(next) => patch({ heroVideoPosterUrl: next ?? '' })}
+                  disabled={dis}
+                  folderSuggestion="products"
+                  helpText="Used before playback starts and as a visual fallback."
+                />
+                <label className="tma-console-label">
+                  Hero video caption
+                  <input
+                    className={fieldClass}
+                    value={asStr(doc.heroVideoCaption)}
+                    onChange={(e) => patch({ heroVideoCaption: e.target.value })}
+                    disabled={dis}
+                  />
+                </label>
+                {asStr(doc.heroVideoUrl) && isLikelyEmbeddableVideoUrl(asStr(doc.heroVideoUrl)) ? (
+                  <p className="tma-console-block-fields-hint">
+                    External hero video will render in an embed player on the public page.
+                  </p>
+                ) : null}
+              </>
+            ) : null}
             <div className="tma-console-field-row">
               <label className="tma-console-label">
                 Primary CTA label
@@ -363,6 +442,310 @@ export function ConsoleProductEditor({
               </div>
             ))}
             <button type="button" className="tma-console-btn-secondary" onClick={() => patch({ modules: [...modules, { id: newId(), title: 'New module', body: '' }] })} disabled={dis}>Add module</button>
+          </fieldset>
+
+          {/* Gallery */}
+          <fieldset className="tma-console-fieldset">
+            <legend className="tma-console-subheading">Gallery</legend>
+            <label className="tma-console-label">
+              Section title
+              <input
+                className={fieldClass}
+                value={asStr(doc.galleryTitle)}
+                onChange={(e) => patch({ galleryTitle: e.target.value })}
+                disabled={dis}
+                placeholder="Optional gallery headline"
+              />
+            </label>
+            <label className="tma-console-label">
+              Intro
+              <textarea
+                className={fieldClass}
+                rows={2}
+                value={asStr(doc.galleryIntro)}
+                onChange={(e) => patch({ galleryIntro: e.target.value })}
+                disabled={dis}
+              />
+            </label>
+            {galleryItems.map((item, i) => {
+              const mediaMode = asStr(item.mediaMode, 'image') === 'video' ? 'video' : 'image'
+              const nextItems = [...galleryItems]
+              const updateItem = (changes: Record<string, unknown>) => {
+                nextItems[i] = { ...item, ...changes }
+                patch({ galleryItems: nextItems })
+              }
+              return (
+                <div key={asStr(item.id, `gallery-${i}`)} className="tma-console-nested-block">
+                  <div className="tma-console-nested-block__head">
+                    <span className="tma-console-nested-block__title">Gallery item {i + 1}</span>
+                    <button
+                      type="button"
+                      className="tma-console-btn-danger tma-console-btn-danger--small"
+                      onClick={() => patch({ galleryItems: galleryItems.filter((_, j) => j !== i) })}
+                      disabled={dis}
+                    >
+                      Remove
+                    </button>
+                  </div>
+                  <label className="tma-console-label">
+                    Media type
+                    <select
+                      className={fieldClass}
+                      value={mediaMode}
+                      onChange={(e) =>
+                        updateItem({
+                          mediaMode: e.target.value === 'video' ? 'video' : 'image',
+                          imageUrl: e.target.value === 'video' ? '' : item.imageUrl,
+                          videoUrl: e.target.value === 'image' ? '' : item.videoUrl,
+                        })
+                      }
+                      disabled={dis}
+                    >
+                      <option value="image">Image</option>
+                      <option value="video">Video</option>
+                    </select>
+                  </label>
+                  {mediaMode === 'video' ? (
+                    <>
+                      <ConsoleInlineMediaField
+                        label="Gallery video"
+                        value={asStr(item.videoUrl) || undefined}
+                        onChange={(next) => updateItem({ videoUrl: next ?? '' })}
+                        disabled={dis}
+                        folderSuggestion="products"
+                        mediaKind="video"
+                        accept="video/mp4,video/webm,video/quicktime,.mp4,.webm,.mov"
+                        uploadLabel="Upload gallery video"
+                        chooseLabel="Choose gallery video"
+                      />
+                      <label className="tma-console-label">
+                        External gallery video URL (optional)
+                        <input
+                          className={fieldClass}
+                          value={asStr(item.videoUrl)}
+                          onChange={(e) => updateItem({ videoUrl: e.target.value })}
+                          disabled={dis}
+                          placeholder="https://vimeo.com/..."
+                        />
+                      </label>
+                      <ConsoleInlineMediaField
+                        label="Poster image"
+                        value={asStr(item.posterUrl) || undefined}
+                        onChange={(next) => updateItem({ posterUrl: next ?? '' })}
+                        disabled={dis}
+                        folderSuggestion="products"
+                      />
+                    </>
+                  ) : (
+                    <ConsoleInlineMediaField
+                      label="Gallery image"
+                      value={asStr(item.imageUrl) || undefined}
+                      onChange={(next) => updateItem({ imageUrl: next ?? '' })}
+                      altValue={asStr(item.imageAlt)}
+                      onAltChange={(next) => updateItem({ imageAlt: next })}
+                      disabled={dis}
+                      folderSuggestion="products"
+                    />
+                  )}
+                  <label className="tma-console-label">
+                    Caption
+                    <input
+                      className={fieldClass}
+                      value={asStr(item.caption)}
+                      onChange={(e) => updateItem({ caption: e.target.value })}
+                      disabled={dis}
+                    />
+                  </label>
+                </div>
+              )
+            })}
+            <button
+              type="button"
+              className="tma-console-btn-secondary"
+              onClick={() =>
+                patch({
+                  galleryItems: [
+                    ...galleryItems,
+                    { id: newId(), mediaMode: 'image', imageUrl: '', imageAlt: '', caption: '' },
+                  ],
+                })
+              }
+              disabled={dis}
+            >
+              Add gallery item
+            </button>
+          </fieldset>
+
+          {/* Video showcase */}
+          <fieldset className="tma-console-fieldset">
+            <legend className="tma-console-subheading">Video showcase</legend>
+            <div className="tma-console-field-row">
+              <label className="tma-console-label">
+                Eyebrow
+                <input
+                  className={fieldClass}
+                  value={asStr(videoShowcase.eyebrow)}
+                  onChange={(e) => patchNested('videoShowcase', { eyebrow: e.target.value })}
+                  disabled={dis}
+                />
+              </label>
+              <label className="tma-console-label">
+                Title
+                <input
+                  className={fieldClass}
+                  value={asStr(videoShowcase.title)}
+                  onChange={(e) => patchNested('videoShowcase', { title: e.target.value })}
+                  disabled={dis}
+                />
+              </label>
+            </div>
+            <label className="tma-console-label">
+              Description
+              <textarea
+                className={fieldClass}
+                rows={3}
+                value={asStr(videoShowcase.description)}
+                onChange={(e) => patchNested('videoShowcase', { description: e.target.value })}
+                disabled={dis}
+              />
+            </label>
+            <div className="tma-console-field-row">
+              <label className="tma-console-label">
+                Video source
+                <select
+                  className={fieldClass}
+                  value={asStr(videoShowcase.sourceType, 'upload')}
+                  onChange={(e) =>
+                    patchNested('videoShowcase', {
+                      sourceType: e.target.value === 'external' ? 'external' : 'upload',
+                    })
+                  }
+                  disabled={dis}
+                >
+                  <option value="upload">Uploaded video</option>
+                  <option value="external">External URL</option>
+                </select>
+              </label>
+              <label className="tma-console-label">
+                Aspect ratio
+                <select
+                  className={fieldClass}
+                  value={asStr(videoShowcase.aspectRatio, '16:9')}
+                  onChange={(e) => patchNested('videoShowcase', { aspectRatio: e.target.value })}
+                  disabled={dis}
+                >
+                  <option value="16:9">Landscape 16:9</option>
+                  <option value="4:5">Portrait 4:5</option>
+                  <option value="1:1">Square 1:1</option>
+                </select>
+              </label>
+            </div>
+            {asStr(videoShowcase.sourceType, 'upload') === 'external' ? (
+              <label className="tma-console-label">
+                External video URL
+                <input
+                  className={fieldClass}
+                  value={asStr(videoShowcase.externalUrl)}
+                  onChange={(e) => patchNested('videoShowcase', { externalUrl: e.target.value })}
+                  disabled={dis}
+                  placeholder="https://www.youtube.com/watch?v=..."
+                />
+              </label>
+            ) : (
+              <ConsoleInlineMediaField
+                label="Uploaded video"
+                value={asStr(videoShowcase.uploadedVideoUrl) || undefined}
+                onChange={(next) => patchNested('videoShowcase', { uploadedVideoUrl: next ?? '' })}
+                disabled={dis}
+                folderSuggestion="products"
+                mediaKind="video"
+                accept="video/mp4,video/webm,video/quicktime,.mp4,.webm,.mov"
+                uploadLabel="Upload showcase video"
+                chooseLabel="Choose showcase video"
+              />
+            )}
+            <ConsoleInlineMediaField
+              label="Poster image"
+              value={asStr(videoShowcase.posterUrl) || undefined}
+              onChange={(next) => patchNested('videoShowcase', { posterUrl: next ?? '' })}
+              disabled={dis}
+              folderSuggestion="products"
+            />
+            <label className="tma-console-label">
+              Caption
+              <input
+                className={fieldClass}
+                value={asStr(videoShowcase.caption)}
+                onChange={(e) => patchNested('videoShowcase', { caption: e.target.value })}
+                disabled={dis}
+              />
+            </label>
+            <div className="tma-console-field-row">
+              <label className="tma-console-label">
+                CTA label
+                <input
+                  className={fieldClass}
+                  value={asStr(videoShowcase.ctaLabel)}
+                  onChange={(e) => patchNested('videoShowcase', { ctaLabel: e.target.value })}
+                  disabled={dis}
+                />
+              </label>
+              <label className="tma-console-label">
+                CTA URL
+                <input
+                  className={fieldClass}
+                  value={asStr(videoShowcase.ctaHref)}
+                  onChange={(e) => patchNested('videoShowcase', { ctaHref: e.target.value })}
+                  disabled={dis}
+                />
+              </label>
+            </div>
+            <div className="tma-console-field-row">
+              <label className="tma-console-label tma-console-label--inline" style={{ alignItems: 'center', gap: '0.5rem' }}>
+                <input
+                  type="checkbox"
+                  checked={asBool(videoShowcase.autoplay)}
+                  onChange={(e) =>
+                    patchNested('videoShowcase', {
+                      autoplay: e.target.checked,
+                      muted: e.target.checked ? true : asBool(videoShowcase.muted),
+                    })
+                  }
+                  disabled={dis}
+                />
+                Autoplay
+              </label>
+              <label className="tma-console-label tma-console-label--inline" style={{ alignItems: 'center', gap: '0.5rem' }}>
+                <input
+                  type="checkbox"
+                  checked={videoShowcase.autoplay === true ? true : asBool(videoShowcase.muted)}
+                  onChange={(e) => patchNested('videoShowcase', { muted: e.target.checked })}
+                  disabled={dis || asBool(videoShowcase.autoplay)}
+                />
+                Muted
+              </label>
+              <label className="tma-console-label tma-console-label--inline" style={{ alignItems: 'center', gap: '0.5rem' }}>
+                <input
+                  type="checkbox"
+                  checked={asBool(videoShowcase.loop)}
+                  onChange={(e) => patchNested('videoShowcase', { loop: e.target.checked })}
+                  disabled={dis}
+                />
+                Loop
+              </label>
+              <label className="tma-console-label tma-console-label--inline" style={{ alignItems: 'center', gap: '0.5rem' }}>
+                <input
+                  type="checkbox"
+                  checked={videoShowcase.controls !== false}
+                  onChange={(e) => patchNested('videoShowcase', { controls: e.target.checked })}
+                  disabled={dis}
+                />
+                Show controls
+              </label>
+            </div>
+            <p className="tma-console-block-fields-hint">
+              Autoplay is only applied when the video is muted. Leave this section empty if the product page does not need a showcase video.
+            </p>
           </fieldset>
 
           {/* Deliverables */}

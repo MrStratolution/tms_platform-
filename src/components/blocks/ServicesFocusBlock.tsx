@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 
 import { absoluteMediaUrl } from '@/lib/mediaUrl'
 import type { PublicLocale } from '@/lib/publicLocale'
@@ -8,11 +8,14 @@ import { CtaButton } from '@/components/tma/CtaButton'
 
 type ServiceItem = {
   id?: string | null
+  slug?: string | null
   title: string
   summary?: string | null
   bullets?: { id?: string | null; text: string }[] | null
   imageUrl?: string | null
   imageAlt?: string | null
+  ctaLabel?: string | null
+  ctaHref?: string | null
 }
 
 type Props = {
@@ -48,6 +51,19 @@ export function ServicesFocusBlock(props: Props) {
   )
   const [activeIndex, setActiveIndex] = useState(0)
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const syncFromHash = () => {
+      const hash = window.location.hash.replace(/^#/, '').trim().toLowerCase()
+      if (!hash) return
+      const nextIndex = items.findIndex((item) => item.slug?.trim().toLowerCase() === hash)
+      if (nextIndex >= 0) setActiveIndex(nextIndex)
+    }
+    syncFromHash()
+    window.addEventListener('hashchange', syncFromHash)
+    return () => window.removeEventListener('hashchange', syncFromHash)
+  }, [items])
+
   if (items.length === 0) {
     return <p className="tma-muted">Add at least one service item in the CMS.</p>
   }
@@ -59,6 +75,8 @@ export function ServicesFocusBlock(props: Props) {
     typeof active.imageUrl === 'string' && active.imageUrl.trim()
       ? absoluteMediaUrl(active.imageUrl.trim())
       : null
+  const activeCtaLabel = active.ctaLabel?.trim() || props.ctaLabel?.trim() || ''
+  const activeCtaHref = active.ctaHref?.trim() || props.ctaHref?.trim() || ''
 
   return (
     <section className="block-services-focus" aria-label={props.sectionTitle?.trim() || labels.section}>
@@ -81,8 +99,14 @@ export function ServicesFocusBlock(props: Props) {
                 type="button"
                 role="tab"
                 aria-selected={selected}
+                id={item.slug?.trim() || undefined}
                 className={`block-services-focus__tab${selected ? ' block-services-focus__tab--active' : ''}`}
-                onClick={() => setActiveIndex(index)}
+                onClick={() => {
+                  setActiveIndex(index)
+                  if (typeof window !== 'undefined' && item.slug?.trim()) {
+                    window.history.replaceState(null, '', `#${item.slug.trim()}`)
+                  }
+                }}
               >
                 <span className="block-services-focus__tab-index">
                   {String(index + 1).padStart(2, '0')}
@@ -113,11 +137,11 @@ export function ServicesFocusBlock(props: Props) {
                 ))}
               </ul>
             ) : null}
-            {props.ctaLabel?.trim() && props.ctaHref?.trim() ? (
+            {activeCtaLabel && activeCtaHref ? (
               <p className="block-services-focus__cta">
                 <CtaButton
-                  label={props.ctaLabel.trim()}
-                  href={props.ctaHref.trim()}
+                  label={activeCtaLabel}
+                  href={activeCtaHref}
                   variant="secondary"
                   locale={locale}
                 />

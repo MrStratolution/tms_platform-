@@ -60,6 +60,12 @@ export default async function ConsoleProductsListPage() {
             Create showcase entry
           </Link>
         </p>
+        <p className="tma-console-actions" style={{ marginBottom: '1.5rem' }}>
+          <Link href="/console/products/new?kind=project" className="tma-console-submit">New project</Link>{' '}
+          <Link href="/console/products/new?kind=product" className="tma-console-btn-secondary">New product</Link>{' '}
+          <Link href="/console/products/new?kind=concept" className="tma-console-btn-secondary">New concept</Link>{' '}
+          <Link href="/console/products/new?kind=system" className="tma-console-btn-secondary">New system</Link>
+        </p>
         {rows === null ? (
           <p className="tma-console-lead tma-console-lead--error" role="alert">
             Database is not configured. Set <code>DATABASE_URL</code>.

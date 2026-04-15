@@ -205,6 +205,19 @@ export interface Service {
   promise?: string | null;
   proof?:
     | {
+        bullets?:
+          | {
+              text: string;
+              id?: string | null;
+            }[]
+          | null;
+        imageMediaId?: number | null;
+        imageUrl?: string | null;
+        imageAlt?: string | null;
+        ctaLabel?: string | null;
+        ctaHref?: string | null;
+      }
+    | {
         [k: string]: unknown;
       }
     | unknown[]
@@ -226,6 +239,16 @@ export interface Industry {
   slug: string;
   summary?: string | null;
   messaging?:
+    | {
+        positioning?: string | null;
+        challenges?: string[] | null;
+        opportunities?: string[] | null;
+        imageMediaId?: number | null;
+        imageUrl?: string | null;
+        imageAlt?: string | null;
+        ctaLabel?: string | null;
+        ctaHref?: string | null;
+      }
     | {
         [k: string]: unknown;
       }
@@ -874,24 +897,43 @@ export interface Page {
         | {
             sectionTitle?: string | null;
             intro?: string | null;
+            sourceMode?: ('manual' | 'library') | null;
+            selectionMode?: ('manual' | 'automatic') | null;
+            serviceIds?: (number | Service)[] | null;
+            ctaLabel?: string | null;
+            ctaHref?: string | null;
             items?:
               | {
+                  slug?: string | null;
                   title: string;
                   summary?: string | null;
                   bullets?:
                     | {
                         text: string;
                         id?: string | null;
-                      }[]
+                }[]
                     | null;
                   imageUrl?: string | null;
                   imageAlt?: string | null;
+                  ctaLabel?: string | null;
+                  ctaHref?: string | null;
                   id?: string | null;
                 }[]
               | null;
             id?: string | null;
             blockName?: string | null;
             blockType: 'servicesFocus';
+          }
+        | {
+            sectionTitle?: string | null;
+            intro?: string | null;
+            selectionMode?: ('manual' | 'automatic') | null;
+            industries?: (number | Industry)[] | null;
+            ctaLabel?: string | null;
+            ctaHref?: string | null;
+            id?: string | null;
+            blockName?: string | null;
+            blockType: 'industryGrid';
           }
         | {
             sectionTitle?: string | null;

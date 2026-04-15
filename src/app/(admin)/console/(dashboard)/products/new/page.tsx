@@ -2,12 +2,24 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 
 import { ConsoleCreateProductForm } from '@/components/console/ConsoleCreateProductForm'
+import { PRODUCT_CONTENT_KIND_VALUES, type ProductContentKind } from '@/types/cms'
 
 export const metadata: Metadata = {
   title: 'New showcase entry',
 }
 
-export default function ConsoleNewProductPage() {
+type Props = {
+  searchParams?: Promise<{ kind?: string | string[] }>
+}
+
+export default async function ConsoleNewProductPage(props: Props) {
+  const searchParams = props.searchParams ? await props.searchParams : undefined
+  const rawKind = typeof searchParams?.kind === 'string' ? searchParams.kind : null
+  const initialContentKind: ProductContentKind =
+    rawKind && PRODUCT_CONTENT_KIND_VALUES.includes(rawKind as ProductContentKind)
+      ? (rawKind as ProductContentKind)
+      : 'product'
+
   return (
     <main className="tma-console-main wide">
       <p className="tma-console-back">
@@ -18,7 +30,7 @@ export default function ConsoleNewProductPage() {
         Inserts into <code>cms_product</code>. Use this for project, product, concept, or
         initiative entries rendered publicly at <code>/products/[slug]</code>.
       </p>
-      <ConsoleCreateProductForm />
+      <ConsoleCreateProductForm initialContentKind={initialContentKind} />
     </main>
   )
 }

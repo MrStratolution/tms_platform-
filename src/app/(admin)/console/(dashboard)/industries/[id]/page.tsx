@@ -28,7 +28,10 @@ export default async function ConsoleIndustryDetailPage(props: Props) {
   return (
     <main className="tma-console-main wide">
       <p className="tma-console-back"><Link href="/console/industries">← All industries</Link></p>
-      <h1 className="tma-console-page-title">Industry #{row.id}</h1>
+      <h1 className="tma-console-page-title">{row.name}</h1>
+      <p className="tma-console-lead">
+        Reusable industry entry for positioning, challenge framing, and industry sections on CMS pages.
+      </p>
       <ConsoleIndustryEditor
         id={row.id}
         initial={{
