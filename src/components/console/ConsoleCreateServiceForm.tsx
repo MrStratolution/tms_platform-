@@ -41,6 +41,10 @@ export function ConsoleCreateServiceForm() {
 
   return (
     <form className="tma-console-form" onSubmit={onSubmit}>
+      <p className="tma-console-block-fields-hint">
+        Start with the service name, promise, and summary. Proof bullets, supporting visuals, and
+        CTA can be added on the next screen without editing raw JSON.
+      </p>
       <label className="tma-console-label">Name <input className="tma-console-input" value={name} onChange={(e) => setName(e.target.value)} required disabled={busy} /></label>
       <label className="tma-console-label">Slug <input className="tma-console-input" value={slug} onChange={(e) => setSlug(e.target.value)} required disabled={busy} /></label>
       <label className="tma-console-label">Summary <textarea className="tma-console-textarea-json" rows={4} value={summary} onChange={(e) => setSummary(e.target.value)} disabled={busy} /></label>

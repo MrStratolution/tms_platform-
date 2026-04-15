@@ -6,12 +6,16 @@ import { useState } from 'react'
 import { readResponseJson } from '@/lib/safeJson'
 import { PRODUCT_CONTENT_KIND_VALUES, type ProductContentKind } from '@/types/cms'
 
-export function ConsoleCreateProductForm() {
+export function ConsoleCreateProductForm(props?: { initialContentKind?: ProductContentKind }) {
   const router = useRouter()
   const [slug, setSlug] = useState('')
   const [name, setName] = useState('')
   const [status, setStatus] = useState<'draft' | 'published'>('draft')
-  const [contentKind, setContentKind] = useState<ProductContentKind>('product')
+  const [contentKind, setContentKind] = useState<ProductContentKind>(
+    props?.initialContentKind && PRODUCT_CONTENT_KIND_VALUES.includes(props.initialContentKind)
+      ? props.initialContentKind
+      : 'product',
+  )
   const [publishedAt, setPublishedAt] = useState('')
   const [listingPriority, setListingPriority] = useState('')
   const [showInProjectFeeds, setShowInProjectFeeds] = useState(false)

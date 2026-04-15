@@ -67,26 +67,32 @@ export function ConsoleCaseStudyEditor({ id, initial, canEdit }: Props) {
   return (
     <form className="tma-console-form" onSubmit={onSave}>
       {!canEdit ? <p className="tma-console-env-warning" role="status"><strong>View only.</strong> Your role cannot edit content.</p> : null}
-      <label className="tma-console-label">Title <input type="text" className="tma-console-input" value={title} onChange={(e) => setTitle(e.target.value)} disabled={dis} /></label>
-      <label className="tma-console-label">Slug <input type="text" className="tma-console-input" value={slug} onChange={(e) => setSlug(e.target.value)} disabled={dis} /></label>
-      <label className="tma-console-label">Summary (optional) <textarea className="tma-console-textarea-json" rows={4} value={summary} onChange={(e) => setSummary(e.target.value)} disabled={dis} /></label>
-      <ConsoleIndustrySelectField
-        label="Industry (optional)"
-        value={industryId}
-        onChange={setIndustryId}
-        disabled={dis}
-        helpText="Choose the market this case study belongs to. Leave empty if it should stay general."
-      />
-      <ConsoleMediaIdField
-        label="Featured image"
-        value={featuredImageId}
-        onChange={setFeaturedImageId}
-        disabled={dis}
-        helpText="Used on case study cards and detail previews."
-        folderSuggestion="case-studies"
-        uploadLabel="Upload featured image"
-        chooseLabel="Choose featured image"
-      />
+      <fieldset className="tma-console-fieldset">
+        <legend className="tma-console-subheading">Basics</legend>
+        <label className="tma-console-label">Title <input type="text" className="tma-console-input" value={title} onChange={(e) => setTitle(e.target.value)} disabled={dis} /></label>
+        <label className="tma-console-label">Slug <input type="text" className="tma-console-input" value={slug} onChange={(e) => setSlug(e.target.value)} disabled={dis} /></label>
+        <label className="tma-console-label">Summary (optional) <textarea className="tma-console-textarea-json" rows={4} value={summary} onChange={(e) => setSummary(e.target.value)} disabled={dis} /></label>
+      </fieldset>
+      <fieldset className="tma-console-fieldset">
+        <legend className="tma-console-subheading">Public placement</legend>
+        <ConsoleIndustrySelectField
+          label="Industry (optional)"
+          value={industryId}
+          onChange={setIndustryId}
+          disabled={dis}
+          helpText="Choose the market this case study belongs to. Leave empty if it should stay general."
+        />
+        <ConsoleMediaIdField
+          label="Featured image"
+          value={featuredImageId}
+          onChange={setFeaturedImageId}
+          disabled={dis}
+          helpText="Used on case study cards and detail previews."
+          folderSuggestion="case-studies"
+          uploadLabel="Upload featured image"
+          chooseLabel="Choose featured image"
+        />
+      </fieldset>
       <label className="tma-console-label tma-console-label--inline"><input type="checkbox" checked={active} onChange={(e) => setActive(e.target.checked)} disabled={dis} /> Active</label>
       <p className="tma-console-block-fields-hint">
         Active case studies are visible in automatic case-study sections. Deactivate a row if it

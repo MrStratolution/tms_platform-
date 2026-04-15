@@ -29,7 +29,21 @@ const createBodySchema = z.object({
   title: z.string().min(1).max(500),
   pageType: pageTypeEnum,
   status: z.enum(['draft', 'review', 'published']).default('draft'),
-  template: z.enum(['blank', 'landing', 'service', 'contact', 'thank_you']).default('blank'),
+  template: z
+    .enum([
+      'blank',
+      'landing',
+      'service',
+      'services_directory',
+      'industries_directory',
+      'work_showcase',
+      'projects_directory',
+      'news_index',
+      'news_article',
+      'contact',
+      'thank_you',
+    ])
+    .default('blank'),
 })
 
 /**

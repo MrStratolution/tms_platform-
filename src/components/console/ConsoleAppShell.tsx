@@ -14,10 +14,11 @@ type NavItem = { href: string; label: string; description?: string }
 const NAV_CONTENT: NavItem[] = [
   { href: '/console', label: 'Dashboard', description: 'Overview' },
   { href: '/console/pages', label: 'Pages', description: 'Site content & layout' },
+  { href: '/console/news', label: 'News / Blog', description: 'Articles & editorial pages' },
   { href: '/console/services', label: 'Services', description: 'Offer directory' },
   { href: '/console/industries', label: 'Industries', description: 'Market directory' },
   { href: '/console/media', label: 'Media', description: 'Images & file URLs' },
-  { href: '/console/products', label: 'Products', description: 'Offers & API' },
+  { href: '/console/products', label: 'Projects & Products', description: 'Showcase entries' },
 ]
 
 const NAV_LIBRARIES: NavItem[] = [
@@ -133,6 +134,8 @@ export function ConsoleAppShell(props: {
                   ? adminCopy(uiLocale, 'navDashboard')
                   : item.href === '/console/pages'
                     ? adminCopy(uiLocale, 'navPages')
+                    : item.href === '/console/news'
+                      ? adminCopy(uiLocale, 'navNews')
                     : item.href === '/console/services'
                       ? adminCopy(uiLocale, 'navServices')
                       : item.href === '/console/industries'

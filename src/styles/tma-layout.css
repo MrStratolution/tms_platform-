@@ -900,12 +900,74 @@
   letter-spacing: var(--tracking-tight);
 }
 
+.tma-product-public__hero {
+  display: grid;
+  gap: clamp(1.5rem, 4vw, 3rem);
+  align-items: start;
+}
+
 .tma-product-public__tagline {
   font-size: 1.125rem;
   color: var(--tma-white-muted);
   max-width: 42rem;
   margin: 0 0 2rem;
   line-height: 1.55;
+}
+
+.tma-product-public__hero-media {
+  margin: 0;
+}
+
+.tma-product-public__hero-image {
+  width: 100%;
+  display: block;
+  border-radius: 1.1rem;
+  border: 1px solid var(--tma-border);
+  background: rgba(255, 255, 255, 0.02);
+  object-fit: cover;
+}
+
+.tma-product-public__hero-caption,
+.tma-product-public__video-caption,
+.tma-product-public__gallery-caption {
+  margin: 0.75rem 0 0;
+  color: var(--tma-white-muted);
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.tma-product-public__cta--hero {
+  margin-top: 1.5rem;
+}
+
+.tma-product-public__media {
+  position: relative;
+  overflow: hidden;
+  border-radius: 1.1rem;
+  border: 1px solid var(--tma-border);
+  background:
+    radial-gradient(circle at top left, rgba(231, 248, 200, 0.14), transparent 36%),
+    rgba(255, 255, 255, 0.02);
+}
+
+.tma-product-public__media iframe,
+.tma-product-public__media video {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+.tma-product-public__media--landscape {
+  aspect-ratio: 16 / 9;
+}
+
+.tma-product-public__media--portrait {
+  aspect-ratio: 4 / 5;
+}
+
+.tma-product-public__media--square {
+  aspect-ratio: 1 / 1;
 }
 
 .tma-product-public__modules {
@@ -958,6 +1020,47 @@
   line-height: 1.55;
 }
 
+.tma-product-public__gallery-grid {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 2.5rem;
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+}
+
+.tma-product-public__gallery-item {
+  padding: 0.9rem;
+  border: 1px solid var(--tma-border);
+  border-radius: 1rem;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.tma-product-public__gallery-visual {
+  overflow: hidden;
+  border-radius: 0.8rem;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.tma-product-public__gallery-visual img,
+.tma-product-public__gallery-video {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.tma-product-public__video-showcase {
+  display: grid;
+  gap: clamp(1.25rem, 4vw, 2.5rem);
+  align-items: center;
+  margin: 0 0 2.5rem;
+}
+
+.tma-product-public__video-copy .tma-product-public__section-title {
+  margin-top: 0;
+}
+
 .tma-product-public__plans {
   list-style: none;
   padding: 0;
@@ -992,6 +1095,13 @@
   color: var(--tma-white-muted);
   font-size: 0.9rem;
   line-height: 1.5;
+}
+
+@media (min-width: 920px) {
+  .tma-product-public__hero,
+  .tma-product-public__video-showcase {
+    grid-template-columns: minmax(0, 1.05fr) minmax(18rem, 0.95fr);
+  }
 }
 
 .tma-case-study-public {

@@ -55,7 +55,7 @@ const force = process.argv.includes('--force')
 const DEMO_OWNER = 'cms-demo-seed'
 const DEMO_VERSION = 2
 
-const CORE_PAGE_SLUGS = ['home', 'about', 'services', 'work', 'projects', 'news', 'contact', 'thanks', 'legal'] as const
+const CORE_PAGE_SLUGS = ['home', 'about', 'services', 'industries', 'work', 'projects', 'news', 'contact', 'thanks', 'legal'] as const
 const DEMO_PAGE_SLUGS = [
   ...CORE_PAGE_SLUGS,
   'creative-tech-with-clarity',
@@ -447,25 +447,55 @@ async function ensureEmailTemplates(db: CustomDb) {
   return { leadUserDe }
 }
 
-async function ensureServices(db: CustomDb) {
+async function ensureServices(db: CustomDb, media: Record<string, MediaRow>) {
   const defs = [
     {
       slug: 'demo-ai-positioning',
       name: 'AI Positioning',
       summary: 'Service record for positioning, proof, and narrative.',
       promise: 'Adapt this placeholder service to your real offer structure.',
+      proof: {
+        bullets: [
+          { text: 'Positioning narrative for skeptical B2B buying groups' },
+          { text: 'Proof framing across site, decks, and product touchpoints' },
+          { text: 'Conversion-ready messaging for launch and sales follow-up' },
+        ],
+        imageMediaId: media['demo/placeholders/service-positioning.svg']?.id ?? null,
+        ctaLabel: 'Projekt anfragen',
+        ctaHref: '/contact',
+      },
     },
     {
       slug: 'demo-demand-systems',
       name: 'Demand Systems',
       summary: 'Service record for paid, organic, and conversion paths.',
       promise: 'Adapt this structure to your campaign and pipeline operating model.',
+      proof: {
+        bullets: [
+          { text: 'Campaign system instead of one-off launch assets' },
+          { text: 'Organic and paid demand mapped to the same story' },
+          { text: 'Clear handoff from attention into lead capture' },
+        ],
+        imageMediaId: media['demo/placeholders/service-demand.svg']?.id ?? null,
+        ctaLabel: 'Demand prüfen',
+        ctaHref: '/contact',
+      },
     },
     {
       slug: 'demo-revops-instrumentation',
       name: 'RevOps Instrumentation',
       summary: 'Service record for funnel instrumentation and handoff design.',
       promise: 'Adapt this structure to your attribution and workflow scope.',
+      proof: {
+        bullets: [
+          { text: 'Lead, booking, and CRM flows stay measurable' },
+          { text: 'Operational handoffs are mapped before launch' },
+          { text: 'Tracking and attribution stay aligned with reality' },
+        ],
+        imageMediaId: media['demo/placeholders/service-revops.svg']?.id ?? null,
+        ctaLabel: 'Setup besprechen',
+        ctaHref: '/contact',
+      },
     },
   ] as const
 
@@ -484,7 +514,7 @@ async function ensureServices(db: CustomDb) {
           name: def.name,
           summary: def.summary,
           promise: def.promise,
-          proof: demoSeedMeta('service', { slug: def.slug }),
+          proof: { ...demoSeedMeta('service', { slug: def.slug }), ...def.proof },
           active: true,
           updatedAt: new Date(),
         })
@@ -498,7 +528,7 @@ async function ensureServices(db: CustomDb) {
         name: def.name,
         summary: def.summary,
         promise: def.promise,
-        proof: demoSeedMeta('service', { slug: def.slug }),
+        proof: { ...demoSeedMeta('service', { slug: def.slug }), ...def.proof },
         active: true,
       })
       .returning({ id: cmsServices.id })
@@ -511,25 +541,46 @@ async function ensureServices(db: CustomDb) {
   return out
 }
 
-async function ensureIndustries(db: CustomDb) {
+async function ensureIndustries(db: CustomDb, media: Record<string, MediaRow>) {
   const defs = [
     {
       slug: 'demo-ai-platforms',
       name: 'AI Platforms',
       summary: 'Industry record for AI-native B2B products.',
-      messaging: { angle: 'Proof-first narrative for skeptical buying committees.' },
+      messaging: {
+        positioning: 'Proof-first narrative for skeptical buying committees.',
+        challenges: ['Abstract value proposition', 'Fast-moving category language', 'Trust gaps before demo requests'],
+        opportunities: ['Sharper positioning', 'Higher-intent pipeline pages'],
+        imageMediaId: media['demo/placeholders/industry-ai.svg']?.id ?? media['demo/placeholders/service-positioning.svg']?.id ?? null,
+        ctaLabel: 'Use case prüfen',
+        ctaHref: '/contact',
+      },
     },
     {
       slug: 'demo-regulated-saas',
       name: 'Regulated SaaS',
       summary: 'Industry record for trust-heavy sales motions.',
-      messaging: { angle: 'Security, compliance, and ROI must sit in the same story.' },
+      messaging: {
+        positioning: 'Security, compliance, and ROI must sit in the same story.',
+        challenges: ['Long buying cycles', 'Heavy trust expectations', 'Compliance-first objections'],
+        opportunities: ['Clearer proof layers', 'Stronger procurement readiness'],
+        imageMediaId: media['demo/placeholders/industry-regulated.svg']?.id ?? media['demo/placeholders/service-demand.svg']?.id ?? null,
+        ctaLabel: 'Vertrauensstrecke planen',
+        ctaHref: '/contact',
+      },
     },
     {
       slug: 'demo-developer-tools',
       name: 'Developer Tools',
       summary: 'Industry record for product-led and sales-assisted developer-tool motions.',
-      messaging: { angle: 'Docs, proof, and pricing need to agree with live sales calls.' },
+      messaging: {
+        positioning: 'Docs, proof, and pricing need to agree with live sales calls.',
+        challenges: ['Product-led entry with enterprise pressure', 'Docs and site drift', 'Technical proof not translating to business value'],
+        opportunities: ['Cleaner product storytelling', 'Better bridge from docs to commercial intent'],
+        imageMediaId: media['demo/placeholders/industry-devtools.svg']?.id ?? media['demo/placeholders/service-revops.svg']?.id ?? null,
+        ctaLabel: 'Developer GTM prüfen',
+        ctaHref: '/contact',
+      },
     },
   ] as const
 
@@ -1636,8 +1687,52 @@ async function ensureProducts(db: CustomDb) {
           'Ein editoriales Digitalprojekt für Marken, Formate und Inhalte, die Haltung, Rhythmus und eine visuelle Erzählung brauchen.',
         tagline:
           'Editoriale digitale Struktur für Inhalte, Kampagnen und markengeführte Formate mit visuellem Rhythmus.',
+        heroMediaMode: 'image',
         coverImageUrl: editorialCover,
         coverImageAlt: 'Editoriales Visual für Luma Editorial Engine',
+        galleryTitle: 'Ausgewählte Ansichten',
+        galleryIntro:
+          'Beispielhafte Ausschnitte für Publishing-Struktur, visuelle Dramaturgie und eine medienreiche Produktpräsentation.',
+        galleryItems: [
+          {
+            id: 'luma-gallery-1',
+            mediaMode: 'image',
+            imageUrl: editorialCover,
+            imageAlt: 'Editoriales Key Visual für Luma Editorial Engine',
+            caption: 'Hero-Visual mit editorischer Stimmung und klarer Typografie.',
+          },
+          {
+            id: 'luma-gallery-2',
+            mediaMode: 'image',
+            imageUrl: conceptCover,
+            imageAlt: 'Systemische Produktansicht für Luma Editorial Engine',
+            caption: 'Layout-System für Storytelling, Launches und markengeführte Formate.',
+          },
+          {
+            id: 'luma-gallery-3',
+            mediaMode: 'image',
+            imageUrl: systemsCover,
+            imageAlt: 'Dunkles Creative-Tech Produktvisual',
+            caption: 'Publishing- und Strukturprinzipien für wiederkehrende digitale Inhalte.',
+          },
+        ],
+        videoShowcase: {
+          eyebrow: 'Video Showcase',
+          title: 'Wie das editoriale System in Bewegung wirkt',
+          description:
+            'Eine optionale Video-Fläche für Reels, Walkthroughs oder Projektteaser, ohne die Produktseite in einen separaten Baukasten zu verwandeln.',
+          sourceType: 'external',
+          externalUrl: 'https://vimeo.com/76979871',
+          posterUrl: editorialCover,
+          caption: 'Demo-Platzhalter für einen extern eingebetteten Produktfilm.',
+          ctaLabel: 'Projekt besprechen',
+          ctaHref: '/contact',
+          autoplay: false,
+          muted: true,
+          loop: false,
+          controls: true,
+          aspectRatio: '16:9',
+        },
         modules: [
           { title: 'Content architecture', body: 'Ein System für Formate, Erzählung und redaktionelle Hierarchie statt isolierter Inhaltsbausteine.' },
           { title: 'Visual pacing', body: 'Eine digitale Dramaturgie aus Layout, Bewegung und Typografie, die Inhalte spürbar macht.' },
@@ -1659,8 +1754,52 @@ async function ensureProducts(db: CustomDb) {
               'An editorial digital project for brands, formats and content that need intent, rhythm and a visual narrative.',
             tagline:
               'Editorial digital structure for content, campaigns and brand-led formats with visual rhythm.',
+            heroMediaMode: 'image',
             coverImageUrl: editorialCover,
             coverImageAlt: 'Editorial visual for Luma Editorial Engine',
+            galleryTitle: 'Selected views',
+            galleryIntro:
+              'Example moments for publishing structure, visual pacing and a more media-rich product story.',
+            galleryItems: [
+              {
+                id: 'luma-gallery-1',
+                mediaMode: 'image',
+                imageUrl: editorialCover,
+                imageAlt: 'Editorial hero visual for Luma Editorial Engine',
+                caption: 'Hero visual with editorial atmosphere and precise typography.',
+              },
+              {
+                id: 'luma-gallery-2',
+                mediaMode: 'image',
+                imageUrl: conceptCover,
+                imageAlt: 'System-led product visual for Luma Editorial Engine',
+                caption: 'Layout system for storytelling, launches and brand-led formats.',
+              },
+              {
+                id: 'luma-gallery-3',
+                mediaMode: 'image',
+                imageUrl: systemsCover,
+                imageAlt: 'Dark creative-tech product visual',
+                caption: 'Publishing and structure principles for recurring digital content.',
+              },
+            ],
+            videoShowcase: {
+              eyebrow: 'Video showcase',
+              title: 'How the editorial system behaves in motion',
+              description:
+                'An optional video surface for reels, walkthroughs, or project teasers without turning the product page into a separate page builder.',
+              sourceType: 'external',
+              externalUrl: 'https://vimeo.com/76979871',
+              posterUrl: editorialCover,
+              caption: 'Demo placeholder for an externally embedded product film.',
+              ctaLabel: 'Discuss project',
+              ctaHref: '/contact',
+              autoplay: false,
+              muted: true,
+              loop: false,
+              controls: true,
+              aspectRatio: '16:9',
+            },
             modules: [
               { title: 'Content architecture', body: 'A system for formats, narrative and editorial hierarchy instead of isolated content fragments.' },
               { title: 'Visual pacing', body: 'A digital dramaturgy of layout, motion and typography that makes content feel intentional.' },
@@ -3381,86 +3520,10 @@ function buildPageDocuments(ctx: {
             sectionTitle: 'Service Navigator',
             intro:
               'Jede Leistung verbindet strategisches Denken mit gestalterischer und technischer Prazision.',
-            items: [
-              {
-                id: 'services-brand',
-                title: 'Brand Identity',
-                summary:
-                  'Markensysteme und Ausdrucksformen, die Haltung, Wiedererkennbarkeit und digitale Konsistenz schaffen.',
-                bullets: [
-                  { id: 'services-brand-1', text: 'Markenpositionierung und strategische Klarheit' },
-                  { id: 'services-brand-2', text: 'Visuelle Identitatssysteme und Markenausdruck' },
-                  { id: 'services-brand-3', text: 'Konsistenz uber digitale Touchpoints hinweg' },
-                ],
-                imageUrl: positioningUrl,
-                imageAlt: 'Visual fur Brand Identity',
-              },
-              {
-                id: 'services-web',
-                title: 'Web Design',
-                summary:
-                  'Editoriale, hochwertige Websites mit klarer Struktur, markentauglicher Gestaltung und technischer Anschlussfahigkeit.',
-                bullets: [
-                  { id: 'services-web-1', text: 'Editoriale und conversion-starke Websites' },
-                  { id: 'services-web-2', text: 'Hochwertige Interfaces mit klarer Hierarchie' },
-                  { id: 'services-web-3', text: 'CMS-fahige Strukturen fur langfristiges Wachstum' },
-                ],
-                imageUrl: heroUrl,
-                imageAlt: 'Visual fur Web Design',
-              },
-              {
-                id: 'services-app',
-                title: 'App Development',
-                summary:
-                  'Digitale Produkte und Anwendungen, die skalierbar, markengerecht und technisch sauber umgesetzt sind.',
-                bullets: [
-                  { id: 'services-app-1', text: 'Skalierbare Apps und digitale Produkte' },
-                  { id: 'services-app-2', text: 'Technisch saubere Frontend- und Backend-Losungen' },
-                  { id: 'services-app-3', text: 'Nutzerorientierte Funktionalitat mit Markenfit' },
-                ],
-                imageUrl: revopsUrl,
-                imageAlt: 'Visual fur App Development',
-              },
-              {
-                id: 'services-marketing',
-                title: 'Marketing',
-                summary:
-                  'Strategische Kampagnen und digitale Systeme, die Sichtbarkeit, Interaktion und Relevanz zusammenbringen.',
-                bullets: [
-                  { id: 'services-marketing-1', text: 'Kampagnen mit strategischer Richtung' },
-                  { id: 'services-marketing-2', text: 'Performance-orientierte digitale Touchpoints' },
-                  { id: 'services-marketing-3', text: 'Sichtbarkeit, Reichweite und Interaktion' },
-                ],
-                imageUrl: demandUrl,
-                imageAlt: 'Visual fur Marketing',
-              },
-              {
-                id: 'services-content',
-                title: 'Content Creation',
-                summary:
-                  'Storytelling, Copy und visuelle Assets, die Ideen verstandlich, relevant und begehrlich machen.',
-                bullets: [
-                  { id: 'services-content-1', text: 'Storytelling, Copywriting und visuelle Systeme' },
-                  { id: 'services-content-2', text: 'Inhalte fur Marke, Produkt und Nachfrage' },
-                  { id: 'services-content-3', text: 'Kreative Assets mit klarer Richtung' },
-                ],
-                imageUrl: auditUrl,
-                imageAlt: 'Visual fur Content Creation',
-              },
-              {
-                id: 'services-ux',
-                title: 'UX Design',
-                summary:
-                  'Nutzerzentrierte digitale Erlebnisse mit Klarheit, Relevanz und weniger Reibung in jeder Interaktion.',
-                bullets: [
-                  { id: 'services-ux-1', text: 'Nutzerzentrierte Strukturen und Journeys' },
-                  { id: 'services-ux-2', text: 'Interfaces mit Klarheit und Relevanz' },
-                  { id: 'services-ux-3', text: 'Weniger Reibung, mehr Wirkung' },
-                ],
-                imageUrl: conversionUrl,
-                imageAlt: 'Visual fur UX Design',
-              },
-            ],
+            sourceMode: 'library',
+            selectionMode: 'automatic',
+            serviceIds: [],
+            items: [],
             ctaLabel: 'Projekt starten',
             ctaHref: '/contact',
           },
@@ -3589,86 +3652,10 @@ function buildPageDocuments(ctx: {
             sectionTitle: 'Service Navigator',
             intro:
               'Each service combines strategic thinking with design and technical execution.',
-            items: [
-              {
-                id: 'services-brand',
-                title: 'Brand Identity',
-                summary:
-                  'Identity systems and expressions that create direction, recognition and digital consistency.',
-                bullets: [
-                  { id: 'services-brand-1', text: 'Brand positioning and strategic clarity' },
-                  { id: 'services-brand-2', text: 'Visual identity systems and brand expression' },
-                  { id: 'services-brand-3', text: 'Consistency across digital touchpoints' },
-                ],
-                imageUrl: positioningUrl,
-                imageAlt: 'Visual for brand identity',
-              },
-              {
-                id: 'services-web',
-                title: 'Web Design',
-                summary:
-                  'Editorial, high-quality websites with clear structure, brand presence and long-term technical flexibility.',
-                bullets: [
-                  { id: 'services-web-1', text: 'Editorial and conversion-strong websites' },
-                  { id: 'services-web-2', text: 'High-quality interfaces with clear hierarchy' },
-                  { id: 'services-web-3', text: 'CMS-ready structures for long-term growth' },
-                ],
-                imageUrl: heroUrl,
-                imageAlt: 'Visual for web design',
-              },
-              {
-                id: 'services-app',
-                title: 'App Development',
-                summary:
-                  'Scalable digital products and applications built with technical rigor and brand fit.',
-                bullets: [
-                  { id: 'services-app-1', text: 'Scalable apps and digital products' },
-                  { id: 'services-app-2', text: 'Clean frontend and backend solutions' },
-                  { id: 'services-app-3', text: 'User-oriented functionality with brand fit' },
-                ],
-                imageUrl: revopsUrl,
-                imageAlt: 'Visual for app development',
-              },
-              {
-                id: 'services-marketing',
-                title: 'Marketing',
-                summary:
-                  'Strategic campaigns and digital touchpoints designed for visibility, interaction and momentum.',
-                bullets: [
-                  { id: 'services-marketing-1', text: 'Campaigns with strategic direction' },
-                  { id: 'services-marketing-2', text: 'Performance-oriented digital touchpoints' },
-                  { id: 'services-marketing-3', text: 'Visibility, reach and interaction' },
-                ],
-                imageUrl: demandUrl,
-                imageAlt: 'Visual for marketing',
-              },
-              {
-                id: 'services-content',
-                title: 'Content Creation',
-                summary:
-                  'Storytelling, copy and visual assets that make ideas clear, relevant and desirable.',
-                bullets: [
-                  { id: 'services-content-1', text: 'Storytelling, copywriting and visual systems' },
-                  { id: 'services-content-2', text: 'Content for brand, product and demand' },
-                  { id: 'services-content-3', text: 'Creative assets with clear direction' },
-                ],
-                imageUrl: auditUrl,
-                imageAlt: 'Visual for content creation',
-              },
-              {
-                id: 'services-ux',
-                title: 'UX Design',
-                summary:
-                  'User-centred digital experiences with clarity, relevance and less friction in every interaction.',
-                bullets: [
-                  { id: 'services-ux-1', text: 'User-centred structures and journeys' },
-                  { id: 'services-ux-2', text: 'Interfaces with clarity and relevance' },
-                  { id: 'services-ux-3', text: 'Less friction, more impact' },
-                ],
-                imageUrl: conversionUrl,
-                imageAlt: 'Visual for UX design',
-              },
-            ],
+            sourceMode: 'library',
+            selectionMode: 'automatic',
+            serviceIds: [],
+            items: [],
             ctaLabel: 'Start project',
             ctaHref: '/contact',
           },
@@ -3752,6 +3739,136 @@ function buildPageDocuments(ctx: {
             label: 'Start project',
             href: '/contact',
             variant: 'primary',
+          },
+        ],
+      },
+    },
+    {
+      slug: 'industries',
+      title: 'Industries · The Modesty Argument',
+      pageType: 'industry',
+      status: 'published',
+      de: {
+        ...commonLocalization,
+        ...demoSeedMeta('page', { slug: 'industries' }),
+        navigationLabel: 'Branchen',
+        navOrder: 15,
+        seo: {
+          title: 'Branchen | The Modesty Argument',
+          description:
+            'Branchen, in denen Positionierung, Vertrauensaufbau und digitale Umsetzung gemeinsam gedacht werden müssen.',
+        },
+        layout: [
+          {
+            blockType: 'hero',
+            id: 'industries-hero',
+            headline: 'Branchen',
+            subheadline:
+              'Wir arbeiten dort, wo Positionierung, Vertrauensaufbau und digitale Umsetzung sauber zusammenfinden müssen.',
+            ctaLabel: 'Kontakt aufnehmen',
+            ctaHref: '/contact',
+            backgroundMediaUrl: heroUrl,
+            height: 'medium',
+            mediaFit: 'cover',
+            mediaPositionX: 'center',
+            mediaPositionY: 'center',
+            animationPreset: 'slide-blur',
+          },
+          {
+            blockType: 'textMedia',
+            id: 'industries-intro',
+            headline: 'Nicht jede Branche braucht dieselbe Sprache, dieselben Beweise oder dieselbe digitale Dramaturgie.',
+            body:
+              'Gerade in komplexen Kategorien unterscheiden sich Erwartung, Kaufdynamik und Vertrauensaufbau stark. Deshalb verbinden wir Positionierung, Story, UX und technische Umsetzung immer mit dem jeweiligen Markt- und Buying-Kontext.',
+            imageUrl: demandUrl,
+            imageAlt: 'Editorial visual for industry positioning and market context',
+            imagePosition: 'right',
+            mediaWidth: 'wide',
+            backgroundEffect: 'glass',
+          },
+          {
+            blockType: 'industryGrid',
+            id: 'industries-grid',
+            sectionTitle: 'Branchenfokus',
+            intro:
+              'Diese Beispiele zeigen, wie wir branchenspezifische Erwartung, Proof und digitale Reise in eine klarere Struktur übersetzen.',
+            selectionMode: 'automatic',
+            industryIds: [],
+            ctaLabel: 'Projekt besprechen',
+            ctaHref: '/contact',
+          },
+          {
+            blockType: 'promoBanner',
+            id: 'industries-final-cta',
+            eyebrow: 'Market fit',
+            headline: 'Wenn Ihre Branche komplex ist, sollte Ihre digitale Kommunikation trotzdem klar wirken.',
+            body:
+              'Wir helfen dabei, Positionierung, Proof und Nutzerführung so aufzubauen, dass Marktlogik und digitale Erfahrung zusammenpassen.',
+            ctaLabel: 'Kontakt aufnehmen',
+            ctaHref: '/contact',
+            variant: 'gradient',
+            align: 'left',
+          },
+        ],
+      },
+      en: {
+        navigationLabel: 'Industries',
+        seo: {
+          title: 'Industries | The Modesty Argument',
+          description:
+            'Industries where positioning, proof, trust, and digital execution need to work together.',
+        },
+        layout: [
+          {
+            blockType: 'hero',
+            id: 'industries-hero',
+            headline: 'Industries',
+            subheadline:
+              'We work in categories where positioning, proof, trust, and digital execution need to align clearly.',
+            ctaLabel: 'Contact us',
+            ctaHref: '/contact',
+            backgroundMediaUrl: heroUrl,
+            height: 'medium',
+            mediaFit: 'cover',
+            mediaPositionX: 'center',
+            mediaPositionY: 'center',
+            animationPreset: 'slide-blur',
+          },
+          {
+            blockType: 'textMedia',
+            id: 'industries-intro',
+            headline:
+              'Not every market needs the same language, evidence, or digital narrative structure.',
+            body:
+              'Complex categories have very different buying expectations and trust dynamics. That is why we connect positioning, story, UX, and technical execution to the specific market context instead of applying one generic template.',
+            imageUrl: demandUrl,
+            imageAlt: 'Editorial visual for industry positioning and market context',
+            imagePosition: 'right',
+            mediaWidth: 'wide',
+            backgroundEffect: 'glass',
+          },
+          {
+            blockType: 'industryGrid',
+            id: 'industries-grid',
+            sectionTitle: 'Industry Focus',
+            intro:
+              'These examples show how we translate category-specific expectations, proof, and digital journeys into clearer structures.',
+            selectionMode: 'automatic',
+            industryIds: [],
+            ctaLabel: 'Discuss project',
+            ctaHref: '/contact',
+          },
+          {
+            blockType: 'promoBanner',
+            id: 'industries-final-cta',
+            eyebrow: 'Market fit',
+            headline: 'If your category is complex, your digital communication should still feel clear.',
+            body:
+              'We help shape positioning, proof, and user flow so market logic and digital experience reinforce each other.',
+            ctaLabel: 'Contact us',
+            ctaHref: '/contact',
+            variant: 'gradient',
+            align: 'left',
           },
         ],
       },
@@ -5236,8 +5353,8 @@ export async function seedCmsDemo(): Promise<void> {
 
   const media = await ensureMedia(db)
   await ensureEmailTemplates(db)
-  const services = await ensureServices(db)
-  const industries = await ensureIndustries(db)
+  const services = await ensureServices(db, media)
+  const industries = await ensureIndustries(db, media)
   const testimonials = await ensureTestimonials(db, media)
   const faqIds = await ensureFaqEntries(db)
   const teamIds = await ensureTeam(db, media)
@@ -5264,6 +5381,6 @@ export async function seedCmsDemo(): Promise<void> {
     process.env.NEXT_PUBLIC_SERVER_URL || 'http://localhost:4069'
   ).replace(/\/$/, '')
   console.info(
-    `CMS demo seeded. Open ${origin}/, ${origin}/services, ${origin}/demo-gtm-audit, ${origin}/products/demo-ai-positioning-sprint, and ${origin}/console.`,
+    `CMS demo seeded. Open ${origin}/, ${origin}/services, ${origin}/industries, ${origin}/demo-gtm-audit, ${origin}/products/demo-ai-positioning-sprint, and ${origin}/console.`,
   )
 }

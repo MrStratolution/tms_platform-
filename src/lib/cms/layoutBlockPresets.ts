@@ -27,6 +27,7 @@ export type LayoutBlockType =
   | 'resourceFeed'
   | 'productFeed'
   | 'servicesFocus'
+  | 'industryGrid'
   | 'rich'
   | 'spacer'
 
@@ -89,6 +90,7 @@ export const LAYOUT_BLOCK_ADD_OPTIONS: { value: LayoutBlockType; label: string }
   { value: 'resourceFeed', label: 'Resource / news feed' },
   { value: 'productFeed', label: 'Product / project feed' },
   { value: 'servicesFocus', label: 'Services focus' },
+  { value: 'industryGrid', label: 'Industry grid' },
   { value: 'rich', label: 'Rich text (Lexical)' },
   { value: 'spacer', label: 'Spacer / divider' },
 ]
@@ -447,9 +449,15 @@ export function createDefaultLayoutBlock(blockType: LayoutBlockType): Record<str
         blockType: 'servicesFocus',
         sectionTitle: 'Services in focus',
         intro: 'Highlight one core service at a time.',
+        sourceMode: 'manual',
+        selectionMode: 'manual',
+        serviceIds: [],
+        ctaLabel: '',
+        ctaHref: '',
         items: [
           {
             id: newId(),
+            slug: 'brand-identity',
             title: 'Brand Identity',
             summary: 'Naming, narrative, and visual language.',
             bullets: [
@@ -461,6 +469,17 @@ export function createDefaultLayoutBlock(blockType: LayoutBlockType): Record<str
             imageAlt: 'Brand identity visual',
           },
         ],
+      }
+    case 'industryGrid':
+      return {
+        id,
+        blockType: 'industryGrid',
+        sectionTitle: 'Industries',
+        intro: 'Surface the markets you know best and link them back to your value proposition.',
+        selectionMode: 'automatic',
+        industries: [],
+        ctaLabel: '',
+        ctaHref: '',
       }
     case 'rich':
       return {

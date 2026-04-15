@@ -1,7 +1,8 @@
-import { and, desc, eq, inArray } from 'drizzle-orm'
+import { and, asc, desc, eq, inArray } from 'drizzle-orm'
 
-import { cmsCaseStudies, cmsDownloadAssets, cmsFaqEntries, cmsIndustries, cmsMedia, cmsPages, cmsProducts, cmsTeamMembers, cmsTestimonials } from '@/db/schema'
+import { cmsCaseStudies, cmsDownloadAssets, cmsFaqEntries, cmsIndustries, cmsMedia, cmsPages, cmsProducts, cmsServices, cmsTeamMembers, cmsTestimonials } from '@/db/schema'
 import { canonicalizeHeroDocument } from '@/lib/cms/canonicalHeroBlock'
+import { normalizeIndustryMessaging, normalizeServiceProof } from '@/lib/contentLibraryShapes'
 import { resolveCaseStudyGridSelectionMode, resolveCaseStudyGridStudies } from '@/lib/caseStudyGrid'
 import { rowToPage, type CmsDb } from '@/lib/cmsData'
 import { resolveLocalizedDocument } from '@/lib/documentLocalization'
@@ -64,10 +65,14 @@ export async function hydrateLayoutContentLibraries(
   const caseStudyIds = new Set<number>()
   const resourcePageIds = new Set<number>()
   const productIds = new Set<number>()
+  const serviceIds = new Set<number>()
+  const industryLibraryIds = new Set<number>()
   let fetchAllTeamMembers = false
   let fetchAllCaseStudies = false
   let fetchAllResourcePages = false
   let fetchAllProducts = false
+  let fetchAllServices = false
+  let fetchAllIndustries = false
 
   for (const block of layout) {
     if (!block || typeof block !== 'object' || Array.isArray(block)) continue
@@ -142,9 +147,27 @@ export async function hydrateLayoutContentLibraries(
         fetchAllProducts = true
       }
     }
+    if (b.blockType === 'servicesFocus' && b.sourceMode === 'library') {
+      if (b.selectionMode === 'manual' && Array.isArray(b.serviceIds) && b.serviceIds.length > 0) {
+        for (const x of b.serviceIds) {
+          if (typeof x === 'number' && Number.isFinite(x)) serviceIds.add(x)
+        }
+      } else {
+        fetchAllServices = true
+      }
+    }
+    if (b.blockType === 'industryGrid') {
+      if (b.selectionMode === 'manual' && Array.isArray(b.industries) && b.industries.length > 0) {
+        for (const x of b.industries) {
+          if (typeof x === 'number' && Number.isFinite(x)) industryLibraryIds.add(x)
+        }
+      } else {
+        fetchAllIndustries = true
+      }
+    }
   }
 
-  const [tRows, fRows, dRows, tmRows, csRows, pageRows, productRows] = await Promise.all([
+  const [tRows, fRows, dRows, tmRows, csRows, pageRows, productRows, serviceRows] = await Promise.all([
     testimonialIds.size
       ? db.select().from(cmsTestimonials).where(inArray(cmsTestimonials.id, [...testimonialIds]))
       : Promise.resolve([] as (typeof cmsTestimonials.$inferSelect)[]),
@@ -186,6 +209,17 @@ export async function hydrateLayoutContentLibraries(
           )
           .orderBy(desc(cmsProducts.updatedAt))
       : Promise.resolve([] as (typeof cmsProducts.$inferSelect)[]),
+    fetchAllServices || serviceIds.size
+      ? db
+          .select()
+          .from(cmsServices)
+          .where(
+            fetchAllServices
+              ? eq(cmsServices.active, true)
+              : inArray(cmsServices.id, [...serviceIds]),
+          )
+          .orderBy(asc(cmsServices.name))
+      : Promise.resolve([] as (typeof cmsServices.$inferSelect)[]),
   ])
 
   const tMap = new Map(tRows.map((r) => [r.id, r]))
@@ -244,22 +278,45 @@ export async function hydrateLayoutContentLibraries(
   for (const r of csRows) {
     if (r.featuredImageId != null && Number.isFinite(r.featuredImageId)) mediaIds.add(r.featuredImageId)
   }
+  for (const r of serviceRows) {
+    const proof = normalizeServiceProof(r.proof)
+    if (proof.imageMediaId != null && Number.isFinite(proof.imageMediaId)) mediaIds.add(proof.imageMediaId)
+  }
 
   const industryIds = new Set<number>()
   for (const r of csRows) {
     if (r.industryId != null && Number.isFinite(r.industryId)) industryIds.add(r.industryId)
   }
+  for (const id of industryLibraryIds) industryIds.add(id)
 
-  const [mRows, indRows] = await Promise.all([
+  const indRows =
+    fetchAllIndustries || industryIds.size > 0
+      ? await db
+          .select()
+          .from(cmsIndustries)
+          .where(
+            fetchAllIndustries
+              ? eq(cmsIndustries.active, true)
+              : inArray(cmsIndustries.id, [...industryIds]),
+          )
+          .orderBy(asc(cmsIndustries.name))
+      : ([] as (typeof cmsIndustries.$inferSelect)[])
+
+  for (const r of indRows) {
+    const messaging = normalizeIndustryMessaging(r.messaging)
+    if (messaging.imageMediaId != null && Number.isFinite(messaging.imageMediaId)) {
+      mediaIds.add(messaging.imageMediaId)
+    }
+  }
+
+  const mRows =
     mediaIds.size > 0
-      ? db.select().from(cmsMedia).where(inArray(cmsMedia.id, [...mediaIds]))
-      : Promise.resolve([] as (typeof cmsMedia.$inferSelect)[]),
-    industryIds.size > 0
-      ? db.select().from(cmsIndustries).where(inArray(cmsIndustries.id, [...industryIds]))
-      : Promise.resolve([] as (typeof cmsIndustries.$inferSelect)[]),
-  ])
+      ? await db.select().from(cmsMedia).where(inArray(cmsMedia.id, [...mediaIds]))
+      : ([] as (typeof cmsMedia.$inferSelect)[])
+
   const mMap = new Map(mRows.map((r) => [r.id, mediaRowToShape(r)]))
   const indMap = new Map(indRows.map((r) => [r.id, r]))
+  const serviceMap = new Map(serviceRows.map((r) => [r.id, r]))
 
   return layout.map((block) => {
     if (!block || typeof block !== 'object' || Array.isArray(block)) return block
@@ -478,6 +535,73 @@ export async function hydrateLayoutContentLibraries(
         locale,
       )
       return { ...b, featuredProduct, products } as typeof block
+    }
+
+    if (b.blockType === 'servicesFocus' && b.sourceMode === 'library') {
+      const selectedRows =
+        b.selectionMode === 'manual' && Array.isArray(b.serviceIds) && b.serviceIds.length > 0
+          ? b.serviceIds.flatMap((x) => {
+              if (typeof x !== 'number' || !Number.isFinite(x)) return []
+              const service = serviceMap.get(x)
+              return service && service.active ? [service] : []
+            })
+          : [...serviceMap.values()].filter((service) => service.active)
+
+      const items = selectedRows.map((service) => {
+        const proof = normalizeServiceProof(service.proof)
+        const media =
+          proof.imageMediaId != null && Number.isFinite(proof.imageMediaId)
+            ? (mMap.get(proof.imageMediaId) ?? null)
+            : null
+        return {
+          id: `service-${service.id}`,
+          slug: service.slug,
+          title: service.name,
+          summary: service.summary?.trim() || service.promise?.trim() || null,
+          bullets: proof.bullets ?? [],
+          imageUrl: proof.imageUrl ?? media?.url ?? null,
+          imageAlt: proof.imageAlt ?? media?.alt ?? service.name,
+          ctaLabel: proof.ctaLabel ?? null,
+          ctaHref: proof.ctaHref ?? null,
+        }
+      })
+
+      return { ...b, items } as typeof block
+    }
+
+    if (b.blockType === 'industryGrid') {
+      const selectedRows =
+        b.selectionMode === 'manual' && Array.isArray(b.industries) && b.industries.length > 0
+          ? b.industries.flatMap((x) => {
+              if (typeof x !== 'number' || !Number.isFinite(x)) return []
+              const industry = indMap.get(x)
+              return industry && industry.active ? [industry] : []
+            })
+          : [...indMap.values()].filter((industry) => industry.active)
+
+      const industries = selectedRows.map((industry) => {
+        const messaging = normalizeIndustryMessaging(industry.messaging)
+        const media =
+          messaging.imageMediaId != null && Number.isFinite(messaging.imageMediaId)
+            ? (mMap.get(messaging.imageMediaId) ?? null)
+            : null
+        return {
+          id: industry.id,
+          name: industry.name,
+          slug: industry.slug,
+          summary: industry.summary,
+          messaging: {
+            ...messaging,
+            imageUrl: messaging.imageUrl ?? media?.url ?? null,
+            imageAlt: messaging.imageAlt ?? media?.alt ?? industry.name,
+          },
+          active: industry.active,
+          updatedAt: industry.updatedAt.toISOString(),
+          createdAt: industry.createdAt.toISOString(),
+        } satisfies Industry
+      })
+
+      return { ...b, industries } as typeof block
     }
 
     return block

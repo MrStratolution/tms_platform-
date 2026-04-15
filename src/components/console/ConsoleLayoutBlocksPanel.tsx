@@ -18,8 +18,10 @@ import {
   DownloadAssetPicker,
   FaqLibraryPicker,
   FeaturedProjectSpotlightPicker,
+  IndustryGridPicker,
   ProductFeedPicker,
   ResourceFeedPicker,
+  ServicesFocusPicker,
   TestimonialSliderPicker,
 } from '@/components/console/ConsoleLibraryPickers'
 import { LexicalRichEditor } from '@/components/cms/LexicalRichEditor'
@@ -3079,6 +3081,7 @@ export function LayoutBlockQuickFields(props: {
         </div>
       )
     case 'servicesFocus': {
+      const sourceMode = o.sourceMode === 'library' ? 'library' : 'manual'
       const items = asRecordArray(o.items)
       const updateItem = (idx: number, patch: Record<string, unknown>) => {
         const next = items.map((row, j) => {
@@ -3126,84 +3129,163 @@ export function LayoutBlockQuickFields(props: {
               disabled={disabled}
             />
           </label>
-          {items.map((item, idx) => {
-            const bullets = asRecordArray(item.bullets)
-            return (
-              <div
-                key={typeof item.id === 'string' ? item.id : `service-${idx}`}
-                className="tma-console-nested-block"
-              >
-                <div className="tma-console-nested-block__head">
-                  <span className="tma-console-nested-block__title">Service {idx + 1}</span>
-                  <button
-                    type="button"
-                    className="tma-console-btn-danger tma-console-btn-danger--small"
-                    onClick={() => removeItem(idx)}
-                    disabled={disabled}
+          <ServicesFocusPicker o={o} set={set} disabled={disabled} />
+          {sourceMode === 'manual' ? (
+            <>
+              {items.map((item, idx) => {
+                const bullets = asRecordArray(item.bullets)
+                return (
+                  <div
+                    key={typeof item.id === 'string' ? item.id : `service-${idx}`}
+                    className="tma-console-nested-block"
                   >
-                    Remove
-                  </button>
-                </div>
-                <label className="tma-console-label">
-                  Title
-                  <input
-                    className={fieldClass}
-                    value={String(item.title ?? '')}
-                    onChange={(e) => updateItem(idx, { title: e.target.value })}
-                    disabled={disabled}
-                  />
-                </label>
-                <label className="tma-console-label">
-                  Summary (optional)
-                  <textarea
-                    className={fieldClass}
-                    rows={2}
-                    value={String(item.summary ?? '')}
-                    onChange={(e) => updateItem(idx, { summary: e.target.value })}
-                    disabled={disabled}
-                  />
-                </label>
-                <label className="tma-console-label">
-                  Bullets (one per line)
-                  <textarea
-                    className={fieldClass}
-                    rows={4}
-                    value={bullets.map((bullet) => String(bullet.text ?? '')).join('\n')}
-                    onChange={(e) =>
-                      updateItem(idx, {
-                        bullets: e.target.value
-                          .split('\n')
-                          .map((text) => text.trim())
-                          .filter(Boolean)
-                          .map((text) => ({ id: newBlockId(), text })),
-                      })
-                    }
-                    disabled={disabled}
-                  />
-                </label>
-                <ConsoleInlineMediaField
-                  label="Service visual"
-                  value={typeof item.imageUrl === 'string' ? item.imageUrl : undefined}
-                  onChange={(next) => updateItem(idx, { imageUrl: next ?? '' })}
-                  altValue={typeof item.imageAlt === 'string' ? item.imageAlt : ''}
-                  onAltChange={(next) => updateItem(idx, { imageAlt: next })}
-                  disabled={disabled}
-                  folderSuggestion="services"
-                />
-              </div>
-            )
-          })}
-          <button
-            type="button"
-            className="tma-console-btn-secondary"
-            onClick={addItem}
-            disabled={disabled}
-          >
-            Add service
-          </button>
+                    <div className="tma-console-nested-block__head">
+                      <span className="tma-console-nested-block__title">Service {idx + 1}</span>
+                      <button
+                        type="button"
+                        className="tma-console-btn-danger tma-console-btn-danger--small"
+                        onClick={() => removeItem(idx)}
+                        disabled={disabled}
+                      >
+                        Remove
+                      </button>
+                    </div>
+                    <label className="tma-console-label">
+                      Title
+                      <input
+                        className={fieldClass}
+                        value={String(item.title ?? '')}
+                        onChange={(e) => updateItem(idx, { title: e.target.value })}
+                        disabled={disabled}
+                      />
+                    </label>
+                    <label className="tma-console-label">
+                      Slug / anchor (optional)
+                      <input
+                        className={fieldClass}
+                        value={String(item.slug ?? '')}
+                        onChange={(e) => updateItem(idx, { slug: e.target.value })}
+                        disabled={disabled}
+                      />
+                    </label>
+                    <label className="tma-console-label">
+                      Summary (optional)
+                      <textarea
+                        className={fieldClass}
+                        rows={2}
+                        value={String(item.summary ?? '')}
+                        onChange={(e) => updateItem(idx, { summary: e.target.value })}
+                        disabled={disabled}
+                      />
+                    </label>
+                    <label className="tma-console-label">
+                      Bullets (one per line)
+                      <textarea
+                        className={fieldClass}
+                        rows={4}
+                        value={bullets.map((bullet) => String(bullet.text ?? '')).join('\n')}
+                        onChange={(e) =>
+                          updateItem(idx, {
+                            bullets: e.target.value
+                              .split('\n')
+                              .map((text) => text.trim())
+                              .filter(Boolean)
+                              .map((text) => ({ id: newBlockId(), text })),
+                          })
+                        }
+                        disabled={disabled}
+                      />
+                    </label>
+                    <ConsoleInlineMediaField
+                      label="Service visual"
+                      value={typeof item.imageUrl === 'string' ? item.imageUrl : undefined}
+                      onChange={(next) => updateItem(idx, { imageUrl: next ?? '' })}
+                      altValue={typeof item.imageAlt === 'string' ? item.imageAlt : ''}
+                      onAltChange={(next) => updateItem(idx, { imageAlt: next })}
+                      disabled={disabled}
+                      folderSuggestion="services"
+                    />
+                  </div>
+                )
+              })}
+              <button
+                type="button"
+                className="tma-console-btn-secondary"
+                onClick={addItem}
+                disabled={disabled}
+              >
+                Add service
+              </button>
+            </>
+          ) : null}
+          <div className="tma-console-field-row">
+            <label className="tma-console-label">
+              Default CTA label (optional)
+              <input
+                className={fieldClass}
+                value={String(o.ctaLabel ?? '')}
+                onChange={(e) => set({ ctaLabel: e.target.value })}
+                disabled={disabled}
+              />
+            </label>
+            <label className="tma-console-label">
+              Default CTA URL (optional)
+              <input
+                className={fieldClass}
+                value={String(o.ctaHref ?? '')}
+                onChange={(e) => set({ ctaHref: e.target.value })}
+                disabled={disabled}
+              />
+            </label>
+          </div>
         </div>
       )
     }
+    case 'industryGrid':
+      return (
+        <div className="tma-console-block-fields">
+          <label className="tma-console-label">
+            Section title
+            <input
+              className={fieldClass}
+              value={String(o.sectionTitle ?? '')}
+              onChange={(e) => set({ sectionTitle: e.target.value })}
+              disabled={disabled}
+            />
+          </label>
+          <label className="tma-console-label">
+            Intro (optional)
+            <textarea
+              className={fieldClass}
+              rows={2}
+              value={String(o.intro ?? '')}
+              onChange={(e) => set({ intro: e.target.value })}
+              disabled={disabled}
+            />
+          </label>
+          <IndustryGridPicker o={o} set={set} disabled={disabled} />
+          <div className="tma-console-field-row">
+            <label className="tma-console-label">
+              CTA label (optional)
+              <input
+                className={fieldClass}
+                value={String(o.ctaLabel ?? '')}
+                onChange={(e) => set({ ctaLabel: e.target.value })}
+                disabled={disabled}
+              />
+            </label>
+            <label className="tma-console-label">
+              CTA URL (optional)
+              <input
+                className={fieldClass}
+                value={String(o.ctaHref ?? '')}
+                onChange={(e) => set({ ctaHref: e.target.value })}
+                disabled={disabled}
+              />
+            </label>
+          </div>
+        </div>
+      )
     case 'rich':
       return (
         <div className="tma-console-block-fields">

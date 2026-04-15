@@ -10,8 +10,9 @@ const COPY = {
   de: {
     navDashboard: 'Dashboard',
     navPages: 'Seiten',
+    navNews: 'News / Blog',
     navMedia: 'Medien',
-    navProducts: 'Produkte',
+    navProducts: 'Projekte & Produkte',
     navServices: 'Services',
     navIndustries: 'Branchen',
     navSavedBlocks: 'Gespeicherte Blöcke',
@@ -63,8 +64,9 @@ const COPY = {
   en: {
     navDashboard: 'Dashboard',
     navPages: 'Pages',
+    navNews: 'News / Blog',
     navMedia: 'Media',
-    navProducts: 'Products',
+    navProducts: 'Projects & Products',
     navServices: 'Services',
     navIndustries: 'Industries',
     navSavedBlocks: 'Saved blocks',

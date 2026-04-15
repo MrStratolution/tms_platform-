@@ -28,7 +28,10 @@ export default async function ConsoleServiceDetailPage(props: Props) {
   return (
     <main className="tma-console-main wide">
       <p className="tma-console-back"><Link href="/console/services">← All services</Link></p>
-      <h1 className="tma-console-page-title">Service #{row.id}</h1>
+      <h1 className="tma-console-page-title">{row.name}</h1>
+      <p className="tma-console-lead">
+        Reusable service entry for library-backed services sections and attribution across the CMS.
+      </p>
       <ConsoleServiceEditor
         id={row.id}
         initial={{
