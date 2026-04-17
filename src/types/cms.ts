@@ -655,6 +655,10 @@ export interface Page {
             ctaHref?: string | null;
             secondaryCtaLabel?: string | null;
             secondaryCtaHref?: string | null;
+            backgroundTone?: ('black' | 'charcoal' | 'olive') | null;
+            backgroundColor?: string | null;
+            backgroundOpacity?: number | null;
+            shadowStrength?: ('light' | 'medium' | 'strong') | null;
             height?: ('short' | 'medium' | 'tall') | null;
             mediaFit?: ('cover' | 'contain') | null;
             mediaPositionX?: ('left' | 'center' | 'right') | null;

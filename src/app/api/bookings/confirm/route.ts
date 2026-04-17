@@ -183,6 +183,9 @@ export async function POST(request: Request) {
       formType: 'internal_booking',
       bookingStatus: 'scheduled',
       idempotencyKey: key,
+      submissionExtras: parsed.data.language?.trim()
+        ? { _tmaLanguage: parsed.data.language.trim() }
+        : undefined,
     })
     .returning({ id: cmsLeads.id })
 

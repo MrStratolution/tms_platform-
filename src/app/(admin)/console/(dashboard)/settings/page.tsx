@@ -1,7 +1,10 @@
 import type { Metadata } from 'next'
+import { eq } from 'drizzle-orm'
 
+import { ConsoleProfileSettingsForm } from '@/components/console/ConsoleProfileSettingsForm'
 import { ConsoleSiteSettingsEditor } from '@/components/console/ConsoleSiteSettingsEditor'
 import { getCustomDb } from '@/db/client'
+import { adminUsers } from '@/db/schema'
 import { consoleUserCanEditCustomCss, consoleUserCanWriteContent } from '@/lib/console/rbac'
 import { requireConsoleSession } from '@/lib/console/requireConsoleSession'
 import { ensureSiteSettingsRow, parseSiteSettingsDocument } from '@/lib/siteSettings'
@@ -15,6 +18,18 @@ export default async function ConsoleSettingsPage() {
   const canEdit = consoleUserCanWriteContent(session.role)
   const canEditCustomCss = consoleUserCanEditCustomCss(session.role)
   const db = getCustomDb()
+  const profileRows =
+    db
+      ? await db
+          .select({
+            displayName: adminUsers.displayName,
+            whatsappNumber: adminUsers.whatsappNumber,
+          })
+          .from(adminUsers)
+          .where(eq(adminUsers.id, session.sub))
+          .limit(1)
+      : []
+  const profile = profileRows[0]
 
   let siteDocument = parseSiteSettingsDocument({})
   if (db) {
@@ -31,10 +46,14 @@ export default async function ConsoleSettingsPage() {
         overrides still win when set on each page.
       </p>
 
-      <fieldset className="tma-console-fieldset" disabled>
-        <legend className="tma-console-subheading">Your profile</legend>
+      <section className="tma-console-settings-block">
+        <h2 className="tma-console-subheading">Your profile</h2>
+        <p className="tma-console-note">
+          Manage your personal console details here. Your WhatsApp number is used for the lead
+          copilot action that sends AI summaries to your own WhatsApp chat.
+        </p>
 
-        <dl className="tma-console-dl" style={{ marginBottom: 0 }}>
+        <dl className="tma-console-dl" style={{ marginBottom: '1.25rem' }}>
           <div className="tma-console-dl-row">
             <dt>Email</dt>
             <dd>
@@ -54,7 +73,12 @@ export default async function ConsoleSettingsPage() {
             </dd>
           </div>
         </dl>
-      </fieldset>
+
+        <ConsoleProfileSettingsForm
+          initialDisplayName={profile?.displayName ?? null}
+          initialWhatsappNumber={profile?.whatsappNumber ?? null}
+        />
+      </section>
 
       {!db ? (
         <p className="tma-console-lead tma-console-lead--error" role="alert" style={{ marginTop: '2rem' }}>

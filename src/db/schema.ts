@@ -25,6 +25,7 @@ export const adminUsers = tmaCustom.table('admin_user', {
   email: text('email').notNull().unique(),
   passwordHash: text('password_hash').notNull(),
   displayName: text('display_name'),
+  whatsappNumber: text('whatsapp_number'),
   role: text('role').notNull().default('admin'),
   uiLocale: text('ui_locale').notNull().default('de'),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),

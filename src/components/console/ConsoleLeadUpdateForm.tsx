@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 
+import { ConsoleLeadCopilotPanel } from '@/components/console/ConsoleLeadCopilotPanel'
 import { readResponseJson } from '@/lib/safeJson'
 
 const STATUSES = ['new', 'contacted', 'qualified', 'lost', 'won'] as const
@@ -13,6 +14,8 @@ type Props = {
   initialLeadStatus: string
   initialNotes: string | null
   canEdit: boolean
+  canUseAi: boolean
+  adminWhatsappNumber: string | null
   bookingEvent: {
     id: number
     status: string
@@ -31,6 +34,16 @@ export function ConsoleLeadUpdateForm(props: Props) {
   const [cancelReason, setCancelReason] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
+
+  function applySuggestedNote(value: string) {
+    setNotes((current) => {
+      const trimmedCurrent = current.trim()
+      if (!trimmedCurrent) return value
+      if (trimmedCurrent.includes(value)) return current
+      return `${trimmedCurrent}\n\n${value}`
+    })
+    setSuccess('AI note inserted. Save changes to keep it.')
+  }
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -187,6 +200,12 @@ export function ConsoleLeadUpdateForm(props: Props) {
           )}
         </section>
       ) : null}
+      <ConsoleLeadCopilotPanel
+        leadId={props.leadId}
+        canUseAi={props.canUseAi}
+        adminWhatsappNumber={props.adminWhatsappNumber}
+        onApplySuggestedNote={props.canEdit ? applySuggestedNote : undefined}
+      />
       {error ? <p className="tma-console-error">{error}</p> : null}
       {success ? <p className="tma-console-success">{success}</p> : null}
       <div className="tma-console-actions">

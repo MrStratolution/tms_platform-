@@ -21,13 +21,44 @@ export async function GET() {
   if (!payload) {
     return NextResponse.json({ user: null })
   }
+  const db = getCustomDb()
+  if (!db) {
+    return NextResponse.json({
+      user: {
+        email: payload.email,
+        role: payload.role,
+        sub: payload.sub,
+        uiLocale: payload.uiLocale,
+        displayName: null,
+        whatsappNumber: null,
+      },
+    })
+  }
+  const rows = await db
+    .select({
+      displayName: adminUsers.displayName,
+      whatsappNumber: adminUsers.whatsappNumber,
+    })
+    .from(adminUsers)
+    .where(eq(adminUsers.id, payload.sub))
+    .limit(1)
+  const profile = rows[0]
   return NextResponse.json({
-    user: { email: payload.email, role: payload.role, sub: payload.sub, uiLocale: payload.uiLocale },
+    user: {
+      email: payload.email,
+      role: payload.role,
+      sub: payload.sub,
+      uiLocale: payload.uiLocale,
+      displayName: profile?.displayName ?? null,
+      whatsappNumber: profile?.whatsappNumber ?? null,
+    },
   })
 }
 
 const patchSchema = z.object({
-  uiLocale: z.enum(['de', 'en']),
+  uiLocale: z.enum(['de', 'en']).optional(),
+  displayName: z.union([z.string().max(120), z.null()]).optional(),
+  whatsappNumber: z.union([z.string().max(40), z.null()]).optional(),
 })
 
 export async function PATCH(request: Request) {
@@ -57,10 +88,39 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ error: 'Database not configured' }, { status: 503 })
   }
 
-  const nextLocale = normalizeAdminUiLocale(parsed.data.uiLocale)
+  if (Object.keys(parsed.data).length === 0) {
+    return NextResponse.json({ error: 'No fields to update' }, { status: 400 })
+  }
+
+  const currentRows = await db
+    .select({
+      displayName: adminUsers.displayName,
+      whatsappNumber: adminUsers.whatsappNumber,
+      uiLocale: adminUsers.uiLocale,
+    })
+    .from(adminUsers)
+    .where(eq(adminUsers.id, payload.sub))
+    .limit(1)
+  const current = currentRows[0]
+
+  const nextLocale = normalizeAdminUiLocale(parsed.data.uiLocale ?? current?.uiLocale ?? payload.uiLocale)
+  const displayName =
+    parsed.data.displayName !== undefined
+      ? parsed.data.displayName?.trim() || null
+      : current?.displayName ?? null
+  const whatsappNumber =
+    parsed.data.whatsappNumber !== undefined
+      ? parsed.data.whatsappNumber?.trim() || null
+      : current?.whatsappNumber ?? null
+
   await db
     .update(adminUsers)
-    .set({ uiLocale: nextLocale, updatedAt: new Date() })
+    .set({
+      uiLocale: nextLocale,
+      displayName,
+      whatsappNumber,
+      updatedAt: new Date(),
+    })
     .where(eq(adminUsers.id, payload.sub))
 
   const refreshedToken = await signConsoleSessionToken(
@@ -72,7 +132,14 @@ export async function PATCH(request: Request) {
 
   const res = NextResponse.json({
     ok: true,
-    user: { email: payload.email, role: payload.role, sub: payload.sub, uiLocale: nextLocale },
+    user: {
+      email: payload.email,
+      role: payload.role,
+      sub: payload.sub,
+      uiLocale: nextLocale,
+      displayName,
+      whatsappNumber,
+    },
   })
   res.cookies.set(CONSOLE_SESSION_COOKIE, refreshedToken, {
     httpOnly: true,
