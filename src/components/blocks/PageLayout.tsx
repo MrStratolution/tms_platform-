@@ -442,6 +442,10 @@ function renderBlock(
           headingId={block.id ? `tma-hero-${block.id}` : 'tma-block-hero-heading'}
           tabletImageUrl={block.tabletImageUrl}
           mobileImageUrl={block.mobileImageUrl}
+          backgroundTone={block.backgroundTone}
+          backgroundColor={block.backgroundColor}
+          backgroundOpacity={block.backgroundOpacity}
+          shadowStrength={block.shadowStrength}
           height={block.height}
           mediaFit={block.mediaFit}
           mediaPositionX={block.mediaPositionX}

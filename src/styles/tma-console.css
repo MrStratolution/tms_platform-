@@ -669,6 +669,12 @@
   cursor: not-allowed;
 }
 
+.tma-console-btn-secondary.is-disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
 .tma-console-btn-danger {
   font: inherit;
   cursor: pointer;
@@ -735,6 +741,125 @@
   gap: 0.65rem;
   align-items: center;
   margin: 0 0 1.25rem;
+}
+
+.tma-console-copilot {
+  margin-top: 2rem;
+  padding: 1rem 1.1rem;
+  border-radius: 0.75rem;
+  border: 1px solid var(--tma-border);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.tma-console-copilot__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+}
+
+.tma-console-copilot__head .tma-console-subheading {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.tma-console-copilot__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.tma-console-copilot__grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.tma-console-copilot__list {
+  margin: 0 0 0.85rem;
+  padding-left: 1rem;
+  color: var(--tma-white-muted);
+  line-height: 1.6;
+}
+
+.tma-console-copilot-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.tma-console-copilot-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.tma-console-copilot-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.tma-console-copilot-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.75rem 1rem;
+  padding: 0.85rem 0.95rem;
+  border-radius: 0.65rem;
+  border: 1px solid var(--tma-border);
+  background: rgba(0, 0, 0, 0.24);
+}
+
+.tma-console-copilot-row__main {
+  min-width: 0;
+}
+
+.tma-console-copilot-row__topline {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem 0.65rem;
+  align-items: center;
+  margin-bottom: 0.35rem;
+  color: var(--tma-white-muted);
+}
+
+.tma-console-copilot-row__topline strong {
+  color: var(--tma-white);
+}
+
+.tma-console-status-pill--high {
+  color: var(--tma-black);
+  border-color: var(--tma-lime);
+  background: var(--tma-lime);
+}
+
+.tma-console-status-pill--medium {
+  color: var(--tma-white);
+  border-color: rgba(255, 214, 102, 0.35);
+  background: rgba(255, 214, 102, 0.12);
+}
+
+.tma-console-status-pill--low {
+  color: var(--tma-white-muted);
+  border-color: var(--tma-border);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+@media (max-width: 900px) {
+  .tma-console-copilot__grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  .tma-console-copilot-row {
+    grid-template-columns: 1fr;
+  }
 }
 
 .tma-console-page-toolbar .tma-console-error {

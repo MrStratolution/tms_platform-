@@ -251,6 +251,10 @@ export async function POST(request: Request) {
 
   const correlationId = randomUUID()
   const { lead: partLead, extras } = partitionLeadFields(flat)
+  const storedExtras = {
+    ...extras,
+    ...(body.language?.trim() ? { _tmaLanguage: body.language.trim() } : {}),
+  }
 
   let created: { id: number } | undefined
   try {
@@ -271,7 +275,7 @@ export async function POST(request: Request) {
         industryId: industryId ?? null,
         consentMarketing: body.consentMarketing ?? false,
         idempotencyKey,
-        submissionExtras: Object.keys(extras).length ? extras : undefined,
+        submissionExtras: Object.keys(storedExtras).length ? storedExtras : undefined,
       })
       .returning({ id: cmsLeads.id })
   } catch (error) {

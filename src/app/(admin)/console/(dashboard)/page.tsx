@@ -1,9 +1,11 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { and, desc, eq, gte, lte, sql } from 'drizzle-orm'
+import { and, desc, eq, gte, inArray, isNull, lte, or, sql } from 'drizzle-orm'
 
+import { ConsoleLeadCopilotDashboardPanel } from '@/components/console/ConsoleLeadCopilotDashboardPanel'
 import { getCustomDb } from '@/db/client'
 import {
+  adminUsers,
   cmsBookingEvents,
   cmsCrmSyncLogs,
   cmsLeads,
@@ -29,6 +31,15 @@ export default async function ConsoleHomePage() {
   const showLeads = userHasConsolePermission(session.role, 'leads:read')
   const showTeam = consoleUserCanAdminTeam(session.role)
   const db = getCustomDb()
+  const adminProfileRows =
+    db
+      ? await db
+          .select({ whatsappNumber: adminUsers.whatsappNumber })
+          .from(adminUsers)
+          .where(eq(adminUsers.id, session.sub))
+          .limit(1)
+      : []
+  const adminWhatsappNumber = adminProfileRows[0]?.whatsappNumber ?? null
 
   const now = new Date()
   const startOfDay = new Date(now)
@@ -77,6 +88,71 @@ export default async function ConsoleHomePage() {
           .where(and(eq(cmsBookingEvents.status, 'confirmed'), gte(cmsBookingEvents.scheduledFor, now), lte(cmsBookingEvents.scheduledFor, inSevenDays)))
           .orderBy(cmsBookingEvents.scheduledFor)
           .limit(5),
+        showLeads
+          ? db
+              .select({
+                id: cmsLeads.id,
+                firstName: cmsLeads.firstName,
+                lastName: cmsLeads.lastName,
+                company: cmsLeads.company,
+                phone: cmsLeads.phone,
+                leadStatus: cmsLeads.leadStatus,
+                bookingStatus: cmsLeads.bookingStatus,
+                sourcePageSlug: cmsLeads.sourcePageSlug,
+              })
+              .from(cmsLeads)
+              .where(inArray(cmsLeads.leadStatus, ['new', 'contacted']))
+              .orderBy(desc(cmsLeads.updatedAt))
+              .limit(4)
+          : Promise.resolve([]),
+        showLeads
+          ? db
+              .select({
+                id: cmsLeads.id,
+                firstName: cmsLeads.firstName,
+                lastName: cmsLeads.lastName,
+                company: cmsLeads.company,
+                phone: cmsLeads.phone,
+                leadStatus: cmsLeads.leadStatus,
+                bookingStatus: cmsLeads.bookingStatus,
+                sourcePageSlug: cmsLeads.sourcePageSlug,
+              })
+              .from(cmsLeads)
+              .where(
+                and(
+                  eq(cmsLeads.leadStatus, 'qualified'),
+                  or(isNull(cmsLeads.owner), eq(cmsLeads.owner, '')),
+                ),
+              )
+              .orderBy(desc(cmsLeads.updatedAt))
+              .limit(4)
+          : Promise.resolve([]),
+        showLeads
+          ? db
+              .select({
+                id: cmsLeads.id,
+                firstName: cmsLeads.firstName,
+                lastName: cmsLeads.lastName,
+                company: cmsLeads.company,
+                phone: cmsLeads.phone,
+                leadStatus: cmsLeads.leadStatus,
+                bookingStatus: cmsLeads.bookingStatus,
+                sourcePageSlug: cmsLeads.sourcePageSlug,
+                scheduledFor: cmsBookingEvents.scheduledFor,
+              })
+              .from(cmsBookingEvents)
+              .innerJoin(cmsLeads, eq(cmsLeads.id, cmsBookingEvents.leadId))
+              .where(
+                and(
+                  eq(cmsBookingEvents.status, 'confirmed'),
+                  gte(cmsBookingEvents.scheduledFor, now),
+                  lte(cmsBookingEvents.scheduledFor, inSevenDays),
+                  or(isNull(cmsLeads.notes), eq(cmsLeads.notes, '')),
+                ),
+              )
+              .orderBy(cmsBookingEvents.scheduledFor)
+              .limit(4)
+          : Promise.resolve([]),
       ])
     : null
 
@@ -87,6 +163,51 @@ export default async function ConsoleHomePage() {
   const recentChanges = metrics?.[4] ?? []
   const translationWarnings = Number(metrics?.[5]?.[0]?.value ?? 0)
   const upcomingBookingRows = metrics?.[6] ?? []
+  const followUpLeadRows = metrics?.[7] ?? []
+  const qualifiedUnassignedRows = metrics?.[8] ?? []
+  const bookingAttentionRows = metrics?.[9] ?? []
+
+  const leadCopilotGroups = [
+    {
+      title: 'Needs follow-up',
+      rows: followUpLeadRows.map((row) => ({
+        id: row.id,
+        leadLabel: [row.firstName, row.lastName].filter(Boolean).join(' ') || row.company || `Lead #${row.id}`,
+        company: row.company,
+        phone: row.phone,
+        leadStatus: row.leadStatus,
+        bookingStatus: row.bookingStatus,
+        scheduledFor: null,
+        sourcePageSlug: row.sourcePageSlug,
+      })),
+    },
+    {
+      title: 'Qualified and unassigned',
+      rows: qualifiedUnassignedRows.map((row) => ({
+        id: row.id,
+        leadLabel: [row.firstName, row.lastName].filter(Boolean).join(' ') || row.company || `Lead #${row.id}`,
+        company: row.company,
+        phone: row.phone,
+        leadStatus: row.leadStatus,
+        bookingStatus: row.bookingStatus,
+        scheduledFor: null,
+        sourcePageSlug: row.sourcePageSlug,
+      })),
+    },
+    {
+      title: 'Upcoming bookings without notes',
+      rows: bookingAttentionRows.map((row) => ({
+        id: row.id,
+        leadLabel: [row.firstName, row.lastName].filter(Boolean).join(' ') || row.company || `Lead #${row.id}`,
+        company: row.company,
+        phone: row.phone,
+        leadStatus: row.leadStatus,
+        bookingStatus: row.bookingStatus,
+        scheduledFor: row.scheduledFor?.toISOString() ?? null,
+        sourcePageSlug: row.sourcePageSlug,
+      })),
+    },
+  ]
 
   const contentCards: CardDef[] = [
     {
@@ -271,6 +392,13 @@ export default async function ConsoleHomePage() {
           </p>
         </article>
       </section>
+
+      {showLeads ? (
+        <ConsoleLeadCopilotDashboardPanel
+          adminWhatsappNumber={adminWhatsappNumber}
+          groups={leadCopilotGroups}
+        />
+      ) : null}
 
       <div className="tma-console-note">
         First-time setup: <code>npm run db:custom:migrate</code> then <code>npm run seed</code> for

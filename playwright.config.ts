@@ -29,7 +29,7 @@ export default defineConfig({
       `npm run build && ` +
       `npm run seed -- --force && ` +
       `npm run ensure-console-admin -- e2e@company.com E2Epassword123 && ` +
-      `PORT=${port} npm run start`,
+      `TMA_AI_COPILOT_STUB=1 PORT=${port} npm run start`,
     url: baseURL,
     timeout: 600_000,
     reuseExistingServer: false,

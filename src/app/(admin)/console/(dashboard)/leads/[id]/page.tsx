@@ -5,7 +5,8 @@ import { desc, eq } from 'drizzle-orm'
 
 import { ConsoleLeadUpdateForm } from '@/components/console/ConsoleLeadUpdateForm'
 import { getCustomDb } from '@/db/client'
-import { cmsBookingEvents, cmsBookingProfiles, cmsLeads } from '@/db/schema'
+import { adminUsers, cmsBookingEvents, cmsBookingProfiles, cmsLeads } from '@/db/schema'
+import { canUseAiTools } from '@/lib/adminAiAuth'
 import { consoleUserCanWriteLeads } from '@/lib/console/rbac'
 import { requireConsoleSession } from '@/lib/console/requireConsoleSession'
 import { requireConsoleLeadsRoute } from '@/lib/console/routeGuards'
@@ -39,6 +40,13 @@ export default async function ConsoleLeadDetailPage(props: Props) {
   if (!lead) notFound()
 
   const canEditLead = consoleUserCanWriteLeads(session.role)
+  const canUseAi = canUseAiTools(session)
+  const adminProfileRows = await db
+    .select({ whatsappNumber: adminUsers.whatsappNumber })
+    .from(adminUsers)
+    .where(eq(adminUsers.id, session.sub))
+    .limit(1)
+  const adminWhatsappNumber = adminProfileRows[0]?.whatsappNumber ?? null
   const bookingRows = await db
     .select()
     .from(cmsBookingEvents)
@@ -109,6 +117,8 @@ export default async function ConsoleLeadDetailPage(props: Props) {
         initialLeadStatus={lead.leadStatus}
         initialNotes={lead.notes}
         canEdit={canEditLead}
+        canUseAi={canUseAi}
+        adminWhatsappNumber={adminWhatsappNumber}
         bookingEvent={
           bookingEvent
             ? {

@@ -632,6 +632,20 @@ export function LayoutBlockQuickFields(props: {
           ? String(o.height)
           : 'medium'
       const heroFit = o.mediaFit === 'contain' ? 'contain' : 'cover'
+      const heroBackgroundTone =
+        o.backgroundTone === 'charcoal' || o.backgroundTone === 'olive' ? String(o.backgroundTone) : 'black'
+      const heroBackgroundColor =
+        typeof o.backgroundColor === 'string' && /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(o.backgroundColor.trim())
+          ? o.backgroundColor.trim()
+          : '#000000'
+      const heroHasCustomBackgroundColor =
+        typeof o.backgroundColor === 'string' && /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(o.backgroundColor.trim())
+      const heroBackgroundOpacity =
+        typeof o.backgroundOpacity === 'number' && Number.isFinite(o.backgroundOpacity)
+          ? String(Math.max(0, Math.min(100, Math.round(o.backgroundOpacity))))
+          : '100'
+      const heroShadowStrength =
+        o.shadowStrength === 'light' || o.shadowStrength === 'strong' ? String(o.shadowStrength) : 'medium'
       const heroPosX =
         o.mediaPositionX === 'left' || o.mediaPositionX === 'right' ? String(o.mediaPositionX) : 'center'
       const heroPosY =
@@ -701,6 +715,88 @@ export function LayoutBlockQuickFields(props: {
             helpText="Upload or choose the main hero background."
             folderSuggestion="hero"
           />
+          <div className="tma-console-field-row">
+            <label className="tma-console-label">
+              Background tone
+              <select
+                className={fieldClass}
+                value={heroBackgroundTone}
+                onChange={(e) =>
+                  set({ backgroundTone: e.target.value as 'black' | 'charcoal' | 'olive' })
+                }
+                disabled={disabled}
+              >
+                <option value="black">Black</option>
+                <option value="charcoal">Charcoal</option>
+                <option value="olive">Olive</option>
+              </select>
+            </label>
+            <label className="tma-console-label">
+              Custom color (optional)
+              <div className="tma-console-actions" style={{ marginTop: '0.5rem', gap: '0.75rem', alignItems: 'center' }}>
+                <input
+                  type="color"
+                  value={heroBackgroundColor}
+                  onChange={(e) => set({ backgroundColor: e.target.value })}
+                  disabled={disabled}
+                  aria-label="Custom hero background color"
+                  style={{
+                    width: '3rem',
+                    height: '2.5rem',
+                    padding: 0,
+                    border: '1px solid var(--tma-border)',
+                    borderRadius: '0.75rem',
+                    background: 'transparent',
+                    cursor: disabled ? 'not-allowed' : 'pointer',
+                  }}
+                />
+                <button
+                  type="button"
+                  className="tma-console-btn-secondary"
+                  onClick={() => set({ backgroundColor: null, backgroundOpacity: 100 })}
+                  disabled={disabled || !heroHasCustomBackgroundColor}
+                >
+                  Use preset tone
+                </button>
+              </div>
+            </label>
+            <label className="tma-console-label">
+              Shadow strength
+              <select
+                className={fieldClass}
+                value={heroShadowStrength}
+                onChange={(e) =>
+                  set({ shadowStrength: e.target.value as 'light' | 'medium' | 'strong' })
+                }
+                disabled={disabled}
+              >
+                <option value="light">Light</option>
+                <option value="medium">Medium</option>
+                <option value="strong">Strong</option>
+              </select>
+            </label>
+          </div>
+          <label className="tma-console-label">
+            Custom color transparency
+            <div className="tma-console-field-row" style={{ alignItems: 'center' }}>
+              <input
+                type="range"
+                min="0"
+                max="100"
+                step="5"
+                value={heroBackgroundOpacity}
+                onChange={(e) => set({ backgroundOpacity: Number.parseInt(e.target.value, 10) })}
+                disabled={disabled || !heroHasCustomBackgroundColor}
+                style={{ flex: 1 }}
+              />
+              <span className="tma-console-hint" style={{ minWidth: '3rem', textAlign: 'right', margin: 0 }}>
+                {heroBackgroundOpacity}%
+              </span>
+            </div>
+            <span className="tma-console-hint">
+              When a custom color is set, transparency controls how strongly it overrides the preset tone.
+            </span>
+          </label>
           <div className="tma-console-field-row">
             <label className="tma-console-label">
               Hero height

@@ -113,6 +113,13 @@
       "when": 1775865600000,
       "tag": "0015_testimonial_logo_media",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1776342600000,
+      "tag": "0016_admin_user_whatsapp",
+      "breakpoints": true
     }
   ]
 }
